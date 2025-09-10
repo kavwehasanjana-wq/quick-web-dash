@@ -10,7 +10,33 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Camera, QrCode, UserCheck, CheckCircle, MapPin, X, BarChart3, Smartphone, AlertCircle } from 'lucide-react';
 import jsQR from 'jsqr';
-import { childAttendanceApi, MarkAttendanceByCardRequest, MarkAttendanceRequest } from '@/api/childAttendance.api';
+import { getAttendanceUrl, getBaseUrl } from '@/contexts/utils/auth.api';
+
+export interface MarkAttendanceByCardRequest {
+  studentCardId: string;
+  instituteId: string;
+  instituteName: string;
+  classId?: string;
+  className?: string;
+  subjectId?: string;
+  subjectName?: string;
+  address: string;
+  markingMethod: 'qr' | 'barcode' | 'rfid/nfc';
+  status: 'present' | 'absent' | 'late';
+}
+
+export interface MarkAttendanceRequest {
+  studentId: string;
+  instituteId: string;
+  instituteName: string;
+  classId?: string;
+  className?: string;
+  subjectId?: string;
+  subjectName?: string;
+  address: string;
+  markingMethod: 'manual';
+  status: 'present' | 'absent' | 'late';
+}
 
 interface AttendanceAlert {
   id: string;
@@ -343,7 +369,6 @@ const QRAttendance = () => {
         type: 'error',
         message: '⚠️ Missing information - ensure student code and institute are selected'
       });
-      // Scanner continues automatically - no need to restart
       return;
     }
 
@@ -353,7 +378,6 @@ const QRAttendance = () => {
         type: 'error',
         message: '📍 Location required - please allow location access'
       });
-      // Scanner continues automatically - no need to restart
       return;
     }
 
@@ -382,7 +406,34 @@ const QRAttendance = () => {
       console.log('📤 Sending attendance request...');
       console.log('📋 Request:', JSON.stringify(request, null, 2));
 
-      const result = await childAttendanceApi.markAttendanceByCard(request);
+      // Use the correct API endpoint for marking attendance
+      let attendanceBaseUrl = getAttendanceUrl();
+      if (!attendanceBaseUrl) {
+        attendanceBaseUrl = getBaseUrl();
+        if (!attendanceBaseUrl) {
+          throw new Error('No API URL configured. Please set the API URL in settings.');
+        }
+      }
+
+      const baseUrl = attendanceBaseUrl.endsWith('/') ? attendanceBaseUrl.slice(0, -1) : attendanceBaseUrl;
+      const fullApiUrl = `${baseUrl}/api/attendance/mark`;
+      
+      const response = await fetch(fullApiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          'ngrok-skip-browser-warning': 'true'
+        },
+        body: JSON.stringify(request)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        throw new Error(`Failed to mark attendance: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
 
       console.log('📥 API Response received');
       console.log('📊 Result:', JSON.stringify(result, null, 2));
@@ -435,12 +486,6 @@ const QRAttendance = () => {
         variant: "destructive",
         duration: 1200
       });
-
-      // Resume scanning after error immediately
-      if (isScanning && videoRef.current && canvasRef.current) {
-        console.log('🔄 Continuing scanner after error...');
-        // Scanner continues automatically - no need to restart
-      }
     }
   };
 
@@ -472,7 +517,7 @@ const QRAttendance = () => {
     }
 
     try {
-      const request: MarkAttendanceRequest = {
+      const requestData: MarkAttendanceRequest = {
         studentId: studentId.trim(),
         instituteId: currentInstituteId,
         instituteName: selectedInstitute.name,
@@ -483,33 +528,62 @@ const QRAttendance = () => {
 
       // Only include class data if a class is selected
       if (selectedClass) {
-        request.classId = selectedClass.id;
-        request.className = selectedClass.name;
+        requestData.classId = selectedClass.id;
+        requestData.className = selectedClass.name;
       }
 
       // Only include subject data if a subject is selected
       if (selectedSubject) {
-        request.subjectId = selectedSubject.id;
-        request.subjectName = selectedSubject.name;
+        requestData.subjectId = selectedSubject.id;
+        requestData.subjectName = selectedSubject.name;
       }
 
       console.log('=== PREPARING MANUAL ATTENDANCE REQUEST ===');
-      console.log('Request Object:', JSON.stringify(request, null, 2));
+      console.log('Request Object:', JSON.stringify(requestData, null, 2));
       console.log('Request Details:');
-      console.log('- Student ID:', request.studentId);
-      console.log('- Institute ID:', request.instituteId);
-      console.log('- Institute Name:', request.instituteName);
-      console.log('- Class ID:', request.classId);
-      console.log('- Class Name:', request.className);
-      console.log('- Subject ID:', request.subjectId);
-      console.log('- Subject Name:', request.subjectName);
-      console.log('- Address:', request.address);
-      console.log('- Marking Method:', request.markingMethod);
-      console.log('- Status:', request.status);
+      console.log('- Student ID:', requestData.studentId);
+      console.log('- Institute ID:', requestData.instituteId);
+
+      // Use the correct API endpoint for marking attendance
+      let attendanceBaseUrl = getAttendanceUrl();
+      if (!attendanceBaseUrl) {
+        attendanceBaseUrl = getBaseUrl();
+        if (!attendanceBaseUrl) {
+          throw new Error('No API URL configured. Please set the API URL in settings.');
+        }
+      }
+
+      const baseUrl = attendanceBaseUrl.endsWith('/') ? attendanceBaseUrl.slice(0, -1) : attendanceBaseUrl;
+      const fullApiUrl = `${baseUrl}/api/attendance/mark`;
+      
+      console.log('- API Endpoint:', fullApiUrl);
+      console.log('- Institute Name:', requestData.instituteName);
+      console.log('- Class ID:', requestData.classId);
+      console.log('- Class Name:', requestData.className);
+      console.log('- Subject ID:', requestData.subjectId);
+      console.log('- Subject Name:', requestData.subjectName);
+      console.log('- Address:', requestData.address);
+      console.log('- Marking Method:', requestData.markingMethod);
+      console.log('- Status:', requestData.status);
       console.log('About to call API...');
       console.log('=========================================');
+      
+      const response = await fetch(fullApiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          'ngrok-skip-browser-warning': 'true'
+        },
+        body: JSON.stringify(requestData)
+      });
 
-      const result = await childAttendanceApi.markAttendance(request);
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        throw new Error(`Failed to mark attendance: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
 
       console.log('=== MANUAL ATTENDANCE API RESULT ===');
       console.log('API Call Completed Successfully');
@@ -517,64 +591,45 @@ const QRAttendance = () => {
       console.log('==================================');
 
       if (result.success) {
-        const previousCount = markedCount;
         setMarkedCount(prev => prev + 1);
         setStudentId('');
         
-        console.log('✅ SUCCESS: Manual attendance marked successfully');
-        console.log('Student ID:', studentId);
-        console.log('Attendance ID:', result.attendanceId);
-        console.log('Previous Count:', previousCount);
-        console.log('New Count:', previousCount + 1);
-        console.log('Input field cleared');
-
         addAlert({
           type: 'success',
-          studentName: `Student ${studentId}`,
-          studentId: studentId,
-          status: status,
-          message: `Student ${studentId} marked as ${status}`
+          message: `✅ Student ${requestData.studentId} marked as ${status.toUpperCase()}`
         });
 
+        toast({
+          title: "✅ Attendance Marked!",
+          description: `Student ${requestData.studentId} - ${status.toUpperCase()}`,
+          duration: 1200
+        });
+        
         setTimeout(() => {
-          console.log('🎯 Focusing on input field for next entry');
           inputRef.current?.focus();
         }, 100);
       } else {
-        console.log('❌ API returned success: false');
-        console.log('Error message:', result.message);
         throw new Error(result.message || 'Failed to mark attendance');
       }
     } catch (error) {
-      const requestForLog: MarkAttendanceRequest = {
-        studentId: studentId.trim(),
-        instituteId: currentInstituteId,
-        instituteName: selectedInstitute.name,
-        address: location.address,
-        markingMethod: 'manual',
-        status: status
-      };
-
-      // Only include class data if a class is selected
-      if (selectedClass) {
-        requestForLog.classId = selectedClass.id;
-        requestForLog.className = selectedClass.name;
-      }
-
-      // Only include subject data if a subject is selected
-      if (selectedSubject) {
-        requestForLog.subjectId = selectedSubject.id;
-        requestForLog.subjectName = selectedSubject.name;
+      console.error('❌ MANUAL ATTENDANCE ERROR');
+      console.error('💥 Error:', error);
+      
+      let errorMessage = 'Failed to mark attendance';
+      if (error instanceof Error) {
+        errorMessage = error.message;
       }
       
-      console.error('=== MANUAL ATTENDANCE ERROR ===');
-      console.error('Error occurred during manual attendance marking');
-      console.error('Error details:', error);
-      console.error('Original request:', JSON.stringify(requestForLog, null, 2));
-      console.error('============================');
       addAlert({
         type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to mark attendance'
+        message: `❌ ${errorMessage}`
+      });
+
+      toast({
+        title: "❌ Marking Failed",
+        description: errorMessage,
+        variant: "destructive",
+        duration: 1200
       });
     }
   };
@@ -586,28 +641,22 @@ const QRAttendance = () => {
 
   if (!hasPermission) {
     return (
-      <div className="container mx-auto p-4">
-        <Card>
-          <CardContent className="text-center py-12">
-            <h3 className="text-lg font-medium mb-2">Access Denied</h3>
-            <p className="text-muted-foreground">
-              You don't have permission to mark attendance. This feature is only available for Institute Admins.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!selectedInstitute) {
-    return (
-      <div className="container mx-auto p-4">
-        <Card>
-          <CardContent className="text-center py-12">
-            <h3 className="text-lg font-medium mb-2">Institute Selection Required</h3>
-            <p className="text-muted-foreground">
-              Please select an institute first to mark attendance.
-            </p>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="w-full max-w-md mx-4">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
+              <X className="w-8 h-8 text-red-600 dark:text-red-400" />
+            </div>
+            <CardTitle className="text-xl text-red-600 dark:text-red-400">Access Denied</CardTitle>
+            <CardDescription>
+              Only Institute Administrators can mark attendance. Please contact your administrator for access.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" onClick={handleBack} className="w-full">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Go Back
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -616,64 +665,6 @@ const QRAttendance = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Attendance Alerts */}
-      <div className="fixed top-4 left-4 z-50 space-y-2 max-w-sm">
-        {attendanceAlerts.map((alert) => (
-          <Alert 
-            key={alert.id}
-            className={`shadow-lg animate-in slide-in-from-left-5 ${
-              alert.type === 'success' 
-                ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' 
-                : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
-            }`}
-          >
-            <div className="flex items-start gap-3">
-              <div className={`w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center ${
-                alert.type === 'success' ? 'bg-green-100 dark:bg-green-800' : 'bg-red-100 dark:bg-red-800'
-              }`}>
-                {alert.type === 'success' ? (
-                  <CheckCircle className={`h-5 w-5 ${alert.type === 'success' ? 'text-green-600 dark:text-green-200' : 'text-red-600 dark:text-red-200'}`} />
-                ) : (
-                  <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-200" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <h4 className={`text-sm font-semibold ${
-                    alert.type === 'success' ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'
-                  }`}>
-                    {alert.type === 'success' ? 'Success' : 'Error'}
-                  </h4>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                    onClick={() => removeAlert(alert.id)}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-                <AlertDescription className={`${
-                  alert.type === 'success' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'
-                } mt-1`}>
-                  <div className="text-sm">{alert.message}</div>
-                  {alert.studentName && (
-                    <div className="text-xs mt-1 flex items-center gap-2 flex-wrap">
-                      <Badge variant="outline" className="text-xs px-1 py-0">
-                        {alert.status}
-                      </Badge>
-                      <span className="opacity-75">
-                        {alert.timestamp.toLocaleTimeString()}
-                      </span>
-                    </div>
-                  )}
-                </AlertDescription>
-              </div>
-            </div>
-          </Alert>
-        ))}
-      </div>
-
       <div className="container mx-auto p-4 space-y-4 max-w-6xl">
         {/* Header */}
         <div className="flex items-center gap-4">
@@ -693,45 +684,46 @@ const QRAttendance = () => {
         <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100 text-lg">
-              <QrCode className="h-5 w-5" />
+              <UserCheck className="h-5 w-5" />
               Current Selection
             </CardTitle>
           </CardHeader>
-           <CardContent className="space-y-3">
-             <div>
-               <p className="text-sm font-medium text-blue-800 dark:text-blue-200">Institute</p>
-               <p className="text-blue-900 dark:text-blue-100">{selectedInstitute?.name}</p>
-             </div>
-             
-             {location && (
-               <div className="flex items-start gap-2 p-3 bg-white dark:bg-gray-800 rounded-lg">
-                 <MapPin className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                 <div className="flex-1 min-w-0">
-                   <p className="text-sm font-medium text-blue-800 dark:text-blue-200">Location</p>
-                   <p className="text-xs text-blue-700 dark:text-blue-300 break-words">{location.address}</p>
-                 </div>
-               </div>
-             )}
-           </CardContent>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <span className="font-medium text-blue-700 dark:text-blue-300">Institute: </span>
+                <span className="text-blue-900 dark:text-blue-100">{selectedInstitute?.name}</span>
+              </div>
+              <div>
+                <span className="font-medium text-blue-700 dark:text-blue-300">Class: </span>
+                <span className="text-blue-900 dark:text-blue-100">{selectedClass?.name || 'None'}</span>
+              </div>
+              <div>
+                <span className="font-medium text-blue-700 dark:text-blue-300">Subject: </span>
+                <span className="text-blue-900 dark:text-blue-100">{selectedSubject?.name || 'None'}</span>
+              </div>
+              <div>
+                <span className="font-medium text-blue-700 dark:text-blue-300">Location: </span>
+                <span className="text-blue-900 dark:text-blue-100 text-xs">
+                  {locationLoading ? 'Loading...' : (location?.address ? 'Available' : 'Unavailable')}
+                </span>
+              </div>
+            </div>
+          </CardContent>
         </Card>
 
         {/* Stats Card */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Today's Stats
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold text-green-600">{markedCount}</p>
-                <p className="text-sm text-muted-foreground">Marked</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-blue-600">{status}</p>
-                <p className="text-sm text-muted-foreground">Current Status</p>
+        <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-green-100 dark:bg-green-800 rounded-lg flex items-center justify-center">
+                  <BarChart3 className="h-6 w-6 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-green-600">{markedCount}</p>
+                  <p className="text-sm text-muted-foreground">Marked Today</p>
+                </div>
               </div>
               <div>
                 <p className="text-2xl font-bold text-purple-600">{selectedMethod.toUpperCase()}</p>
@@ -741,7 +733,7 @@ const QRAttendance = () => {
           </CardContent>
         </Card>
 
-        {/* QR Scanner Section - Made Much Bigger */}
+        {/* QR Scanner Section */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-2xl">
@@ -752,69 +744,95 @@ const QRAttendance = () => {
               Position code within the frame
             </CardDescription>
           </CardHeader>
-           <CardContent className="space-y-6">
-             {!isScanning ? (
-               <div className="space-y-6">
-                 <div className="space-y-4">
-                   <div>
-                     <p className="text-sm font-medium mb-2">Status</p>
-                     <Select value={status} onValueChange={(value) => setStatus(value as 'present' | 'absent' | 'late')}>
-                       <SelectTrigger className="w-full">
-                         <SelectValue />
-                       </SelectTrigger>
-                       <SelectContent className="bg-white dark:bg-gray-800 z-50">
-                         <SelectItem value="present">Present</SelectItem>
-                         <SelectItem value="absent">Absent</SelectItem>
-                         <SelectItem value="late">Late</SelectItem>
-                       </SelectContent>
-                     </Select>
-                   </div>
-                 </div>
-                 
-                 <div className="text-center py-16">
-                   <Camera className="h-20 w-20 mx-auto mb-6 text-muted-foreground" />
-                   <p className="text-xl font-medium mb-3">Ready to Scan</p>
-                   <p className="text-muted-foreground mb-8 text-lg">Start camera to begin scanning QR codes</p>
-                   <Button 
-                     onClick={startCameraWithMethod} 
-                     className="w-full max-w-sm text-lg py-6"
-                     size="lg"
-                   >
-                     <Camera className="h-6 w-6 mr-3" />
-                     Start Camera
-                   </Button>
-                 </div>
-               </div>
-             ) : (
-               <div className="space-y-4 sm:space-y-6">
-                 {/* Status Selector while scanning */}
-                 <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border">
-                   <p className="text-sm font-medium mb-2">Status</p>
-                   <Select value={status} onValueChange={(value) => setStatus(value as 'present' | 'absent' | 'late')}>
-                     <SelectTrigger className="w-full">
-                       <SelectValue />
-                     </SelectTrigger>
-                     <SelectContent className="bg-white dark:bg-gray-800 z-50">
-                       <SelectItem value="present">Present</SelectItem>
-                       <SelectItem value="absent">Absent</SelectItem>
-                       <SelectItem value="late">Late</SelectItem>
-                     </SelectContent>
-                   </Select>
-                 </div>
-                 
-                 {/* Mobile Responsive Camera View */}
-                  <div className="relative w-full h-[70vh] sm:h-[500px] md:h-[600px] lg:h-[700px] bg-black rounded-lg sm:rounded-2xl overflow-hidden shadow-2xl">
-                   <video
-                     ref={videoRef}
-                     className="w-full h-full object-cover"
-                     playsInline
-                     muted
-                   />
-                   <canvas
-                     ref={canvasRef}
-                     className="hidden"
-                   />
-                   {cameraError && (
+          <CardContent className="space-y-6">
+            {!isScanning ? (
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm font-medium mb-2">Status</p>
+                    <Select value={status} onValueChange={(value) => setStatus(value as 'present' | 'absent' | 'late')}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white dark:bg-gray-800 z-50">
+                        <SelectItem value="present">Present</SelectItem>
+                        <SelectItem value="absent">Absent</SelectItem>
+                        <SelectItem value="late">Late</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="text-center py-16">
+                  <Camera className="h-20 w-20 mx-auto mb-6 text-muted-foreground" />
+                  <p className="text-xl font-medium mb-3">Ready to Scan</p>
+                  <p className="text-muted-foreground mb-8 text-lg">Start camera to begin scanning QR codes</p>
+                  <Button 
+                    onClick={startCameraWithMethod} 
+                    className="w-full max-w-sm text-lg py-6"
+                    size="lg"
+                  >
+                    <Camera className="h-6 w-6 mr-3" />
+                    Start Camera
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 sm:space-y-6">
+                {/* Status Selector while scanning */}
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border">
+                  <p className="text-sm font-medium mb-2">Status</p>
+                  <Select value={status} onValueChange={(value) => setStatus(value as 'present' | 'absent' | 'late')}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white dark:bg-gray-800 z-50">
+                      <SelectItem value="present">Present</SelectItem>
+                      <SelectItem value="absent">Absent</SelectItem>
+                      <SelectItem value="late">Late</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Camera View with QR Frame Overlay */}
+                <div className="relative w-full h-[70vh] sm:h-[500px] md:h-[600px] lg:h-[700px] bg-black rounded-lg sm:rounded-2xl overflow-hidden shadow-2xl">
+                  <video
+                    ref={videoRef}
+                    className="w-full h-full object-cover"
+                    playsInline
+                    muted
+                  />
+                  
+                  {/* QR Code Frame Overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="relative w-64 h-64 sm:w-80 sm:h-80">
+                      {/* Corner brackets */}
+                      <div className="absolute top-0 left-0 w-12 h-12 border-l-4 border-t-4 border-green-400 rounded-tl-lg"></div>
+                      <div className="absolute top-0 right-0 w-12 h-12 border-r-4 border-t-4 border-green-400 rounded-tr-lg"></div>
+                      <div className="absolute bottom-0 left-0 w-12 h-12 border-l-4 border-b-4 border-green-400 rounded-bl-lg"></div>
+                      <div className="absolute bottom-0 right-0 w-12 h-12 border-r-4 border-b-4 border-green-400 rounded-br-lg"></div>
+                      
+                      {/* Center crosshair */}
+                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                        <div className="w-6 h-6 border-2 border-green-400 rounded-full opacity-60 animate-pulse"></div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Instructions overlay */}
+                  <div className="absolute bottom-6 left-0 right-0 text-center">
+                    <div className="inline-block bg-black/70 backdrop-blur-sm px-4 py-2 rounded-lg border border-green-400/30">
+                      <p className="text-green-400 text-sm font-medium flex items-center gap-2">
+                        <QrCode className="h-4 w-4" />
+                        Position QR code within the frame
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Hidden canvas for QR processing */}
+                  <canvas ref={canvasRef} className="hidden" />
+                  
+                  {cameraError && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                       <div className="text-center text-white p-4 sm:p-8">
                         <AlertCircle className="h-8 w-8 sm:h-16 sm:w-16 mx-auto mb-3 sm:mb-6" />
@@ -822,42 +840,10 @@ const QRAttendance = () => {
                       </div>
                     </div>
                   )}
-                  
-                  {/* Mobile Responsive Scanning Overlay */}
-                  <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                      {/* Mobile: smaller frame, Desktop: larger frame */}
-                      <div className="w-56 h-56 sm:w-72 sm:h-72 md:w-80 md:h-80 lg:w-96 lg:h-96 border-2 sm:border-4 border-white/70 rounded-2xl sm:rounded-3xl shadow-lg">
-                        {/* Corner indicators - responsive sizes */}
-                        <div className="absolute -top-1 -left-1 sm:-top-2 sm:-left-2 w-6 h-6 sm:w-12 sm:h-12 border-t-4 border-l-4 sm:border-t-8 sm:border-l-8 border-white rounded-tl-2xl sm:rounded-tl-3xl"></div>
-                        <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-6 h-6 sm:w-12 sm:h-12 border-t-4 border-r-4 sm:border-t-8 sm:border-r-8 border-white rounded-tr-2xl sm:rounded-tr-3xl"></div>
-                        <div className="absolute -bottom-1 -left-1 sm:-bottom-2 sm:-left-2 w-6 h-6 sm:w-12 sm:h-12 border-b-4 border-l-4 sm:border-b-8 sm:border-l-8 border-white rounded-bl-2xl sm:rounded-bl-3xl"></div>
-                        <div className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 w-6 h-6 sm:w-12 sm:h-12 border-b-4 border-r-4 sm:border-b-8 sm:border-r-8 border-white rounded-br-2xl sm:rounded-br-3xl"></div>
-                        
-                        {/* Center crosshair - responsive sizes */}
-                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                          <div className="w-4 h-0.5 sm:w-8 sm:h-1 bg-white/90 rounded-full"></div>
-                          <div className="w-0.5 h-4 sm:w-1 sm:h-8 bg-white/90 rounded-full absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Instruction text - responsive positioning and sizing */}
-                    <div className="absolute bottom-4 sm:bottom-8 left-0 right-0 text-center px-4">
-                      <div className="bg-black/70 text-white px-3 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-xl mx-auto max-w-fit">
-                        <p className="text-sm sm:text-lg font-medium">Position QR code within the frame</p>
-                      </div>
-                    </div>
-                  </div>
                 </div>
-
-                <div className="flex justify-center px-4">
-                  <Button 
-                    onClick={stopCamera} 
-                    variant="outline" 
-                    size="lg"
-                    className="w-full sm:w-auto sm:min-w-[250px] text-base sm:text-lg py-4 sm:py-6"
-                  >
+                
+                <div className="flex gap-4">
+                  <Button onClick={stopCamera} variant="outline" className="flex-1">
                     Stop Camera
                   </Button>
                 </div>
@@ -866,7 +852,7 @@ const QRAttendance = () => {
           </CardContent>
         </Card>
 
-        {/* Manual Entry - Separate section */}
+        {/* Manual Entry Section */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -874,99 +860,130 @@ const QRAttendance = () => {
               Manual Entry
             </CardTitle>
             <CardDescription>
-              Enter student ID manually
+              Enter student ID manually if QR scanning is not available
             </CardDescription>
           </CardHeader>
-           <CardContent className="space-y-4">
-             <div className="space-y-4">
-               <div>
-                 <p className="text-sm font-medium mb-2">Status</p>
-                 <Select value={status} onValueChange={(value) => setStatus(value as 'present' | 'absent' | 'late')}>
-                   <SelectTrigger className="w-full">
-                     <SelectValue />
-                   </SelectTrigger>
-                   <SelectContent className="bg-white dark:bg-gray-800 z-50">
-                     <SelectItem value="present">Present</SelectItem>
-                     <SelectItem value="absent">Absent</SelectItem>
-                     <SelectItem value="late">Late</SelectItem>
-                   </SelectContent>
-                 </Select>
-               </div>
-               
-               <div className="space-y-2">
-                 <Input
-                   ref={inputRef}
-                   placeholder="Enter Student ID"
-                   value={studentId}
-                   onChange={(e) => setStudentId(e.target.value)}
-                   onKeyPress={(e) => {
-                     if (e.key === 'Enter') {
-                       handleManualMarkAttendance();
-                     }
-                   }}
-                 />
-               </div>
-             </div>
-             
-             <Button 
-               onClick={handleManualMarkAttendance}
-               className="w-full"
-               disabled={!studentId.trim()}
-               size="lg"
-             >
-               <UserCheck className="h-5 w-5 mr-2" />
-               Mark Attendance
-             </Button>
-           </CardContent>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                ref={inputRef}
+                placeholder="Enter student ID..."
+                value={studentId}
+                onChange={(e) => setStudentId(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleManualMarkAttendance()}
+                className="flex-1"
+              />
+              <Button onClick={handleManualMarkAttendance} disabled={!studentId.trim()}>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Mark
+              </Button>
+            </div>
+          </CardContent>
         </Card>
-      </div>
 
-      {/* Method Selection Dialog */}
-      <Dialog open={showMethodDialog} onOpenChange={setShowMethodDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Select Scanning Method</DialogTitle>
-            <DialogDescription>
-              Choose the type of code you want to scan
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-1 gap-3">
-            <Button 
-              onClick={() => startCameraForMethod('qr')}
-              variant="outline"
-              className="justify-start h-auto p-4"
-            >
-              <QrCode className="h-8 w-8 mr-3" />
-              <div className="text-left">
-                <div className="font-medium">QR Code</div>
-                <div className="text-sm text-muted-foreground">Scan QR codes</div>
-              </div>
-            </Button>
-            <Button 
-              onClick={() => startCameraForMethod('barcode')}
-              variant="outline"
-              className="justify-start h-auto p-4"
-            >
-              <BarChart3 className="h-8 w-8 mr-3" />
-              <div className="text-left">
-                <div className="font-medium">Barcode</div>
-                <div className="text-sm text-muted-foreground">Scan barcodes</div>
-              </div>
-            </Button>
-            <Button 
-              onClick={() => startCameraForMethod('rfid/nfc')}
-              variant="outline"
-              className="justify-start h-auto p-4"
-            >
-              <Smartphone className="h-8 w-8 mr-3" />
-              <div className="text-left">
-                <div className="font-medium">RFID/NFC</div>
-                <div className="text-sm text-muted-foreground">Scan RFID or NFC tags</div>
-              </div>
-            </Button>
+        {/* Attendance Alerts */}
+        {attendanceAlerts.length > 0 && (
+          <div className="fixed bottom-4 right-4 z-50 space-y-2 max-w-sm">
+            {attendanceAlerts.map((alert) => (
+              <Alert 
+                key={alert.id} 
+                className={`${
+                  alert.type === 'success' 
+                    ? 'bg-green-50 dark:bg-green-900/50 border-green-200 dark:border-green-800' 
+                    : 'bg-red-50 dark:bg-red-900/50 border-red-200 dark:border-red-800'
+                } shadow-lg animate-in slide-in-from-right-2`}
+              >
+                <div className="flex items-start gap-3">
+                  {alert.type === 'success' ? (
+                    <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h4 className={`text-sm font-semibold ${
+                        alert.type === 'success' ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'
+                      }`}>
+                        {alert.type === 'success' ? 'Success' : 'Error'}
+                      </h4>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => removeAlert(alert.id)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <AlertDescription className={`${
+                      alert.type === 'success' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'
+                    } mt-1`}>
+                      <div className="text-sm">{alert.message}</div>
+                      {alert.studentName && (
+                        <div className="text-xs mt-1 flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className="text-xs px-1 py-0">
+                            {alert.status}
+                          </Badge>
+                          <span className="opacity-75">
+                            {alert.timestamp.toLocaleTimeString()}
+                          </span>
+                        </div>
+                      )}
+                    </AlertDescription>
+                  </div>
+                </div>
+              </Alert>
+            ))}
           </div>
-        </DialogContent>
-      </Dialog>
+        )}
+
+        {/* Method Selection Dialog */}
+        <Dialog open={showMethodDialog} onOpenChange={setShowMethodDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <QrCode className="h-5 w-5" />
+                Select Scanning Method
+              </DialogTitle>
+              <DialogDescription>
+                Choose the method you'll use for scanning student codes
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-3">
+              <Button
+                variant="outline"
+                className="justify-start h-auto p-4"
+                onClick={() => startCameraForMethod('qr')}
+              >
+                <div className="text-left">
+                  <div className="font-medium">QR Code</div>
+                  <div className="text-sm text-muted-foreground">Standard QR codes</div>
+                </div>
+              </Button>
+              <Button
+                variant="outline"
+                className="justify-start h-auto p-4"
+                onClick={() => startCameraForMethod('barcode')}
+              >
+                <div className="text-left">
+                  <div className="font-medium">Barcode</div>
+                  <div className="text-sm text-muted-foreground">Linear barcodes</div>
+                </div>
+              </Button>
+              <Button
+                variant="outline"
+                className="justify-start h-auto p-4"
+                onClick={() => startCameraForMethod('rfid/nfc')}
+              >
+                <div className="text-left">
+                  <div className="font-medium">RFID/NFC</div>
+                  <div className="text-sm text-muted-foreground">Contact-based cards</div>
+                </div>
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 };
