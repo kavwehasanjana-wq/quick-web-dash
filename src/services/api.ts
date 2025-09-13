@@ -279,13 +279,7 @@ class ApiService {
   }
 
   static async getLectures(page?: number, recordsPerPage?: number): Promise<any> {
-    const params = new URLSearchParams();
-    
-    if (page) params.append('currentPage', page.toString());
-    if (recordsPerPage) params.append('recordsPerPage', recordsPerPage.toString());
-    
-    const queryString = params.toString();
-    const url = `${getSecondBUrl()}/api/structured-lectures${queryString ? `?${queryString}` : ''}`;
+    const url = `${getSecondBUrl()}/api/structured-lectures`;
     
     const response = await fetch(url, {
       method: 'GET',

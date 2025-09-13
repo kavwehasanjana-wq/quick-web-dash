@@ -63,14 +63,30 @@ export default function SubjectLecturesManagement() {
   const fetchLectures = async () => {
     try {
       setLoading(true);
-      const response = await ApiService.getLectures(currentPage, 50);
+      const response = await ApiService.getLectures();
       
-      if (response.success && response.data) {
+      // Handle different response structures
+      if (Array.isArray(response)) {
+        setLectures(response);
+        setTotalRecords(response.length);
+        setTotalPages(1);
+      } else if (response.success && response.data) {
         setLectures(response.data);
         if (response.pagination) {
           setTotalPages(response.pagination.totalPages);
           setTotalRecords(response.pagination.totalRecords);
+        } else {
+          setTotalRecords(response.data.length);
+          setTotalPages(1);
         }
+      } else if (response.data) {
+        setLectures(response.data);
+        setTotalRecords(response.data.length);
+        setTotalPages(1);
+      } else {
+        setLectures([]);
+        setTotalRecords(0);
+        setTotalPages(1);
       }
     } catch (error) {
       console.error('Error fetching lectures:', error);
