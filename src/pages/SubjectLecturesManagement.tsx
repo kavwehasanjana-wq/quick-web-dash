@@ -170,7 +170,8 @@ export default function SubjectLecturesManagement() {
             </div>
             <Button 
               onClick={handleCreateLecture} 
-              className="shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
+              className="shrink-0 bg-blue-600 text-white hover:bg-blue-700 px-4 py-2"
+              style={{ display: 'flex', alignItems: 'center' }}
             >
               <Plus className="h-4 w-4 mr-2" />
               Create Lecture
@@ -235,18 +236,22 @@ export default function SubjectLecturesManagement() {
                            size="sm"
                            variant="outline"
                            onClick={() => handleEditLecture(lecture)}
-                           className="border-border"
+                           className="border-gray-300 bg-white hover:bg-gray-50 px-3 py-1"
+                           style={{ display: 'flex', alignItems: 'center' }}
                          >
                            <Edit className="h-4 w-4" />
+                           <span className="ml-1 text-xs">Edit</span>
                          </Button>
                         {lecture.lectureLink && (
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => window.open(lecture.lectureLink, '_blank')}
-                            className="border-border"
+                            className="border-gray-300 bg-white hover:bg-gray-50 px-3 py-1"
+                            style={{ display: 'flex', alignItems: 'center' }}
                           >
                             <ExternalLink className="h-4 w-4" />
+                            <span className="ml-1 text-xs">Link</span>
                           </Button>
                         )}
                       </div>
