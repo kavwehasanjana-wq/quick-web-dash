@@ -1,35 +1,38 @@
-
-import React from 'react';
-import { useLocation } from 'react-router-dom';
-import AppContent from '@/components/AppContent';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
+import ApiService from '@/services/api';
 
 const Index = () => {
-  const location = useLocation();
-  console.log('Index component rendering, current path:', location.pathname);
-  
-  // Extract page name from URL path
-  const getPageFromPath = () => {
-    const pathname = location.pathname;
-    console.log('Converting pathname to page:', pathname);
-    if (pathname === '/') return 'dashboard';
-    
-    // Handle nested routes
-    if (pathname.startsWith('/institutes/')) {
-      const parts = pathname.split('/');
-      if (parts[2] === 'users') return 'institute-users';
-      if (parts[2] === 'classes') return 'classes';
-      return 'institutes';
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (ApiService.isAuthenticated()) {
+      navigate('/admin');
     }
-    
-    // Remove leading slash and use as page name
-    const pageName = pathname.slice(1);
-    console.log('Final page name:', pageName);
-    return pageName;
-  };
-  
-  const currentPage = getPageFromPath();
-  
-  return <AppContent initialPage={currentPage} />;
+  }, [navigate]);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
+      <div className="container mx-auto px-4 py-16">
+        <div className="text-center space-y-8">
+          <h1 className="text-6xl font-bold text-foreground">
+            Welcome to LAAS
+          </h1>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Learning as a Service - Your comprehensive educational platform for modern learning experiences.
+          </p>
+          <Button 
+            size="lg" 
+            className="bg-admin hover:bg-admin/90 text-admin-foreground px-8 py-3 text-lg"
+            onClick={() => navigate('/login')}
+          >
+            Admin Login
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default Index;
