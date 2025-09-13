@@ -4,9 +4,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, ExternalLink, FileText } from 'lucide-react';
+import { Search, ExternalLink, FileText, Plus, Edit } from 'lucide-react';
 import ApiService from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
+import CreateEditLectureModal from '@/components/CreateEditLectureModal';
 import {
   Table,
   TableBody,
@@ -54,6 +55,8 @@ export default function SubjectLecturesManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingLecture, setEditingLecture] = useState<Lecture | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -106,6 +109,25 @@ export default function SubjectLecturesManagement() {
     lecture.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleCreateLecture = () => {
+    setEditingLecture(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEditLecture = (lecture: Lecture) => {
+    setEditingLecture(lecture);
+    setIsModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setEditingLecture(null);
+  };
+
+  const handleModalSuccess = () => {
+    fetchLectures();
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -146,6 +168,10 @@ export default function SubjectLecturesManagement() {
                 className="pl-10 border-border bg-background"
               />
             </div>
+            <Button onClick={handleCreateLecture} className="shrink-0">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Lecture
+            </Button>
           </div>
 
           <div className="overflow-hidden">
@@ -202,6 +228,14 @@ export default function SubjectLecturesManagement() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEditLecture(lecture)}
+                          className="border-border"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
                         {lecture.lectureLink && (
                           <Button
                             size="sm"
@@ -264,6 +298,13 @@ export default function SubjectLecturesManagement() {
           )}
         </CardContent>
       </Card>
+
+      <CreateEditLectureModal
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+        onSuccess={handleModalSuccess}
+        lecture={editingLecture}
+      />
     </div>
   );
 }

@@ -296,6 +296,67 @@ class ApiService {
     return await response.json();
   }
 
+  static async createLecture(lectureData: {
+    subjectId: string;
+    grade: number;
+    title: string;
+    description: string;
+    lessonNumber: number;
+    lectureNumber: number;
+    provider: string;
+    lectureLink: string;
+    documents: Array<{
+      name: string;
+      url: string;
+    }>;
+    isActive: boolean;
+  }): Promise<any> {
+    const response = await fetch(`${getSecondBUrl()}/api/structured-lectures`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getAuthHeader(),
+      },
+      body: JSON.stringify(lectureData),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create lecture');
+    }
+
+    return await response.json();
+  }
+
+  static async updateLecture(lectureId: string, lectureData: {
+    grade: number;
+    title: string;
+    description: string;
+    lessonNumber: number;
+    lectureNumber: number;
+    provider: string;
+    lectureLink: string;
+    documents: Array<{
+      name: string;
+      url: string;
+    }>;
+    isActive: boolean;
+  }): Promise<any> {
+    const response = await fetch(`${getSecondBUrl()}/api/structured-lectures/${lectureId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getAuthHeader(),
+      },
+      body: JSON.stringify(lectureData),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update lecture');
+    }
+
+    return await response.json();
+  }
+
   static logout() {
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');
