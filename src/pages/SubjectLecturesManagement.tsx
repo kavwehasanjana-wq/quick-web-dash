@@ -168,7 +168,10 @@ export default function SubjectLecturesManagement() {
                 className="pl-10 border-border bg-background"
               />
             </div>
-            <Button onClick={handleCreateLecture} className="shrink-0">
+            <Button 
+              onClick={handleCreateLecture} 
+              className="shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Create Lecture
             </Button>
@@ -228,14 +231,14 @@ export default function SubjectLecturesManagement() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEditLecture(lecture)}
-                          className="border-border"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                         <Button
+                           size="sm"
+                           variant="outline"
+                           onClick={() => handleEditLecture(lecture)}
+                           className="border-border"
+                         >
+                           <Edit className="h-4 w-4" />
+                         </Button>
                         {lecture.lectureLink && (
                           <Button
                             size="sm"
