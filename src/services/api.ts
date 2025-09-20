@@ -357,6 +357,22 @@ class ApiService {
     return await response.json();
   }
 
+  static async getTransport(): Promise<any> {
+    const response = await fetch(`${getSecondBUrl()}/api/bookhires/admin/all`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getAuthHeader(),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch transport data');
+    }
+
+    return await response.json();
+  }
+
   static logout() {
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');

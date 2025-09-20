@@ -6,6 +6,7 @@ import { UserManagement } from '@/components/UserManagement';
 import { InstituteManagement } from '@/pages/InstituteManagement';
 import { SubjectManagement } from '@/pages/SubjectManagement';
 import SubjectLecturesManagement from '@/pages/SubjectLecturesManagement';
+import TransportManagement from '@/pages/TransportManagement';
 import { PaymentManagement } from '@/pages/PaymentManagement';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ApiService from '@/services/api';
@@ -116,6 +117,9 @@ export default function AdminDashboard() {
         
       case 'lectures':
         return <SubjectLecturesManagement />;
+        
+      case 'transport':
+        return <TransportManagement />;
         
       case 'classes':
         return (

@@ -9,7 +9,8 @@ import {
   Shield,
   Menu,
   X,
-  BookOpen
+  BookOpen,
+  Truck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -31,6 +32,7 @@ const navigation = [
   { id: 'institutes', label: 'Institutes', icon: Building2 },
   { id: 'subjects', label: 'Subjects', icon: Settings },
   { id: 'lectures', label: 'Subject Lectures', icon: BookOpen },
+  { id: 'transport', label: 'Transport', icon: Truck },
   { id: 'classes', label: 'Classes', icon: Settings },
   { id: 'payments', label: 'Payments', icon: CreditCard },
   { id: 'settings', label: 'Settings', icon: Settings },
