@@ -78,6 +78,25 @@ export default function TransportManagement() {
     });
   };
 
+  const handleVerifyTransport = async (transportId: string) => {
+    try {
+      await ApiService.verifyTransport(transportId);
+      toast({
+        title: "Success",
+        description: "Transport verified successfully",
+      });
+      // Refresh the data
+      fetchTransports();
+    } catch (error) {
+      console.error('Error verifying transport:', error);
+      toast({
+        title: "Error",
+        description: "Failed to verify transport",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredTransports = transports.filter(transport => {
     const matchesSearch = 
       transport.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -97,7 +116,7 @@ export default function TransportManagement() {
   const pendingCount = transports.filter(t => !t.isApproved).length;
   const verifiedCount = transports.filter(t => t.isApproved).length;
 
-  const renderTransportTable = (transportList: Transport[]) => (
+  const renderTransportTable = (transportList: Transport[], showActions = false) => (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
@@ -107,12 +126,13 @@ export default function TransportManagement() {
             <TableHead>Route & Capacity</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Dates</TableHead>
+            {showActions && <TableHead>Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
           {transportList.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={showActions ? 6 : 5} className="text-center py-8 text-muted-foreground">
                 No transport records found
               </TableCell>
             </TableRow>
@@ -197,6 +217,21 @@ export default function TransportManagement() {
                     </div>
                   </div>
                 </TableCell>
+                
+                {showActions && (
+                  <TableCell>
+                    {!transport.isApproved && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleVerifyTransport(transport._id)}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Verify
+                      </Button>
+                    )}
+                  </TableCell>
+                )}
               </TableRow>
             ))
           )}
@@ -260,7 +295,7 @@ export default function TransportManagement() {
             </TabsContent>
             
             <TabsContent value="pending">
-              {renderTransportTable(filteredTransports)}
+              {renderTransportTable(filteredTransports, true)}
             </TabsContent>
             
             <TabsContent value="verified">
