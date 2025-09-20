@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -50,7 +50,7 @@ interface Lecture {
 
 export default function SubjectLecturesManagement() {
   const [lectures, setLectures] = useState<Lecture[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -59,9 +59,6 @@ export default function SubjectLecturesManagement() {
   const [editingLecture, setEditingLecture] = useState<Lecture | null>(null);
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchLectures();
-  }, [currentPage]);
 
   const fetchLectures = async () => {
     try {
@@ -168,6 +165,14 @@ export default function SubjectLecturesManagement() {
                 className="pl-10 border-border bg-background"
               />
             </div>
+            <Button 
+              onClick={fetchLectures} 
+              className="shrink-0 bg-green-600 text-white hover:bg-green-700 px-4 py-2 mr-2"
+              style={{ display: 'flex', alignItems: 'center' }}
+            >
+              <Search className="h-4 w-4 mr-2" />
+              Load Lectures
+            </Button>
             <Button 
               onClick={handleCreateLecture} 
               className="shrink-0 bg-blue-600 text-white hover:bg-blue-700 px-4 py-2"
