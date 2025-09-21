@@ -389,6 +389,22 @@ class ApiService {
     return await response.json();
   }
 
+  static async rejectTransport(transportId: string): Promise<any> {
+    const response = await fetch(`${getSecondBUrl()}/api/bookhires/admin/${transportId}/reject`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getAuthHeader(),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to reject transport');
+    }
+
+    return await response.json();
+  }
+
   static logout() {
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');

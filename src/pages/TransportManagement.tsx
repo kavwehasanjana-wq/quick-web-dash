@@ -29,6 +29,7 @@ interface Transport {
   imageUrl?: string;
   isActive: boolean;
   isApproved: boolean;
+  isRejected?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -44,7 +45,8 @@ export default function TransportManagement() {
   const [transports, setTransports] = useState<Transport[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('pending');
+  const [rejectedTransports, setRejectedTransports] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   const fetchTransports = async () => {
@@ -97,6 +99,26 @@ export default function TransportManagement() {
     }
   };
 
+  const handleRejectTransport = async (transportId: string) => {
+    try {
+      await ApiService.rejectTransport(transportId);
+      setRejectedTransports(prev => new Set([...prev, transportId]));
+      toast({
+        title: "Success",
+        description: "Transport rejected successfully",
+      });
+      // Refresh the data
+      fetchTransports();
+    } catch (error) {
+      console.error('Error rejecting transport:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject transport",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredTransports = transports.filter(transport => {
     const matchesSearch = 
       transport.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -105,16 +127,18 @@ export default function TransportManagement() {
       (transport.ownerId?.ownerName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (transport.ownerId?.businessName || '').toLowerCase().includes(searchTerm.toLowerCase());
 
+    const isRejected = rejectedTransports.has(transport._id);
     const matchesFilter = 
-      activeTab === 'all' ||
-      (activeTab === 'pending' && !transport.isApproved) ||
-      (activeTab === 'verified' && transport.isApproved);
+      (activeTab === 'pending' && !transport.isApproved && !isRejected) ||
+      (activeTab === 'verified' && transport.isApproved) ||
+      (activeTab === 'rejected' && isRejected);
 
     return matchesSearch && matchesFilter;
   });
 
-  const pendingCount = transports.filter(t => !t.isApproved).length;
+  const pendingCount = transports.filter(t => !t.isApproved && !rejectedTransports.has(t._id)).length;
   const verifiedCount = transports.filter(t => t.isApproved).length;
+  const rejectedCount = rejectedTransports.size;
 
   const renderTransportTable = (transportList: Transport[], showActions = false) => (
     <div className="rounded-md border">
@@ -192,9 +216,11 @@ export default function TransportManagement() {
                 
                 <TableCell>
                   <div className="space-y-2">
-                    <Badge variant={transport.isApproved ? 'default' : 'secondary'}>
+                    <Badge variant={transport.isApproved ? 'default' : rejectedTransports.has(transport._id) ? 'destructive' : 'secondary'}>
                       {transport.isApproved ? (
                         <><CheckCircle className="h-3 w-3 mr-1" /> Verified</>
+                      ) : rejectedTransports.has(transport._id) ? (
+                        <><Clock className="h-3 w-3 mr-1" /> Rejected</>
                       ) : (
                         <><Clock className="h-3 w-3 mr-1" /> Pending</>
                       )}
@@ -220,15 +246,25 @@ export default function TransportManagement() {
                 
                 {showActions && (
                   <TableCell>
-                    {!transport.isApproved && (
-                      <Button
-                        size="sm"
-                        onClick={() => handleVerifyTransport(transport._id)}
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        Verify
-                      </Button>
+                    {!transport.isApproved && !rejectedTransports.has(transport._id) && (
+                      <div className="space-x-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleVerifyTransport(transport._id)}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Verify
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleRejectTransport(transport._id)}
+                        >
+                          <Clock className="h-4 w-4 mr-1" />
+                          Reject
+                        </Button>
+                      </div>
                     )}
                   </TableCell>
                 )}
@@ -279,26 +315,26 @@ export default function TransportManagement() {
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
             <TabsList>
-              <TabsTrigger value="all">
-                All ({transports.length})
-              </TabsTrigger>
               <TabsTrigger value="pending">
                 Pending ({pendingCount})
               </TabsTrigger>
               <TabsTrigger value="verified">
                 Verified ({verifiedCount})
               </TabsTrigger>
+              <TabsTrigger value="rejected">
+                Rejected ({rejectedCount})
+              </TabsTrigger>
             </TabsList>
-            
-            <TabsContent value="all">
-              {renderTransportTable(filteredTransports)}
-            </TabsContent>
             
             <TabsContent value="pending">
               {renderTransportTable(filteredTransports, true)}
             </TabsContent>
             
             <TabsContent value="verified">
+              {renderTransportTable(filteredTransports)}
+            </TabsContent>
+            
+            <TabsContent value="rejected">
               {renderTransportTable(filteredTransports)}
             </TabsContent>
           </Tabs>
