@@ -405,6 +405,26 @@ class ApiService {
     return await response.json();
   }
 
+  static async assignRfid(assignData: {
+    userId: string;
+    userRfid: string;
+  }): Promise<any> {
+    const response = await fetch(`${getBaseUrl()}/users/register-rfid`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getAuthHeader(),
+      },
+      body: JSON.stringify(assignData),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to assign RFID');
+    }
+
+    return await response.json();
+  }
+
   static logout() {
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');

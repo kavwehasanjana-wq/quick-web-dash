@@ -33,6 +33,7 @@ const navigation = [
   { id: 'subjects', label: 'Subjects', icon: Settings },
   { id: 'lectures', label: 'Subject Lectures', icon: BookOpen },
   { id: 'transport', label: 'Transport', icon: Truck },
+  { id: 'assign-rfid', label: 'Assign Rfid', icon: Shield },
   { id: 'classes', label: 'Classes', icon: Settings },
   { id: 'payments', label: 'Payments', icon: CreditCard },
   { id: 'settings', label: 'Settings', icon: Settings },

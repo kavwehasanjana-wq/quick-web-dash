@@ -7,6 +7,7 @@ import { InstituteManagement } from '@/pages/InstituteManagement';
 import { SubjectManagement } from '@/pages/SubjectManagement';
 import SubjectLecturesManagement from '@/pages/SubjectLecturesManagement';
 import TransportManagement from '@/pages/TransportManagement';
+import { AssignRfidManagement } from '@/pages/AssignRfidManagement';
 import { PaymentManagement } from '@/pages/PaymentManagement';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ApiService from '@/services/api';
@@ -120,6 +121,9 @@ export default function AdminDashboard() {
         
       case 'transport':
         return <TransportManagement />;
+        
+      case 'assign-rfid':
+        return <AssignRfidManagement />;
         
       case 'classes':
         return (
