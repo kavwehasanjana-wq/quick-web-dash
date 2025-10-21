@@ -28,22 +28,6 @@ export default {
 					DEFAULT: 'hsl(var(--primary))',
 					foreground: 'hsl(var(--primary-foreground))'
 				},
-				admin: {
-					DEFAULT: 'hsl(var(--admin-primary))',
-					foreground: 'hsl(var(--admin-primary-foreground))',
-					secondary: 'hsl(var(--admin-secondary))',
-					accent: 'hsl(var(--admin-accent))'
-				},
-				status: {
-					active: 'hsl(var(--status-active))',
-					inactive: 'hsl(var(--status-inactive))',
-					pending: 'hsl(var(--status-pending))'
-				},
-				dashboard: {
-					card: 'hsl(var(--dashboard-card))',
-					border: 'hsl(var(--dashboard-border))',
-					muted: 'hsl(var(--dashboard-muted))'
-				},
 				secondary: {
 					DEFAULT: 'hsl(var(--secondary))',
 					foreground: 'hsl(var(--secondary-foreground))'

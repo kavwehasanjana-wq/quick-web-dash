@@ -8,9 +8,6 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
-    hmr: {
-      port: 8080,
-    },
   },
   plugins: [
     react(),
@@ -22,5 +19,4 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // Removed problematic WS_TOKEN define that was causing build errors
 }));
