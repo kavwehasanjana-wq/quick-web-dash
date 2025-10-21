@@ -7,11 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Save, RefreshCw } from 'lucide-react';
 import { examApi } from '@/api/exam.api';
 import { examResultsApi } from '@/api/examResults.api';
 import { instituteApi } from '@/api/institute.api';
 import AppLayout from '@/components/layout/AppLayout';
+import GradeConfigurationCard, { GradeRange } from '@/components/GradeConfigurationCard';
 import { cn } from '@/lib/utils';
 
 interface Student {
@@ -29,6 +31,14 @@ interface StudentResult {
   remarks: string;
 }
 
+const defaultGradeRanges: GradeRange[] = [
+  { grade: 'A', minScore: 75, maxScore: 100, remarks: 'Excellent' },
+  { grade: 'B', minScore: 65, maxScore: 74, remarks: 'Very Good' },
+  { grade: 'C', minScore: 55, maxScore: 64, remarks: 'Credit Pass' },
+  { grade: 'S', minScore: 40, maxScore: 54, remarks: 'Ordinary Pass (Satisfactory)' },
+  { grade: 'F', minScore: 0, maxScore: 39, remarks: 'Fail' }
+];
+
 const CreateExamResults = () => {
   const { examId } = useParams<{ examId: string }>();
   const navigate = useNavigate();
@@ -40,6 +50,7 @@ const CreateExamResults = () => {
   const [results, setResults] = useState<Record<string, StudentResult>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [gradeRanges, setGradeRanges] = useState<GradeRange[]>(defaultGradeRanges);
 
   useEffect(() => {
     loadData();
@@ -122,17 +133,14 @@ const CreateExamResults = () => {
       return { grade: '', remarks: '' };
     }
     
-    if (numScore >= 75 && numScore <= 100) {
-      return { grade: 'A', remarks: 'Excellent' };
-    } else if (numScore >= 65 && numScore < 75) {
-      return { grade: 'B', remarks: 'Very Good' };
-    } else if (numScore >= 55 && numScore < 65) {
-      return { grade: 'C', remarks: 'Credit Pass' };
-    } else if (numScore >= 40 && numScore < 55) {
-      return { grade: 'S', remarks: 'Ordinary Pass (Satisfactory)' };
-    } else {
-      return { grade: 'F', remarks: 'Fail' };
+    // Find the matching grade range
+    for (const range of gradeRanges) {
+      if (numScore >= range.minScore && numScore <= range.maxScore) {
+        return { grade: range.grade, remarks: range.remarks };
+      }
     }
+    
+    return { grade: '', remarks: '' };
   };
 
   const handleResultChange = (studentId: string, field: keyof StudentResult, value: string) => {
@@ -216,19 +224,25 @@ const CreateExamResults = () => {
   return (
     <AppLayout>
       <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/exams')}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold">Create Exam Results</h1>
-          {exam && (
-            <p className="text-muted-foreground mt-1">
-              {exam.title} - Enter marks for each student
-            </p>
-          )}
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/exams')}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Create Exam Results</h1>
+            {exam && (
+              <p className="text-muted-foreground mt-1">
+                {exam.title} - Enter marks for each student
+              </p>
+            )}
+          </div>
         </div>
-      </div>
+
+        <GradeConfigurationCard
+          gradeRanges={gradeRanges}
+          onGradeRangesChange={setGradeRanges}
+          onReset={() => setGradeRanges(defaultGradeRanges)}
+        />
 
       {students.length === 0 ? (
         <Card>
@@ -295,20 +309,21 @@ const CreateExamResults = () => {
                       />
                     </div>
                     <div>
-                      <Label htmlFor={`remarks-${student.id}`}>Remarks (Auto)</Label>
-                      <Input
+                      <Label htmlFor={`remarks-${student.id}`}>Remarks</Label>
+                      <Textarea
                         id={`remarks-${student.id}`}
-                        placeholder="Auto-filled"
+                        placeholder="Enter or auto-fill remarks"
                         value={results[student.id]?.remarks || ''}
-                        readOnly
+                        onChange={(e) => handleResultChange(student.id, 'remarks', e.target.value)}
                         className={cn(
-                          "bg-muted font-medium",
+                          "font-medium resize-none",
                           results[student.id]?.grade === 'A' && "text-green-600 dark:text-green-400",
                           results[student.id]?.grade === 'B' && "text-blue-600 dark:text-blue-400",
                           results[student.id]?.grade === 'C' && "text-teal-600 dark:text-teal-400",
                           results[student.id]?.grade === 'S' && "text-yellow-600 dark:text-yellow-400",
                           results[student.id]?.grade === 'F' && "text-red-600 dark:text-red-400"
                         )}
+                        rows={2}
                       />
                     </div>
                   </div>
