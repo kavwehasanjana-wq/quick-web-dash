@@ -308,7 +308,7 @@ const Payments = () => {
 
           <TabsContent value={activeTab} className="mt-6">
             <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-              <TableContainer sx={{ maxHeight: 600 }}>
+              <TableContainer sx={{ maxHeight: 'calc(100vh - 400px)' }}>
                 <Table stickyHeader aria-label="payment submissions table">
                   <TableHead>
                     <TableRow>

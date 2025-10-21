@@ -99,10 +99,15 @@ const CreateLectureForm = ({ onClose, onSuccess, courseId }: CreateLectureFormPr
       
       toast({
         title: "Success",
-        description: `Lecture "${newLecture.title}" created successfully`,
+        description: `Lecture created successfully`,
       });
 
-      // Reset form
+      // Call onSuccess first to close dialog and refresh
+      if (onSuccess) {
+        await onSuccess();
+      }
+
+      // Reset form after success callback
       setFormData({
         title: '',
         description: '',
@@ -117,10 +122,6 @@ const CreateLectureForm = ({ onClose, onSuccess, courseId }: CreateLectureFormPr
         meetingId: '',
         meetingPassword: ''
       });
-
-      if (onSuccess) {
-        await onSuccess();
-      }
     } catch (error) {
       console.error('Error creating lecture:', error);
       toast({

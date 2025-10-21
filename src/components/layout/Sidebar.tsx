@@ -350,13 +350,6 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
             permission: 'view-students',
             alwaysShow: false
           },
-          {
-            id: 'unverified-students',
-            label: 'Unverified Students',
-            icon: AlertCircle,
-            permission: 'view-students',
-            alwaysShow: false
-          },
         ];
       }
 
@@ -388,13 +381,6 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
             id: 'students',
             label: 'Students',
             icon: GraduationCap,
-            permission: 'view-students',
-            alwaysShow: false
-          },
-          {
-            id: 'unverified-students',
-            label: 'Unverified Students',
-            icon: AlertCircle,
             permission: 'view-students',
             alwaysShow: false
           },
@@ -526,13 +512,6 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
             alwaysShow: false
           },
           {
-            id: 'unverified-students',
-            label: 'Unverified Students',
-            icon: AlertCircle,
-            permission: 'view-students',
-            alwaysShow: false
-          },
-          {
             id: 'classes',
             label: 'All Classes',
             icon: School,
@@ -584,13 +563,6 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
             id: 'students',
             label: 'Students',
             icon: GraduationCap,
-            permission: 'view-students',
-            alwaysShow: false
-          },
-          {
-            id: 'unverified-students',
-            label: 'Unverified Students',
-            icon: AlertCircle,
             permission: 'view-students',
             alwaysShow: false
           },
@@ -1128,13 +1100,6 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
             icon: FileText,
             permission: 'view-exams',
             alwaysShow: false
-          },
-          {
-            id: 'results',
-            label: 'Results',
-            icon: ClipboardList,
-            permission: 'view-results',
-            alwaysShow: false
           }
         ];
       }
@@ -1174,13 +1139,6 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
             icon: FileText,
             permission: 'view-exams',
             alwaysShow: false
-          },
-          {
-            id: 'results',
-            label: 'Results',
-            icon: ClipboardList,
-            permission: 'view-results',
-            alwaysShow: false
           }
         ];
       }
@@ -1217,13 +1175,6 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
         label: 'Exams',
         icon: FileText,
         permission: 'view-exams',
-        alwaysShow: false
-      },
-      {
-        id: 'results',
-        label: 'Results',
-        icon: ClipboardList,
-        permission: 'view-results',
         alwaysShow: false
       }
     ];

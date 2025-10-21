@@ -328,7 +328,7 @@ export default function SMSHistory() {
       )}
 
       <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-        <TableContainer sx={{ maxHeight: 600 }}>
+        <TableContainer sx={{ maxHeight: 'calc(100vh - 400px)' }}>
           <Table stickyHeader aria-label="sms messages table">
             <TableHead>
               <TableRow>
