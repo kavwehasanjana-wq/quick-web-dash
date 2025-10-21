@@ -8,7 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ArrowLeft, Save, RefreshCw } from 'lucide-react';
+import donutChartIcon from '@/assets/donut-chart.png';
 import { examApi } from '@/api/exam.api';
 import { examResultsApi } from '@/api/examResults.api';
 import { instituteApi } from '@/api/institute.api';
@@ -32,12 +34,20 @@ interface StudentResult {
 }
 
 const defaultGradeRanges: GradeRange[] = [
-  { grade: 'A', minScore: 75, maxScore: 100, remarks: 'Excellent' },
-  { grade: 'B', minScore: 65, maxScore: 74, remarks: 'Very Good' },
-  { grade: 'C', minScore: 55, maxScore: 64, remarks: 'Credit Pass' },
-  { grade: 'S', minScore: 40, maxScore: 54, remarks: 'Ordinary Pass (Satisfactory)' },
-  { grade: 'F', minScore: 0, maxScore: 39, remarks: 'Fail' }
+  { grade: 'A', minScore: 75, maxScore: 100 },
+  { grade: 'B', minScore: 65, maxScore: 74 },
+  { grade: 'C', minScore: 55, maxScore: 64 },
+  { grade: 'S', minScore: 40, maxScore: 54 },
+  { grade: 'F', minScore: 0, maxScore: 39 }
 ];
+
+const defaultRemarks: Record<string, string> = {
+  'A': 'Excellent',
+  'B': 'Very Good',
+  'C': 'Credit Pass',
+  'S': 'Ordinary Pass (Satisfactory)',
+  'F': 'Fail'
+};
 
 const CreateExamResults = () => {
   const { examId } = useParams<{ examId: string }>();
@@ -136,7 +146,7 @@ const CreateExamResults = () => {
     // Find the matching grade range
     for (const range of gradeRanges) {
       if (numScore >= range.minScore && numScore <= range.maxScore) {
-        return { grade: range.grade, remarks: range.remarks };
+        return { grade: range.grade, remarks: defaultRemarks[range.grade] || '' };
       }
     }
     
@@ -228,7 +238,7 @@ const CreateExamResults = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate('/exams')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
+          <div className="flex-1">
             <h1 className="text-3xl font-bold">Create Exam Results</h1>
             {exam && (
               <p className="text-muted-foreground mt-1">
@@ -236,13 +246,24 @@ const CreateExamResults = () => {
               </p>
             )}
           </div>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon">
+                <img src={donutChartIcon} alt="Grade Configuration" className="h-5 w-5" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Grade Configuration</DialogTitle>
+              </DialogHeader>
+              <GradeConfigurationCard
+                gradeRanges={gradeRanges}
+                onGradeRangesChange={setGradeRanges}
+                onReset={() => setGradeRanges(defaultGradeRanges)}
+              />
+            </DialogContent>
+          </Dialog>
         </div>
-
-        <GradeConfigurationCard
-          gradeRanges={gradeRanges}
-          onGradeRangesChange={setGradeRanges}
-          onReset={() => setGradeRanges(defaultGradeRanges)}
-        />
 
       {students.length === 0 ? (
         <Card>

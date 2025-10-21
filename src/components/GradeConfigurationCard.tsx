@@ -9,7 +9,6 @@ export interface GradeRange {
   grade: string;
   minScore: number;
   maxScore: number;
-  remarks: string;
 }
 
 interface GradeConfigurationCardProps {
@@ -27,7 +26,7 @@ const GradeConfigurationCard: React.FC<GradeConfigurationCardProps> = ({
     const updatedRanges = [...gradeRanges];
     updatedRanges[index] = {
       ...updatedRanges[index],
-      [field]: field === 'grade' || field === 'remarks' ? value : Number(value)
+      [field]: field === 'grade' ? value : Number(value)
     };
     onGradeRangesChange(updatedRanges);
   };
@@ -42,19 +41,17 @@ const GradeConfigurationCard: React.FC<GradeConfigurationCardProps> = ({
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {gradeRanges.map((range, index) => (
             <div key={index} className="border rounded-lg p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <Label htmlFor={`grade-${index}`}>Grade</Label>
-                  <Input
-                    id={`grade-${index}`}
-                    value={range.grade}
-                    onChange={(e) => handleRangeChange(index, 'grade', e.target.value)}
-                    className="font-bold text-center"
-                  />
-                </div>
+              <div>
+                <Label htmlFor={`grade-${index}`}>Grade</Label>
+                <Input
+                  id={`grade-${index}`}
+                  value={range.grade}
+                  onChange={(e) => handleRangeChange(index, 'grade', e.target.value)}
+                  className="font-bold text-center"
+                />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -79,14 +76,6 @@ const GradeConfigurationCard: React.FC<GradeConfigurationCardProps> = ({
                     max={100}
                   />
                 </div>
-              </div>
-              <div>
-                <Label htmlFor={`remarks-${index}`}>Remarks</Label>
-                <Input
-                  id={`remarks-${index}`}
-                  value={range.remarks}
-                  onChange={(e) => handleRangeChange(index, 'remarks', e.target.value)}
-                />
               </div>
             </div>
           ))}
