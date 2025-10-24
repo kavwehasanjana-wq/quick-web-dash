@@ -128,7 +128,7 @@ const SubmitPaymentDialog = ({ open, onOpenChange, payment, instituteId, onSucce
             <h3 className="font-semibold mb-2">Payment Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
               <p><strong>Payment Type:</strong> {payment.paymentType}</p>
-              <p><strong>Amount:</strong> ₹{payment.amount.toLocaleString()}</p>
+              <p><strong>Amount:</strong> Rs {payment.amount.toLocaleString()}</p>
               <p><strong>Due Date:</strong> {new Date(payment.dueDate).toLocaleDateString()}</p>
               <p><strong>Priority:</strong> {payment.priority}</p>
             </div>
@@ -158,7 +158,7 @@ const SubmitPaymentDialog = ({ open, onOpenChange, payment, instituteId, onSucce
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="paymentAmount">Payment Amount *</Label>
+              <Label htmlFor="paymentAmount">Payment Amount (Rs) *</Label>
               <Input
                 id="paymentAmount"
                 type="number"

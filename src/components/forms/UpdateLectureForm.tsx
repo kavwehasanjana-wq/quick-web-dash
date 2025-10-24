@@ -89,6 +89,8 @@ const UpdateLectureForm = ({ lecture, onClose, onSuccess }: UpdateLectureFormPro
         isActive: formData.isActive
       };
 
+      console.log('Updating lecture with payload:', payload);
+
       await lectureApi.updateLecture(lecture.id, payload, {
         instituteId: lecture.instituteId,
         classId: lecture.classId,

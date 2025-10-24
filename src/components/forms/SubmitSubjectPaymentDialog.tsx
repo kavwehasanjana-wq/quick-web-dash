@@ -161,7 +161,7 @@ const SubmitSubjectPaymentDialog: React.FC<SubmitSubjectPaymentDialogProps> = ({
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-500">Amount Required:</span>
             <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
-              ₹{parseFloat(payment.amount).toLocaleString()}
+              Rs {parseFloat(payment.amount).toLocaleString()}
             </span>
           </div>
           <div className="flex justify-between items-center mt-1">
@@ -207,7 +207,7 @@ const SubmitSubjectPaymentDialog: React.FC<SubmitSubjectPaymentDialogProps> = ({
           <div>
             <Label htmlFor="submittedAmount" className="flex items-center space-x-2">
               <DollarSign className="h-4 w-4" />
-              <span>Amount Paid</span>
+              <span>Amount Paid (Rs)</span>
             </Label>
             <Input
               id="submittedAmount"
