@@ -203,7 +203,7 @@ const UpdateLectureForm = ({ lecture, onClose, onSuccess }: UpdateLectureFormPro
                   id="venue"
                   value={formData.venue}
                   onChange={(e) => handleInputChange('venue', e.target.value)}
-                  placeholder={formData.lectureType === 'online' ? 'Online Platform' : 'Physical Location'}
+                  placeholder="Enter venue"
                 />
               </div>
               <div>
@@ -218,49 +218,49 @@ const UpdateLectureForm = ({ lecture, onClose, onSuccess }: UpdateLectureFormPro
               </div>
             </div>
 
-            {formData.lectureType === 'online' && (
-              <div className="space-y-4 border-t pt-4">
-                <h3 className="text-lg font-medium">Online Meeting Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="meetingLink">Meeting Link</Label>
-                    <Input
-                      id="meetingLink"
-                      value={formData.meetingLink}
-                      onChange={(e) => handleInputChange('meetingLink', e.target.value)}
-                      placeholder="https://zoom.us/j/..."
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="meetingId">Meeting ID</Label>
-                    <Input
-                      id="meetingId"
-                      value={formData.meetingId}
-                      onChange={(e) => handleInputChange('meetingId', e.target.value)}
-                      placeholder="Meeting ID"
-                    />
-                  </div>
+            <div className="space-y-4 border-t pt-4">
+              <h3 className="text-lg font-medium">Meeting Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="meetingLink">Meeting Link</Label>
+                  <Input
+                    id="meetingLink"
+                    value={formData.meetingLink}
+                    onChange={(e) => handleInputChange('meetingLink', e.target.value)}
+                    placeholder="https://meet.example.com/..."
+                  />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="meetingPassword">Meeting Password</Label>
-                    <Input
-                      id="meetingPassword"
-                      value={formData.meetingPassword}
-                      onChange={(e) => handleInputChange('meetingPassword', e.target.value)}
-                      placeholder="Optional meeting password"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="recordingUrl">Recording URL</Label>
-                    <Input
-                      id="recordingUrl"
-                      value={formData.recordingUrl}
-                      onChange={(e) => handleInputChange('recordingUrl', e.target.value)}
-                      placeholder="Recording URL (if available)"
-                    />
-                  </div>
+                <div>
+                  <Label htmlFor="meetingId">Meeting ID</Label>
+                  <Input
+                    id="meetingId"
+                    value={formData.meetingId}
+                    onChange={(e) => handleInputChange('meetingId', e.target.value)}
+                    placeholder="Meeting ID"
+                  />
                 </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="meetingPassword">Meeting Password</Label>
+                  <Input
+                    id="meetingPassword"
+                    value={formData.meetingPassword}
+                    onChange={(e) => handleInputChange('meetingPassword', e.target.value)}
+                    placeholder="Meeting password"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="recordingUrl">Recording URL</Label>
+                  <Input
+                    id="recordingUrl"
+                    value={formData.recordingUrl}
+                    onChange={(e) => handleInputChange('recordingUrl', e.target.value)}
+                    placeholder="Recording URL"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
@@ -271,8 +271,18 @@ const UpdateLectureForm = ({ lecture, onClose, onSuccess }: UpdateLectureFormPro
                   />
                   <Label htmlFor="isRecorded">Session is recorded</Label>
                 </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="isActive"
+                    checked={formData.isActive}
+                    onChange={(e) => handleInputChange('isActive', e.target.checked)}
+                    className="rounded"
+                  />
+                  <Label htmlFor="isActive">Lecture is active</Label>
+                </div>
               </div>
-            )}
+            </div>
 
             <div className="flex justify-end space-x-2 pt-4">
               <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
