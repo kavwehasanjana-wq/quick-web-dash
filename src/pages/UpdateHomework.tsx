@@ -52,6 +52,18 @@ const UpdateHomework = () => {
     }
   }, [homeworkId, canUpdate, navigate]);
 
+  const toDateString = (value: any): string => {
+    if (!value) return '';
+    try {
+      const d = value instanceof Date ? value : new Date(value);
+      if (isNaN(d.getTime())) return '';
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    } catch {
+      return '';
+    }
+  };
+
   const fetchHomework = async () => {
     try {
       setLoading(true);
@@ -71,8 +83,8 @@ const UpdateHomework = () => {
           title: homeworkData.title || '',
           description: homeworkData.description || '',
           instructions: homeworkData.instructions || '',
-          startDate: homeworkData.startDate ? homeworkData.startDate.split('T')[0] : '',
-          dueDate: homeworkData.endDate ? homeworkData.endDate.split('T')[0] : '',
+          startDate: toDateString(homeworkData.startDate),
+          dueDate: toDateString(homeworkData.endDate),
           maxMarks: homeworkData.maxMarks?.toString() || '',
           attachmentUrl: homeworkData.attachmentUrl || '',
           referenceLink: homeworkData.referenceLink || '',

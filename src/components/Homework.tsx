@@ -295,16 +295,7 @@ const Homework = ({ apiLevel = 'institute' }: HomeworkProps) => {
           View
         </Button>
       )
-    }] : []),
-    { 
-      key: 'isActive', 
-      header: 'Status',
-      render: (value: boolean) => (
-        <Badge variant={value ? 'default' : 'secondary'}>
-          {value ? 'Active' : 'Inactive'}
-        </Badge>
-      )
-    }
+    }] : [])
   ];
 
   // Custom actions based on user role

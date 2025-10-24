@@ -267,6 +267,11 @@ class OrganizationApiClient {
     const response = await apiClient.put(`/organizations/${organizationId}/verify`, data);
     return response;
   }
+
+  async getOrganizationStudents(instituteId: string, organizationId: string, params?: OrganizationQueryParams): Promise<any> {
+    const response = await apiClient.get(`/organizations/institute/${instituteId}/organization/${organizationId}/students`, params);
+    return response;
+  }
 }
 
 // Organization-specific API client that uses baseUrl2

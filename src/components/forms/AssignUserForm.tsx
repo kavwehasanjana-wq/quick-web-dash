@@ -164,12 +164,10 @@ const AssignUserForm = ({ instituteId, onSubmit, onCancel, initialUserId }: Assi
               <SelectValue placeholder="Select user role" />
             </SelectTrigger>
             <SelectContent>
-              {/* Roles available for InstituteAdmin to assign */}
               <SelectItem value="INSTITUTE_ADMIN">Institute Admin</SelectItem>
+              <SelectItem value="TEACHER">Teacher</SelectItem>
               <SelectItem value="STUDENT">Student</SelectItem>
               <SelectItem value="ATTENDANCE_MARKER">Attendance Marker</SelectItem>
-              <SelectItem value="TEACHER">Teacher</SelectItem>
-              <SelectItem value="PARENT">Parent</SelectItem>
             </SelectContent>
           </Select>
         </div>

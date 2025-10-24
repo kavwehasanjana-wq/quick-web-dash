@@ -23,11 +23,23 @@ const UpdateHomeworkForm = ({ homework, onClose, onSuccess }: UpdateHomeworkForm
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   
+  const toDateString = (value: any): string => {
+    if (!value) return '';
+    try {
+      const d = value instanceof Date ? value : new Date(value);
+      if (isNaN(d.getTime())) return '';
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    } catch {
+      return '';
+    }
+  };
+  
   const [formData, setFormData] = useState({
     title: homework.title || '',
     description: homework.description || '',
-    startDate: homework.startDate ? homework.startDate.split('T')[0] : '',
-    endDate: homework.endDate ? homework.endDate.split('T')[0] : '',
+    startDate: toDateString(homework.startDate),
+    endDate: toDateString(homework.endDate),
     referenceLink: homework.referenceLink || '',
     isActive: homework.isActive ?? true
   });

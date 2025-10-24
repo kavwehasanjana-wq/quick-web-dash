@@ -160,14 +160,14 @@ const TeacherExams = () => {
     render: (value: string) => <Badge variant={value === 'scheduled' ? 'default' : value === 'draft' ? 'secondary' : value === 'completed' ? 'outline' : 'destructive'}>
           {value}
         </Badge>
-  }, {
+  }, ...(['InstituteAdmin', 'Teacher'].includes(effectiveRole) ? [{
     key: 'createResults',
     header: 'Create Results',
     render: (value: any, row: TeacherExam) => <Button size="sm" variant="outline" onClick={() => navigate(`/exams/${row.id}/create-results`)} className="flex items-center gap-2">
           <BarChart3 className="h-3 w-3" />
           Create
         </Button>
-  }, {
+  }] : []), {
     key: 'results',
     header: 'View Results',
     render: (value: any, row: TeacherExam) => <Button size="sm" variant="default" onClick={() => handleViewResults(row)} className="flex items-center gap-2">

@@ -38,13 +38,25 @@ const UpdateLectureForm = ({ lecture, onClose, onSuccess }: UpdateLectureFormPro
     );
   }
   
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const toInputDateTime = (value: any): string => {
+    if (!value) return '';
+    try {
+      const d = value instanceof Date ? value : new Date(value);
+      if (isNaN(d.getTime())) return '';
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } catch {
+      return '';
+    }
+  };
+
   const [formData, setFormData] = useState({
     title: lecture.title || '',
     description: lecture.description || '',
     lectureType: lecture.lectureType || 'online',
     venue: lecture.venue || '',
-    startTime: lecture.startTime ? new Date(lecture.startTime).toISOString().slice(0, 16) : '',
-    endTime: lecture.endTime ? new Date(lecture.endTime).toISOString().slice(0, 16) : '',
+    startTime: toInputDateTime(lecture.startTime),
+    endTime: toInputDateTime(lecture.endTime),
     status: lecture.status || 'scheduled',
     meetingLink: lecture.meetingLink || '',
     meetingId: lecture.meetingId || '',
@@ -77,7 +89,11 @@ const UpdateLectureForm = ({ lecture, onClose, onSuccess }: UpdateLectureFormPro
         isActive: formData.isActive
       };
 
-      await lectureApi.updateLecture(lecture.id, payload);
+      await lectureApi.updateLecture(lecture.id, payload, {
+        instituteId: lecture.instituteId,
+        classId: lecture.classId,
+        subjectId: lecture.subjectId
+      });
       
       toast({
         title: "Success",

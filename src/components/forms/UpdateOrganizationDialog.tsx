@@ -123,24 +123,30 @@ const UpdateOrganizationDialog = ({
             </div>
 
             <div>
-              <Label htmlFor="image">Organization Image</Label>
-              <div className="space-y-2">
-                <Input
-                  id="image"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setSelectedImage(e.target.files?.[0] || null)}
-                />
-                {selectedImage && (
-                  <span className="text-xs text-muted-foreground">
-                    Selected: {selectedImage.name}
-                  </span>
+              <Label htmlFor="image">Organization Image (Optional)</Label>
+              <div className="flex items-center gap-4">
+                {(selectedImage || formData.imageUrl) && (
+                  <div className="w-16 h-16 rounded-lg border overflow-hidden flex-shrink-0">
+                    <img
+                      src={selectedImage ? URL.createObjectURL(selectedImage) : formData.imageUrl}
+                      alt="Organization preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 )}
-                {!selectedImage && formData.imageUrl && (
-                  <span className="text-xs text-muted-foreground">
-                    Current: {formData.imageUrl}
-                  </span>
-                )}
+                <div className="flex-1">
+                  <Input
+                    id="image"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setSelectedImage(e.target.files?.[0] || null)}
+                  />
+                  {selectedImage && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Selected: {selectedImage.name}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 

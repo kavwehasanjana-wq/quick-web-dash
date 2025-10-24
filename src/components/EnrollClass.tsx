@@ -439,6 +439,14 @@ const EnrollClass = () => {
             <DialogDescription>
               Enter the enrollment code to join this class. You can get this code from your teacher or institute.
             </DialogDescription>
+            {selectedClass && (
+              <div className="mt-2 p-3 bg-muted rounded-md space-y-1">
+                <p className="text-sm"><span className="font-medium">Class ID:</span> {selectedClass.id}</p>
+                <p className="text-sm"><span className="font-medium">Enrollment Code:</span> {selectedClass.enrollmentCode || 'N/A'}</p>
+                <p className="text-sm"><span className="font-medium">Enrollment Enabled:</span> {selectedClass.enrollmentEnabled ? 'Yes' : 'No'}</p>
+                <p className="text-sm"><span className="font-medium">Requires Verification:</span> {selectedClass.requireTeacherVerification ? 'Yes' : 'No'}</p>
+              </div>
+            )}
           </DialogHeader>
 
           <Form {...form}>

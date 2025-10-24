@@ -3,12 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Building2, RefreshCw, Plus, UserPlus } from 'lucide-react';
+import { Building2, RefreshCw, Plus, UserPlus, Eye } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTableData } from '@/hooks/useTableData';
 import MUITable from '@/components/ui/mui-table';
 import CreateOrganizationForm from '@/components/forms/CreateOrganizationForm';
 import AddOrganizationUserDialog from '@/components/forms/AddOrganizationUserDialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface Organization {
   organizationId: string;
@@ -27,10 +28,34 @@ interface Organization {
   };
 }
 
+interface OrganizationMember {
+  userId: string;
+  studentIdByInstitute: string;
+  firstName: string;
+  lastName: string;
+  name: string;
+  email: string;
+  phoneNumber: string;
+  imageUrl: string;
+  role: string;
+  status: string;
+  enrolledDate: string;
+}
+
 const InstituteOrganizations = () => {
   const { selectedInstitute } = useAuth();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [addUserDialog, setAddUserDialog] = useState<{ open: boolean; orgId: string; orgName: string }>({
+    open: false,
+    orgId: '',
+    orgName: '',
+  });
+
+  const [viewMembersDialog, setViewMembersDialog] = useState<{ 
+    open: boolean; 
+    orgId: string; 
+    orgName: string;
+  }>({
     open: false,
     orgId: '',
     orgName: '',
@@ -44,6 +69,77 @@ const InstituteOrganizations = () => {
       availableLimits: [10, 25, 50]
     }
   });
+
+  const membersData = useTableData<OrganizationMember>({
+    endpoint: viewMembersDialog.orgId && selectedInstitute 
+      ? `/organizations/institute/${selectedInstitute.id}/organization/${viewMembersDialog.orgId}/students`
+      : '',
+    autoLoad: false,
+    pagination: {
+      defaultLimit: 10,
+      availableLimits: [10, 25, 50]
+    }
+  });
+
+  const memberColumns = [
+    {
+      id: 'imageUrl',
+      label: 'Photo',
+      minWidth: 80,
+      format: (_value: any, row: any) => (
+        <Avatar className="h-10 w-10">
+          <AvatarImage src={row.imageUrl} alt={row.name} />
+          <AvatarFallback>{row.name?.charAt(0) || 'U'}</AvatarFallback>
+        </Avatar>
+      )
+    },
+    {
+      id: 'studentIdByInstitute',
+      label: 'Student ID',
+      minWidth: 120,
+    },
+    {
+      id: 'name',
+      label: 'Name',
+      minWidth: 180,
+    },
+    {
+      id: 'email',
+      label: 'Email',
+      minWidth: 200,
+    },
+    {
+      id: 'phoneNumber',
+      label: 'Phone',
+      minWidth: 140,
+    },
+    {
+      id: 'role',
+      label: 'Role',
+      minWidth: 100,
+      format: (_value: any, row: any) => (
+        <Badge variant={row.role === 'ADMIN' ? 'default' : 'secondary'}>
+          {row.role}
+        </Badge>
+      )
+    },
+    {
+      id: 'status',
+      label: 'Status',
+      minWidth: 100,
+      format: (_value: any, row: any) => (
+        <Badge variant={row.status === 'verified' ? 'default' : 'outline'}>
+          {row.status}
+        </Badge>
+      )
+    },
+    {
+      id: 'enrolledDate',
+      label: 'Enrolled Date',
+      minWidth: 140,
+      format: (value: any) => value ? new Date(value).toLocaleDateString() : '-'
+    },
+  ];
 
   const columns = [
     {
@@ -112,17 +208,31 @@ const InstituteOrganizations = () => {
     {
       id: 'actions',
       label: 'Actions',
-      minWidth: 120,
+      minWidth: 200,
       align: 'center' as const,
       format: (_value: any, row: any) => (
-        <Button
-          size="sm"
-          onClick={() => setAddUserDialog({ open: true, orgId: row.organizationId, orgName: row.name })}
-          className="gap-1"
-        >
-          <UserPlus className="h-4 w-4" />
-          Add User
-        </Button>
+        <div className="flex gap-2 justify-center">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setViewMembersDialog({ open: true, orgId: row.organizationId, orgName: row.name });
+              setTimeout(() => membersData.actions.loadData(true), 100);
+            }}
+            className="gap-1"
+          >
+            <Eye className="h-4 w-4" />
+            View Members
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setAddUserDialog({ open: true, orgId: row.organizationId, orgName: row.name })}
+            className="gap-1"
+          >
+            <UserPlus className="h-4 w-4" />
+            Add User
+          </Button>
+        </div>
       )
     },
   ];
@@ -201,6 +311,42 @@ const InstituteOrganizations = () => {
         organizationName={addUserDialog.orgName}
         onSuccess={() => actions.loadData(true)}
       />
+
+      <Dialog open={viewMembersDialog.open} onOpenChange={(open) => setViewMembersDialog({ ...viewMembersDialog, open })}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Members - {viewMembersDialog.orgName}</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            <Card className="h-full flex flex-col border-0 shadow-none">
+              <CardContent className="p-0 flex-1 flex flex-col overflow-hidden">
+                {membersData.state.loading && !membersData.state.data.length ? (
+                  <div className="flex items-center justify-center p-8">
+                    <RefreshCw className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : membersData.state.error ? (
+                  <div className="p-4 text-destructive">{membersData.state.error}</div>
+                ) : (
+                  <MUITable
+                    title=""
+                    columns={memberColumns}
+                    data={membersData.state.data}
+                    page={membersData.pagination.page}
+                    rowsPerPage={membersData.pagination.limit}
+                    totalCount={membersData.pagination.totalCount}
+                    onPageChange={membersData.actions.setPage}
+                    onRowsPerPageChange={membersData.actions.setLimit}
+                    rowsPerPageOptions={membersData.availableLimits}
+                    allowAdd={false}
+                    allowEdit={false}
+                    allowDelete={false}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {state.error && (
         <Card className="border-destructive">

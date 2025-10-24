@@ -500,9 +500,10 @@ const AssignUserMethodsDialog = ({ open, onClose, instituteId, onSuccess }: Assi
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="STUDENT">Student</SelectItem>
+                      <SelectItem value="INSTITUTE_ADMIN">Institute Admin</SelectItem>
                       <SelectItem value="TEACHER">Teacher</SelectItem>
-                      <SelectItem value="PARENT">Parent</SelectItem>
+                      <SelectItem value="STUDENT">Student</SelectItem>
+                      <SelectItem value="ATTENDANCE_MARKER">Attendance Marker</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -602,9 +603,10 @@ const AssignUserMethodsDialog = ({ open, onClose, instituteId, onSuccess }: Assi
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="STUDENT">Student</SelectItem>
+                      <SelectItem value="INSTITUTE_ADMIN">Institute Admin</SelectItem>
                       <SelectItem value="TEACHER">Teacher</SelectItem>
-                      <SelectItem value="PARENT">Parent</SelectItem>
+                      <SelectItem value="STUDENT">Student</SelectItem>
+                      <SelectItem value="ATTENDANCE_MARKER">Attendance Marker</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -700,9 +702,10 @@ const AssignUserMethodsDialog = ({ open, onClose, instituteId, onSuccess }: Assi
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="STUDENT">Student</SelectItem>
+                      <SelectItem value="INSTITUTE_ADMIN">Institute Admin</SelectItem>
                       <SelectItem value="TEACHER">Teacher</SelectItem>
-                      <SelectItem value="PARENT">Parent</SelectItem>
+                      <SelectItem value="STUDENT">Student</SelectItem>
+                      <SelectItem value="ATTENDANCE_MARKER">Attendance Marker</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -799,9 +802,10 @@ const AssignUserMethodsDialog = ({ open, onClose, instituteId, onSuccess }: Assi
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="STUDENT">Student</SelectItem>
+                      <SelectItem value="INSTITUTE_ADMIN">Institute Admin</SelectItem>
                       <SelectItem value="TEACHER">Teacher</SelectItem>
-                      <SelectItem value="PARENT">Parent</SelectItem>
+                      <SelectItem value="STUDENT">Student</SelectItem>
+                      <SelectItem value="ATTENDANCE_MARKER">Attendance Marker</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

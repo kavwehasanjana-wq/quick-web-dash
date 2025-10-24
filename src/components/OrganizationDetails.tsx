@@ -7,10 +7,9 @@ import { Organization, organizationSpecificApi } from '@/api/organization.api';
 import OrganizationGallery from './OrganizationGallery';
 import OrganizationCourses from './OrganizationCourses';
 import OrganizationCourseLectures from './OrganizationCourseLectures';
-import OrganizationMembers from './OrganizationMembers';
+import OrganizationStudents from './OrganizationStudents';
 import OrganizationUnverifiedMembers from './OrganizationUnverifiedMembers';
 import AssignInstituteDialog from './AssignInstituteDialog';
-import OrganizationImageUpload from './OrganizationImageUpload';
 import UpdateOrganizationDialog from './forms/UpdateOrganizationDialog';
 interface OrganizationDetailsProps {
   organization: Organization;
@@ -122,7 +121,7 @@ const OrganizationDetails = ({
         return <OrganizationCourseLectures course={null} onBack={() => {}} organization={organization} />;
       case 'members':
         // Only render if this tab is active to avoid expensive API calls on initial load
-        return activeTab === 'members' ? <OrganizationMembers organizationId={organization.organizationId} userRole={effectiveUserRole} /> : null;
+        return activeTab === 'members' ? <OrganizationStudents organizationId={organization.organizationId} userRole={effectiveUserRole} /> : null;
       case 'unverified':
         // Only render if this tab is active to avoid expensive API calls on initial load
         return activeTab === 'unverified' ? <OrganizationUnverifiedMembers organizationId={organization.organizationId} userRole={effectiveUserRole} /> : null;

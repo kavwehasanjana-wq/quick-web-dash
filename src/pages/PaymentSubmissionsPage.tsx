@@ -118,12 +118,7 @@ const PaymentSubmissionsPage: React.FC = () => {
   };
 
   // Filter submissions based on search term
-  const filteredSubmissions = submissions.filter(submission => 
-    submission.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    submission.submittedAmount?.toString().includes(searchTerm) ||
-    submission.transactionId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    false
-  );
+  const filteredSubmissions = submissions.filter(submission => submission.username?.toLowerCase().includes(searchTerm.toLowerCase()) || submission.submittedAmount?.toString().includes(searchTerm) || submission.transactionId?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
   const handleRefresh = () => {
     setLoaded(false);
     setSearchTerm('');
@@ -174,8 +169,7 @@ const PaymentSubmissionsPage: React.FC = () => {
         </div>
 
         {/* Subject Info */}
-        {selectedSubject && (
-          <Card className="border-border">
+        {selectedSubject && <Card className="border-border">
             <CardHeader className="p-3 sm:p-4">
               <CardTitle className="flex items-center gap-2 text-sm sm:text-base text-foreground">
                 <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
@@ -185,8 +179,7 @@ const PaymentSubmissionsPage: React.FC = () => {
                 {selectedClass?.name} • {selectedInstitute?.name}
               </p>
             </CardHeader>
-          </Card>
-        )}
+          </Card>}
 
 
         {/* Payment Submissions Section */}
@@ -215,21 +208,11 @@ const PaymentSubmissionsPage: React.FC = () => {
               {/* Search Input */}
               <div className="relative">
                 <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3 sm:h-4 sm:w-4" />
-                <Input 
-                  placeholder="Search student, amount, or transaction..." 
-                  value={searchTerm} 
-                  onChange={e => setSearchTerm(e.target.value)} 
-                  className="pl-8 sm:pl-10 text-xs sm:text-sm h-9 sm:h-10" 
-                />
+                <Input placeholder="Search student, amount, or transaction..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-8 sm:pl-10 text-xs sm:text-sm h-9 sm:h-10" />
               </div>
 
               {/* Submissions Count */}
-              <div className="bg-muted/50 rounded-lg p-2 sm:p-3">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <span className="text-xs sm:text-sm font-medium text-muted-foreground">Total Submissions</span>
-                  <Badge variant="secondary" className="text-xs sm:text-sm">{totalCount}</Badge>
-                </div>
-              </div>
+              
 
               {/* Load Button or Table */}
               {!loaded ? <div className="text-center py-6 sm:py-8">
@@ -240,21 +223,34 @@ const PaymentSubmissionsPage: React.FC = () => {
                 </div> : <Paper sx={{
               width: '100%',
               overflow: 'hidden',
-              height: { xs: 'calc(100vh - 400px)', sm: 'calc(100vh - 360px)', md: 'calc(100vh - 320px)' }
+              height: {
+                xs: 'calc(100vh - 400px)',
+                sm: 'calc(100vh - 360px)',
+                md: 'calc(100vh - 320px)'
+              }
             }}>
                   <TableContainer sx={{
                 height: 'calc(100% - 52px)',
                 overflowX: 'auto'
               }}>
                     <Table stickyHeader aria-label="payment submissions table" sx={{
-                  minWidth: { xs: 800, sm: 900 }
+                  minWidth: {
+                    xs: 800,
+                    sm: 900
+                  }
                 }}>
                       <TableHead>
                         <TableRow>
                           {columns.map(column => <TableCell key={column.id} align={column.align} sx={{
                         minWidth: column.minWidth,
-                        fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                        padding: { xs: '8px', sm: '16px' }
+                        fontSize: {
+                          xs: '0.75rem',
+                          sm: '0.875rem'
+                        },
+                        padding: {
+                          xs: '8px',
+                          sm: '16px'
+                        }
                       }}>
                               {column.label}
                             </TableCell>)}
@@ -263,7 +259,10 @@ const PaymentSubmissionsPage: React.FC = () => {
                       <TableBody>
                         {filteredSubmissions.length === 0 ? <TableRow>
                             <TableCell colSpan={columns.length} align="center" sx={{
-                        py: { xs: 4, sm: 8 }
+                        py: {
+                          xs: 4,
+                          sm: 8
+                        }
                       }}>
                               <div className="text-center px-4">
                                 <FileText className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-3 sm:mb-4" />
@@ -277,96 +276,129 @@ const PaymentSubmissionsPage: React.FC = () => {
                             </TableCell>
                           </TableRow> : filteredSubmissions.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map(submission => <TableRow hover role="checkbox" tabIndex={-1} key={submission.id}>
                                 <TableCell sx={{
-                          fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                          padding: { xs: '8px', sm: '16px' }
-                        }}>{submission.username || 'Unknown User'}</TableCell>
+                        fontSize: {
+                          xs: '0.75rem',
+                          sm: '0.875rem'
+                        },
+                        padding: {
+                          xs: '8px',
+                          sm: '16px'
+                        }
+                      }}>{submission.username || 'Unknown User'}</TableCell>
                                 <TableCell align="right" sx={{
-                          fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                          padding: { xs: '8px', sm: '16px' }
-                        }}>
+                        fontSize: {
+                          xs: '0.75rem',
+                          sm: '0.875rem'
+                        },
+                        padding: {
+                          xs: '8px',
+                          sm: '16px'
+                        }
+                      }}>
                                   Rs {parseFloat(submission.submittedAmount || '0').toLocaleString()}
                                 </TableCell>
                                 <TableCell sx={{
-                          fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                          padding: { xs: '8px', sm: '16px' }
-                        }}>{submission.transactionId}</TableCell>
+                        fontSize: {
+                          xs: '0.75rem',
+                          sm: '0.875rem'
+                        },
+                        padding: {
+                          xs: '8px',
+                          sm: '16px'
+                        }
+                      }}>{submission.transactionId}</TableCell>
                                 <TableCell sx={{
-                          fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                          padding: { xs: '8px', sm: '16px' }
-                        }}>
+                        fontSize: {
+                          xs: '0.75rem',
+                          sm: '0.875rem'
+                        },
+                        padding: {
+                          xs: '8px',
+                          sm: '16px'
+                        }
+                      }}>
                                   {new Date(submission.paymentDate).toLocaleDateString()}
                                 </TableCell>
                                 <TableCell sx={{
-                          fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                          padding: { xs: '8px', sm: '16px' }
-                        }}>
+                        fontSize: {
+                          xs: '0.75rem',
+                          sm: '0.875rem'
+                        },
+                        padding: {
+                          xs: '8px',
+                          sm: '16px'
+                        }
+                      }}>
                                   <span className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium border ${getStatusColor(submission.status)}`}>
                                     {submission.status}
                                   </span>
                                 </TableCell>
                                 <TableCell sx={{
-                          fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                          padding: { xs: '8px', sm: '16px' }
-                        }}>
+                        fontSize: {
+                          xs: '0.75rem',
+                          sm: '0.875rem'
+                        },
+                        padding: {
+                          xs: '8px',
+                          sm: '16px'
+                        }
+                      }}>
                                   {new Date(submission.uploadedAt).toLocaleDateString()}
                                 </TableCell>
                                 <TableCell sx={{
-                          fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                          padding: { xs: '8px', sm: '16px' }
-                        }}>
-                                  {submission.receiptUrl ? (
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm" 
-                                      onClick={() => window.open(submission.receiptUrl, '_blank')} 
-                                      className="flex items-center gap-1 text-xs px-2 py-1"
-                                    >
+                        fontSize: {
+                          xs: '0.75rem',
+                          sm: '0.875rem'
+                        },
+                        padding: {
+                          xs: '8px',
+                          sm: '16px'
+                        }
+                      }}>
+                                  {submission.receiptUrl ? <Button variant="outline" size="sm" onClick={() => window.open(submission.receiptUrl, '_blank')} className="flex items-center gap-1 text-xs px-2 py-1">
                                       <Eye className="h-3 w-3" />
                                       <span className="hidden sm:inline">View</span>
-                                    </Button>
-                                  ) : (
-                                    <span className="text-muted-foreground text-xs sm:text-sm">N/A</span>
-                                  )}
+                                    </Button> : <span className="text-muted-foreground text-xs sm:text-sm">N/A</span>}
                                 </TableCell>
                                 <TableCell sx={{
-                          fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                          padding: { xs: '8px', sm: '16px' }
-                        }}>
+                        fontSize: {
+                          xs: '0.75rem',
+                          sm: '0.875rem'
+                        },
+                        padding: {
+                          xs: '8px',
+                          sm: '16px'
+                        }
+                      }}>
                                   <div className="flex items-center gap-1 sm:gap-2">
-                                    {canVerifySubmissions && submission.status === 'PENDING' && (
-                                      <Button 
-                                        onClick={() => setVerifyingSubmission(submission)} 
-                                        className="flex items-center gap-1 text-xs px-2 py-1" 
-                                        size="sm"
-                                      >
+                                    {canVerifySubmissions && submission.status === 'PENDING' && <Button onClick={() => setVerifyingSubmission(submission)} className="flex items-center gap-1 text-xs px-2 py-1" size="sm">
                                         <Shield className="h-3 w-3" />
                                         <span className="hidden sm:inline">Verify</span>
-                                      </Button>
-                                    )}
+                                      </Button>}
                                   </div>
                                 </TableCell>
                               </TableRow>)}
                       </TableBody>
                     </Table>
                   </TableContainer>
-                  <TablePagination 
-                    rowsPerPageOptions={[25, 50, 100]} 
-                    component="div" 
-                    count={searchTerm ? filteredSubmissions.length : totalCount} 
-                    rowsPerPage={rowsPerPage} 
-                    page={page} 
-                    onPageChange={handleChangePage} 
-                    onRowsPerPageChange={handleChangeRowsPerPage}
-                    sx={{
-                      '.MuiTablePagination-toolbar': {
-                        fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                        minHeight: { xs: '48px', sm: '52px' }
-                      },
-                      '.MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows': {
-                        fontSize: { xs: '0.75rem', sm: '0.875rem' }
-                      }
-                    }}
-                  />
+                  <TablePagination rowsPerPageOptions={[25, 50, 100]} component="div" count={searchTerm ? filteredSubmissions.length : totalCount} rowsPerPage={rowsPerPage} page={page} onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage} sx={{
+                '.MuiTablePagination-toolbar': {
+                  fontSize: {
+                    xs: '0.75rem',
+                    sm: '0.875rem'
+                  },
+                  minHeight: {
+                    xs: '48px',
+                    sm: '52px'
+                  }
+                },
+                '.MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows': {
+                  fontSize: {
+                    xs: '0.75rem',
+                    sm: '0.875rem'
+                  }
+                }
+              }} />
                 </Paper>}
             </div>
           </CardContent>

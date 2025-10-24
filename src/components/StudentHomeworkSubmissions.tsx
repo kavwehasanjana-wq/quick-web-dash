@@ -128,18 +128,6 @@ const StudentHomeworkSubmissions = () => {
           {format(new Date(row.updatedAt), 'MMM dd, yyyy HH:mm')}
         </div>
   }, {
-    id: 'status',
-    label: 'Status',
-    minWidth: 120,
-    align: 'center' as const,
-    format: (value: any, row: HomeworkSubmission) => row.teacherCorrectionFileUrl ? <Badge variant="default" className="text-xs">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Corrected
-          </Badge> : <Badge variant="secondary" className="text-xs">
-            <XCircle className="h-3 w-3 mr-1" />
-            Pending
-          </Badge>
-  }, {
     id: 'remarks',
     label: 'Remarks',
     minWidth: 200,

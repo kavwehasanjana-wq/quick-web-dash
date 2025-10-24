@@ -11,19 +11,31 @@ import { examResultsApi, type ExamResult, type ExamResultsQueryParams } from '@/
 import { useApiRequest } from '@/hooks/useApiRequest';
 import AppLayout from '@/components/layout/AppLayout';
 import MUITable from '@/components/ui/mui-table';
-
 const ExamResults = () => {
   const navigate = useNavigate();
-  const { examId } = useParams<{ examId: string }>();
+  const {
+    examId
+  } = useParams<{
+    examId: string;
+  }>();
   const [examDetails, setExamDetails] = useState<{
     title?: string;
     examType?: string;
     totalMarks?: string;
     passingMarks?: string;
   }>({});
-  
-  const { user, selectedInstitute, selectedClass, selectedSubject, currentInstituteId, currentClassId, currentSubjectId } = useAuth();
-  const { toast } = useToast();
+  const {
+    user,
+    selectedInstitute,
+    selectedClass,
+    selectedSubject,
+    currentInstituteId,
+    currentClassId,
+    currentSubjectId
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
   const [examResults, setExamResults] = useState<ExamResult[]>([]);
   const [totalResults, setTotalResults] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -32,19 +44,19 @@ const ExamResults = () => {
   const [hasPreviousPage, setHasPreviousPage] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
-
-  const { execute: fetchResults, loading } = useApiRequest(examResultsApi.getExamResults);
-
+  const {
+    execute: fetchResults,
+    loading
+  } = useApiRequest(examResultsApi.getExamResults);
   const loadExamResults = async (page = currentPage) => {
     if (!currentInstituteId || !currentClassId || !currentSubjectId) {
       toast({
         title: "Selection Required",
         description: "Please select institute, class, and subject to view exam results",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     try {
       const params: ExamResultsQueryParams = {
         page,
@@ -53,13 +65,10 @@ const ExamResults = () => {
         classId: currentClassId,
         subjectId: currentSubjectId
       };
-
       if (examId) {
         params.examId = examId;
       }
-
       const response = await fetchResults(params, true);
-      
       setExamResults(response.data);
       setTotalResults(response.meta.total);
       setTotalPages(response.meta.totalPages);
@@ -73,38 +82,33 @@ const ExamResults = () => {
         const firstResult = response.data[0];
         setExamDetails({
           title: firstResult.exam.title,
-          examType: firstResult.exam.examType,
+          examType: firstResult.exam.examType
         });
       }
-      
       toast({
         title: "Results Loaded",
-        description: `Loaded ${response.data.length} exam results`,
+        description: `Loaded ${response.data.length} exam results`
       });
     } catch (error) {
       console.error('Error loading exam results:', error);
       toast({
         title: "Error",
         description: "Failed to load exam results",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   useEffect(() => {
     if (currentInstituteId && currentClassId && currentSubjectId && examId) {
       loadExamResults(1);
     }
   }, [currentInstituteId, currentClassId, currentSubjectId, examId]);
-
   const handlePageChange = (newPage: number) => {
     loadExamResults(newPage);
   };
-
   const handleGoBack = () => {
     navigate('/exams');
   };
-
   const getContextBreadcrumb = () => {
     const parts = [];
     if (selectedInstitute) parts.push(selectedInstitute.name);
@@ -112,7 +116,6 @@ const ExamResults = () => {
     if (selectedSubject) parts.push(selectedSubject.name);
     return parts.length > 0 ? `Exams (${parts.join(' → ')})` : 'Exams';
   };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -120,7 +123,6 @@ const ExamResults = () => {
       day: 'numeric'
     });
   };
-
   const getGradeColor = (grade: string) => {
     switch (grade.toUpperCase()) {
       case 'A+':
@@ -140,13 +142,11 @@ const ExamResults = () => {
         return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
     }
   };
-
   const calculateAverageScore = () => {
     if (examResults.length === 0) return 0;
     const totalScore = examResults.reduce((sum, result) => sum + parseFloat(result.score), 0);
-    return Math.round((totalScore / examResults.length) * 100) / 100;
+    return Math.round(totalScore / examResults.length * 100) / 100;
   };
-
   const getGradeDistribution = () => {
     const distribution: Record<string, number> = {};
     examResults.forEach(result => {
@@ -155,7 +155,6 @@ const ExamResults = () => {
     });
     return distribution;
   };
-
   const gradeDistribution = getGradeDistribution();
   const averageScore = calculateAverageScore();
 
@@ -163,27 +162,14 @@ const ExamResults = () => {
   const filteredResults = examResults.filter(result => {
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
-    return (
-      result.student.firstName.toLowerCase().includes(searchLower) ||
-      result.student.lastName.toLowerCase().includes(searchLower) ||
-      result.student.email.toLowerCase().includes(searchLower) ||
-      result.grade.toLowerCase().includes(searchLower) ||
-      (result.remarks && result.remarks.toLowerCase().includes(searchLower))
-    );
+    return result.student.firstName.toLowerCase().includes(searchLower) || result.student.lastName.toLowerCase().includes(searchLower) || result.student.email.toLowerCase().includes(searchLower) || result.grade.toLowerCase().includes(searchLower) || result.remarks && result.remarks.toLowerCase().includes(searchLower);
   });
-
-  return (
-    <AppLayout>
+  return <AppLayout>
       <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
           <div className="flex-1">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleGoBack}
-              className="mb-2 -ml-2"
-            >
+            <Button variant="ghost" size="sm" onClick={handleGoBack} className="mb-2 -ml-2">
               <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               <span className="text-sm sm:text-base truncate">{getContextBreadcrumb()}</span>
             </Button>
@@ -193,70 +179,32 @@ const ExamResults = () => {
             <p className="text-sm sm:text-base text-muted-foreground mt-1">
               View and analyze exam results
             </p>
-            {lastRefresh && (
-              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            {lastRefresh && <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                 Last refreshed: {lastRefresh.toLocaleTimeString()}
-              </p>
-            )}
+              </p>}
           </div>
         </div>
 
         {/* Exam Info and Current Selection */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Exam Details & Selection
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {examDetails.title && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4 border-b">
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary">Type: {examDetails.examType || 'N/A'}</Badge>
-                    <Badge variant="outline">Total: {examDetails.totalMarks || 'N/A'} marks</Badge>
-                    <Badge variant="outline">Passing: {examDetails.passingMarks || 'N/A'} marks</Badge>
-                  </div>
-                </div>
-              )}
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline">Institute: {selectedInstitute?.name || 'Not Selected'}</Badge>
-                <Badge variant="outline">Class: {selectedClass?.name || 'Not Selected'}</Badge>
-                <Badge variant="outline">Subject: {selectedSubject?.name || 'Not Selected'}</Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        
 
         {/* Action Bar */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <h2 className="text-lg sm:text-xl font-semibold">
             All Results ({filteredResults.length})
           </h2>
-          <Button
-            variant="outline"
-            onClick={() => loadExamResults(currentPage)}
-            disabled={loading}
-            size="sm"
-            className="w-full sm:w-auto"
-          >
-            {loading ? (
-              <>
+          <Button variant="outline" onClick={() => loadExamResults(currentPage)} disabled={loading} size="sm" className="w-full sm:w-auto">
+            {loading ? <>
                 <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-2 animate-spin" />
                 <span className="text-sm">Loading...</span>
-              </>
-            ) : (
-              <>
+              </> : <>
                 <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                 <span className="text-sm">Refresh</span>
-              </>
-            )}
+              </>}
           </Button>
         </div>
 
-        {!currentInstituteId || !currentClassId || !currentSubjectId ? (
-          <Card>
+        {!currentInstituteId || !currentClassId || !currentSubjectId ? <Card>
             <CardContent className="p-8 text-center">
               <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">Selection Required</h3>
@@ -264,12 +212,9 @@ const ExamResults = () => {
                 Please select institute, class, and subject to view exam results.
               </p>
             </CardContent>
-          </Card>
-        ) : (
-          <>
+          </Card> : <>
           {/* Summary Cards */}
-          {examResults.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+          {examResults.length > 0 && <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Results</CardTitle>
@@ -317,12 +262,10 @@ const ExamResults = () => {
                   </div>
                 </CardContent>
               </Card>
-            </div>
-          )}
+            </div>}
 
           {/* Grade Distribution */}
-          {examResults.length > 0 && Object.keys(gradeDistribution).length > 0 && (
-            <Card>
+          {examResults.length > 0 && Object.keys(gradeDistribution).length > 0 && <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Award className="h-5 w-5" />
@@ -331,20 +274,17 @@ const ExamResults = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-4">
-                  {Object.entries(gradeDistribution).map(([grade, count]) => (
-                    <div key={grade} className="flex items-center gap-2">
+                  {Object.entries(gradeDistribution).map(([grade, count]) => <div key={grade} className="flex items-center gap-2">
                       <Badge className={getGradeColor(grade)}>
                         Grade {grade}
                       </Badge>
                       <span className="text-sm text-muted-foreground">
                         {count} result{count !== 1 ? 's' : ''}
                       </span>
-                    </div>
-                  ))}
+                    </div>)}
                 </div>
               </CardContent>
-            </Card>
-          )}
+            </Card>}
 
             {/* Results Table */}
             <Card>
@@ -362,31 +302,19 @@ const ExamResults = () => {
                   {/* Search Bar */}
                   <div className="relative w-full md:max-w-sm">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3 sm:h-4 sm:w-4" />
-                    <Input
-                      placeholder="Search students, grade, remarks..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-8 sm:pl-10 text-sm"
-                    />
+                    <Input placeholder="Search students, grade, remarks..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-8 sm:pl-10 text-sm" />
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                {loading ? (
-                  <div className="flex justify-center items-center py-8">
+                {loading ? <div className="flex justify-center items-center py-8">
                     <RefreshCw className="h-6 w-6 animate-spin mr-2" />
                     <span>Loading results...</span>
-                  </div>
-                ) : filteredResults.length > 0 ? (
-                  <MUITable
-                    title=""
-                    columns={[
-                      {
-                        id: 'student',
-                        label: 'Student',
-                        minWidth: 180,
-                        format: (value: any, row: ExamResult) => (
-                          <div className="flex flex-col">
+                  </div> : filteredResults.length > 0 ? <MUITable title="" columns={[{
+              id: 'student',
+              label: 'Student',
+              minWidth: 180,
+              format: (value: any, row: ExamResult) => <div className="flex flex-col">
                             <span className="font-medium">
                               {row.student.firstName} {row.student.lastName}
                             </span>
@@ -394,89 +322,57 @@ const ExamResults = () => {
                               {row.student.email}
                             </span>
                           </div>
-                        )
-                      },
-                      {
-                        id: 'exam',
-                        label: 'Exam Details',
-                        minWidth: 150,
-                        format: (value: any, row: ExamResult) => (
-                          <div className="flex flex-col">
+            }, {
+              id: 'exam',
+              label: 'Exam Details',
+              minWidth: 150,
+              format: (value: any, row: ExamResult) => <div className="flex flex-col">
                             <span className="font-medium">{row.exam.title}</span>
                             <Badge variant="outline" className="text-xs w-fit mt-1">
                               {row.exam.examType}
                             </Badge>
                           </div>
-                        )
-                      },
-                      {
-                        id: 'score',
-                        label: 'Score',
-                        minWidth: 120,
-                        align: 'center' as const,
-                        format: (value: string, row: ExamResult) => (
-                          <div className="flex items-center gap-2 justify-center">
+            }, {
+              id: 'score',
+              label: 'Score',
+              minWidth: 120,
+              align: 'center' as const,
+              format: (value: string, row: ExamResult) => <div className="flex items-center gap-2 justify-center">
                             <span className="font-semibold text-lg">{value}</span>
                             {examDetails.totalMarks && <span className="text-muted-foreground">/ {examDetails.totalMarks}</span>}
                           </div>
-                        )
-                      },
-                      {
-                        id: 'grade',
-                        label: 'Grade',
-                        minWidth: 100,
-                        align: 'center' as const,
-                        format: (value: string) => (
-                          <Badge className={getGradeColor(value)}>
+            }, {
+              id: 'grade',
+              label: 'Grade',
+              minWidth: 100,
+              align: 'center' as const,
+              format: (value: string) => <Badge className={getGradeColor(value)}>
                             {value}
                           </Badge>
-                        )
-                      },
-                      ...(examDetails.totalMarks && examDetails.passingMarks ? [{
-                        id: 'status',
-                        label: 'Pass/Fail',
-                        minWidth: 100,
-                        align: 'center' as const,
-                        format: (value: any, row: ExamResult) => (
-                          <Badge 
-                            variant={parseFloat(row.score) >= parseFloat(examDetails.passingMarks!) ? "default" : "destructive"}
-                          >
+            }, ...(examDetails.totalMarks && examDetails.passingMarks ? [{
+              id: 'status',
+              label: 'Pass/Fail',
+              minWidth: 100,
+              align: 'center' as const,
+              format: (value: any, row: ExamResult) => <Badge variant={parseFloat(row.score) >= parseFloat(examDetails.passingMarks!) ? "default" : "destructive"}>
                             {parseFloat(row.score) >= parseFloat(examDetails.passingMarks!) ? "Pass" : "Fail"}
                           </Badge>
-                        )
-                      }] : []),
-                      {
-                        id: 'createdAt',
-                        label: 'Date',
-                        minWidth: 120,
-                        format: (value: string) => (
-                          <div className="flex items-center gap-1 text-sm">
+            }] : []), {
+              id: 'createdAt',
+              label: 'Date',
+              minWidth: 120,
+              format: (value: string) => <div className="flex items-center gap-1 text-sm">
                             <Calendar className="h-3 w-3" />
                             {formatDate(value)}
                           </div>
-                        )
-                      },
-                      {
-                        id: 'remarks',
-                        label: 'Remarks',
-                        minWidth: 150,
-                        format: (value: string) => (
-                          <span className="text-sm">
+            }, {
+              id: 'remarks',
+              label: 'Remarks',
+              minWidth: 150,
+              format: (value: string) => <span className="text-sm">
                             {value || "No remarks"}
                           </span>
-                        )
-                      }
-                    ]}
-                    data={filteredResults}
-                    page={currentPage - 1}
-                    rowsPerPage={10}
-                    totalCount={totalResults}
-                    onPageChange={(newPage) => handlePageChange(newPage + 1)}
-                    onRowsPerPageChange={() => {}}
-                    rowsPerPageOptions={[10]}
-                  />
-                ) : (
-                  <div className="text-center py-8">
+            }]} data={filteredResults} page={currentPage - 1} rowsPerPage={10} totalCount={totalResults} onPageChange={newPage => handlePageChange(newPage + 1)} onRowsPerPageChange={() => {}} rowsPerPageOptions={[10]} /> : <div className="text-center py-8">
                     <Award className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-semibold mb-2">
                       {searchTerm ? 'No results match your search' : 'No Exam Results'}
@@ -484,15 +380,11 @@ const ExamResults = () => {
                     <p className="text-muted-foreground">
                       {searchTerm ? 'Try adjusting your search criteria.' : 'No exam results found for the selected context.'}
                     </p>
-                  </div>
-                )}
+                  </div>}
               </CardContent>
             </Card>
-          </>
-        )}
+          </>}
       </div>
-    </AppLayout>
-  );
+    </AppLayout>;
 };
-
 export default ExamResults;

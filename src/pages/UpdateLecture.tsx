@@ -123,7 +123,11 @@ const UpdateLecture = () => {
         isActive: formData.isActive
       };
 
-      await lectureApi.updateLecture(lectureId!, payload);
+      await lectureApi.updateLecture(lectureId!, payload, {
+        instituteId: lecture?.instituteId,
+        classId: lecture?.classId,
+        subjectId: lecture?.subjectId
+      });
       
       toast({
         title: "Success",

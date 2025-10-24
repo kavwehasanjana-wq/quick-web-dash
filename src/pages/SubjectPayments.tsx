@@ -320,7 +320,7 @@ const SubjectPayments = () => {
             overflow: 'hidden'
           }}>
                 <TableContainer sx={{
-              maxHeight: 'calc(100vh - 350px)',
+              minHeight: '500px',
               overflow: 'auto'
             }}>
                   <Table stickyHeader aria-label="subject payments table">

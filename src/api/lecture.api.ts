@@ -116,20 +116,14 @@ class LectureApi {
     });
   }
 
-  async updateInstituteLecture(id: string, data: Partial<LectureCreateData>): Promise<Lecture> {
+  async updateInstituteLecture(id: string, data: Partial<LectureCreateData>, context?: { instituteId?: string }): Promise<Lecture> {
     console.log('📝 Updating institute lecture (will invalidate cache):', id, data);
-    return enhancedCachedClient.patch<Lecture>(`/institute-lectures/${id}`, data, {
-      instituteId: data.instituteId
-    });
+    return enhancedCachedClient.patch<Lecture>(`/institute-lectures/${id}`, data, context);
   }
 
-  async updateLecture(id: string, data: Partial<LectureCreateData>): Promise<Lecture> {
+  async updateLecture(id: string, data: Partial<LectureCreateData>, context?: { instituteId?: string; classId?: string; subjectId?: string }): Promise<Lecture> {
     console.log('📝 Updating lecture (will invalidate cache):', id, data);
-    return enhancedCachedClient.patch<Lecture>(`/institute-class-subject-lectures/${id}`, data, {
-      instituteId: data.instituteId,
-      classId: data.classId,
-      subjectId: data.subjectId
-    });
+    return enhancedCachedClient.patch<Lecture>(`/institute-class-subject-lectures/${id}`, data, context);
   }
 
   async deleteLecture(id: string, context?: { instituteId?: string; classId?: string; subjectId?: string }): Promise<void> {

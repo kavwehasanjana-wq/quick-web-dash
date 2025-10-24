@@ -90,8 +90,8 @@ const TeacherLectures = () => {
     { key: 'description', header: 'Description' },
     { key: 'lectureType', header: 'Type', render: (value: string) => <Badge variant="outline">{value}</Badge> },
     { key: 'venue', header: 'Venue' },
-    { key: 'startTime', header: 'Start Time', render: (value: string) => new Date(value).toLocaleString() },
-    { key: 'endTime', header: 'End Time', render: (value: string) => new Date(value).toLocaleString() },
+    { key: 'startTime', header: 'Start Time', render: (value: any) => { const d = value instanceof Date ? value : new Date(value); return isNaN(d.getTime()) ? 'N/A' : d.toLocaleString(); } },
+    { key: 'endTime', header: 'End Time', render: (value: any) => { const d = value instanceof Date ? value : new Date(value); return isNaN(d.getTime()) ? 'N/A' : d.toLocaleString(); } },
     { 
       key: 'status', 
       header: 'Status',

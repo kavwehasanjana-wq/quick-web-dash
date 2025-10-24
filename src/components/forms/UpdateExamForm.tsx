@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Card, CardContent } from '../ui/card';
 import { toast } from '../ui/use-toast';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
-import { getBaseUrl, getApiHeaders } from '../../contexts/utils/auth.api';
+import { examApi } from '@/api/exam.api';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
@@ -42,16 +42,44 @@ export const UpdateExamForm: React.FC<UpdateExamFormProps> = ({ exam, onClose, o
     return null;
   }
   
+  const toDateString = (value: any): string => {
+    if (!value) return '';
+    try {
+      const d = value instanceof Date ? value : new Date(value);
+      if (isNaN(d.getTime())) return '';
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch {
+      return '';
+    }
+  };
+
+  const toTimeString = (value: any): string => {
+    if (!value) return '';
+    try {
+      const d = value instanceof Date ? value : new Date(value);
+      if (isNaN(d.getTime())) return '';
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      const seconds = String(d.getSeconds()).padStart(2, '0');
+      return `${hours}:${minutes}:${seconds}`;
+    } catch {
+      return '';
+    }
+  };
+  
   const [formData, setFormData] = useState({
     title: exam.title || '',
     description: exam.description || '',
     examType: exam.examType || 'online',
-    duration: exam.durationMinutes || 60,
-    maxMarks: exam.totalMarks || 100,
+    duration: exam.durationMinutes || exam.duration || 60,
+    maxMarks: exam.totalMarks || exam.maxMarks || 100,
     passingMarks: exam.passingMarks || 40,
-    examDate: exam.scheduleDate ? exam.scheduleDate.split('T')[0] : '',
-    startTime: exam.startTime ? new Date(exam.startTime).toTimeString().slice(0, 8) : '09:00:00',
-    endTime: exam.endTime ? new Date(exam.endTime).toTimeString().slice(0, 8) : '10:00:00',
+    examDate: toDateString(exam.scheduleDate || exam.examDate),
+    startTime: toTimeString(exam.startTime) || '09:00:00',
+    endTime: toTimeString(exam.endTime) || '10:00:00',
     venue: exam.venue || '',
     examLink: exam.examLink || '',
     instructions: exam.instructions || '',
@@ -77,6 +105,9 @@ export const UpdateExamForm: React.FC<UpdateExamFormProps> = ({ exam, onClose, o
 
     try {
       const payload = {
+        instituteId: exam.instituteId,
+        classId: exam.classId,
+        subjectId: exam.subjectId,
         title: formData.title,
         description: formData.description,
         examType: formData.examType,
@@ -90,24 +121,12 @@ export const UpdateExamForm: React.FC<UpdateExamFormProps> = ({ exam, onClose, o
         examLink: formData.examLink || null,
         instructions: formData.instructions || null,
         status: formData.status,
-        createdBy: formData.createdBy,
         toWhom: formData.toWhom,
         isActive: formData.isActive
       };
 
-      const response = await fetch(`${getBaseUrl()}/institute-class-subject-exams/${exam.id}`, {
-        method: 'PATCH',
-        headers: getApiHeaders(),
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('Exam updated successfully:', result);
+      await examApi.updateExam(exam.id, payload);
+      console.log('Exam updated successfully');
 
       toast({
         title: "Success",

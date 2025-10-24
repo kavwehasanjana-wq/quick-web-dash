@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Save } from 'lucide-react';
 
 export interface GradeRange {
   grade: string;
@@ -15,14 +15,27 @@ interface GradeConfigurationCardProps {
   gradeRanges: GradeRange[];
   onGradeRangesChange: (ranges: GradeRange[]) => void;
   onReset: () => void;
+  onSave: () => void;
 }
 
 const GradeConfigurationCard: React.FC<GradeConfigurationCardProps> = ({
   gradeRanges,
   onGradeRangesChange,
-  onReset
+  onReset,
+  onSave
 }) => {
+  const ALLOWED_GRADES = ['A', 'B', 'C', 'S', 'F'];
+  
   const handleRangeChange = (index: number, field: keyof GradeRange, value: string | number) => {
+    // Validate grade input
+    if (field === 'grade') {
+      const gradeValue = String(value).toUpperCase();
+      if (gradeValue && !ALLOWED_GRADES.includes(gradeValue)) {
+        return; // Don't update if not an allowed grade
+      }
+      value = gradeValue;
+    }
+    
     const updatedRanges = [...gradeRanges];
     updatedRanges[index] = {
       ...updatedRanges[index],
@@ -35,10 +48,16 @@ const GradeConfigurationCard: React.FC<GradeConfigurationCardProps> = ({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Grade Configuration</CardTitle>
-        <Button variant="outline" size="sm" onClick={onReset}>
-          <RotateCcw className="h-4 w-4 mr-2" />
-          Reset to Default
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={onReset}>
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Reset to Default
+          </Button>
+          <Button size="sm" onClick={onSave}>
+            <Save className="h-4 w-4 mr-2" />
+            Save
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -51,6 +70,8 @@ const GradeConfigurationCard: React.FC<GradeConfigurationCardProps> = ({
                   value={range.grade}
                   onChange={(e) => handleRangeChange(index, 'grade', e.target.value)}
                   className="font-bold text-center"
+                  maxLength={1}
+                  placeholder="A/B/C/S/F"
                 />
               </div>
               <div className="grid grid-cols-2 gap-2">

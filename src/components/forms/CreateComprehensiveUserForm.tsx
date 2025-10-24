@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/api/client';
 import { CalendarIcon, User, GraduationCap, Users } from 'lucide-react';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface CreateComprehensiveUserFormProps {
   onSubmit: (data: any) => void;
@@ -15,6 +19,73 @@ interface CreateComprehensiveUserFormProps {
 
 type UserType = 'USER' | 'USER_WITHOUT_PARENT' | 'USER_WITHOUT_STUDENT';
 type BloodGroup = 'A_POSITIVE' | 'A_NEGATIVE' | 'B_POSITIVE' | 'B_NEGATIVE' | 'O_POSITIVE' | 'O_NEGATIVE' | 'AB_POSITIVE' | 'AB_NEGATIVE';
+
+enum Occupation {
+  TEACHER = 'TEACHER', LECTURER = 'LECTURER', PRINCIPAL = 'PRINCIPAL', TUITION_TEACHER = 'TUITION_TEACHER',
+  SCHOOL_COUNSELOR = 'SCHOOL_COUNSELOR', TUITION_INSTITUTE_OWNER = 'TUITION_INSTITUTE_OWNER', LIBRARIAN = 'LIBRARIAN',
+  NURSE = 'NURSE', DOCTOR = 'DOCTOR', PHARMACIST = 'PHARMACIST', LABORATORY_TECHNICIAN = 'LABORATORY_TECHNICIAN',
+  MIDWIFE = 'MIDWIFE', DENTIST = 'DENTIST', VETERINARY_DOCTOR = 'VETERINARY_DOCTOR', PHARMACIST_ASSISTANT = 'PHARMACIST_ASSISTANT',
+  MEDICAL_REPRESENTATIVE = 'MEDICAL_REPRESENTATIVE', ENGINEER = 'ENGINEER', CIVIL_ENGINEER = 'CIVIL_ENGINEER',
+  ARCHITECT = 'ARCHITECT', QUANTITY_SURVEYOR = 'QUANTITY_SURVEYOR', SURVEYOR = 'SURVEYOR', DRAFTSMAN = 'DRAFTSMAN',
+  TECHNICIAN = 'TECHNICIAN', AIR_CONDITIONING_TECHNICIAN = 'AIR_CONDITIONING_TECHNICIAN', AUTO_ELECTRICIAN = 'AUTO_ELECTRICIAN',
+  MOBILE_TECHNICIAN = 'MOBILE_TECHNICIAN', COMPUTER_TECHNICIAN = 'COMPUTER_TECHNICIAN', CCTV_INSTALLER = 'CCTV_INSTALLER',
+  IT_OFFICER = 'IT_OFFICER', SOFTWARE_DEVELOPER = 'SOFTWARE_DEVELOPER', WEB_DEVELOPER = 'WEB_DEVELOPER',
+  GRAPHIC_DESIGNER = 'GRAPHIC_DESIGNER', CONTENT_CREATOR = 'CONTENT_CREATOR', YOUTUBER = 'YOUTUBER',
+  DATA_ENTRY_OPERATOR = 'DATA_ENTRY_OPERATOR', SOCIAL_MEDIA_MARKETER = 'SOCIAL_MEDIA_MARKETER', ACCOUNTANT = 'ACCOUNTANT',
+  BANK_OFFICER = 'BANK_OFFICER', INSURANCE_AGENT = 'INSURANCE_AGENT', MARKETING_EXECUTIVE = 'MARKETING_EXECUTIVE',
+  ENTREPRENEUR = 'ENTREPRENEUR', BUSINESS_OWNER = 'BUSINESS_OWNER', SHOP_OWNER = 'SHOP_OWNER', BOUTIQUE_OWNER = 'BOUTIQUE_OWNER',
+  GROCERY_SHOP_OWNER = 'GROCERY_SHOP_OWNER', TAILORING_SHOP_OWNER = 'TAILORING_SHOP_OWNER', BEAUTY_SALON_OWNER = 'BEAUTY_SALON_OWNER',
+  BARBER_SHOP_OWNER = 'BARBER_SHOP_OWNER', CONSULTANT = 'CONSULTANT', MANAGER = 'MANAGER', SUPERVISOR = 'SUPERVISOR',
+  HR_OFFICER = 'HR_OFFICER', HR_EXECUTIVE = 'HR_EXECUTIVE', PROCUREMENT_OFFICER = 'PROCUREMENT_OFFICER', CLERK = 'CLERK',
+  CASHIER = 'CASHIER', RECEPTIONIST = 'RECEPTIONIST', CASH_COLLECTOR = 'CASH_COLLECTOR', STORE_KEEPER = 'STORE_KEEPER',
+  STORE_MANAGER = 'STORE_MANAGER', WAREHOUSE_ASSISTANT = 'WAREHOUSE_ASSISTANT', SALES_EXECUTIVE = 'SALES_EXECUTIVE',
+  SALESMAN = 'SALESMAN', SHOP_ASSISTANT = 'SHOP_ASSISTANT', CALL_CENTER_AGENT = 'CALL_CENTER_AGENT',
+  CALL_CENTER_SUPERVISOR = 'CALL_CENTER_SUPERVISOR', DRIVER = 'DRIVER', BUS_DRIVER = 'BUS_DRIVER', TUK_TUK_DRIVER = 'TUK_TUK_DRIVER',
+  TAXI_DRIVER = 'TAXI_DRIVER', HEAVY_VEHICLE_DRIVER = 'HEAVY_VEHICLE_DRIVER', DELIVERY_RIDER = 'DELIVERY_RIDER',
+  DELIVERY_PARTNER = 'DELIVERY_PARTNER', DELIVERY_HELPER = 'DELIVERY_HELPER', DELIVERY_DISPATCHER = 'DELIVERY_DISPATCHER',
+  BUS_CONDUCTOR = 'BUS_CONDUCTOR', DRIVER_ASSISTANT = 'DRIVER_ASSISTANT', CRANE_OPERATOR = 'CRANE_OPERATOR',
+  FORKLIFT_OPERATOR = 'FORKLIFT_OPERATOR', BUS_OWNER = 'BUS_OWNER', VEHICLE_INSPECTOR = 'VEHICLE_INSPECTOR',
+  BOATMAN = 'BOATMAN', FERRY_OPERATOR = 'FERRY_OPERATOR', FARMER = 'FARMER', TEA_ESTATE_WORKER = 'TEA_ESTATE_WORKER',
+  RUBBER_TAPPER = 'RUBBER_TAPPER', COCONUT_FARMER = 'COCONUT_FARMER', PADDY_FARMER = 'PADDY_FARMER',
+  SPICE_CULTIVATOR = 'SPICE_CULTIVATOR', VEGETABLE_CULTIVATOR = 'VEGETABLE_CULTIVATOR', POULTRY_FARMER = 'POULTRY_FARMER',
+  LIVESTOCK_FARMER = 'LIVESTOCK_FARMER', DAIRY_FARMER = 'DAIRY_FARMER', FISHERMAN = 'FISHERMAN', FISHER = 'FISHER',
+  NET_REPAIRER = 'NET_REPAIRER', FISH_SELLER = 'FISH_SELLER', POLICE_OFFICER = 'POLICE_OFFICER', SOLDIER = 'SOLDIER',
+  NAVY = 'NAVY', AIR_FORCE = 'AIR_FORCE', SECURITY_GUARD = 'SECURITY_GUARD', SECURITY_SUPERVISOR = 'SECURITY_SUPERVISOR',
+  WATCHMAN = 'WATCHMAN', MECHANIC = 'MECHANIC', BUS_MECHANIC = 'BUS_MECHANIC', LIGHT_VEHICLE_MECHANIC = 'LIGHT_VEHICLE_MECHANIC',
+  ELECTRICIAN = 'ELECTRICIAN', PLUMBER = 'PLUMBER', CARPENTER = 'CARPENTER', MASON = 'MASON', WELDER = 'WELDER',
+  PAINTER_BUILDING = 'PAINTER_BUILDING', PAINTER_VEHICLE = 'PAINTER_VEHICLE', CONSTRUCTION_WORKER = 'CONSTRUCTION_WORKER',
+  TAILOR = 'TAILOR', DRESSMAKER = 'DRESSMAKER', FASHION_DESIGNER = 'FASHION_DESIGNER', TAILORING_ASSISTANT = 'TAILORING_ASSISTANT',
+  HAIRDRESSER = 'HAIRDRESSER', BEAUTICIAN = 'BEAUTICIAN', BARBER = 'BARBER', CHEF = 'CHEF', COOK = 'COOK',
+  BAKER = 'BAKER', PASTRY_CHEF = 'PASTRY_CHEF', WAITER = 'WAITER', WAITRESS = 'WAITRESS', HOTEL_STAFF = 'HOTEL_STAFF',
+  TOUR_GUIDE = 'TOUR_GUIDE', ARTIST = 'ARTIST', MUSICIAN = 'MUSICIAN', DANCER = 'DANCER', PHOTOGRAPHER = 'PHOTOGRAPHER',
+  VIDEOGRAPHER = 'VIDEOGRAPHER', PHOTOGRAPHER_ASSISTANT = 'PHOTOGRAPHER_ASSISTANT', CAMERAMAN = 'CAMERAMAN', ACTOR = 'ACTOR',
+  ACTRESS = 'ACTRESS', SINGER = 'SINGER', MUSIC_TEACHER = 'MUSIC_TEACHER', PAINTER_ARTIST = 'PAINTER_ARTIST',
+  GYM_INSTRUCTOR = 'GYM_INSTRUCTOR', SPORTS_COACH = 'SPORTS_COACH', FITNESS_TRAINER = 'FITNESS_TRAINER',
+  HOUSEWIFE = 'HOUSEWIFE', HOUSEMAID = 'HOUSEMAID', DOMESTIC_WORKER = 'DOMESTIC_WORKER', GARDENER = 'GARDENER',
+  CLEANER = 'CLEANER', JANITOR = 'JANITOR', FACTORY_WORKER = 'FACTORY_WORKER', LABOURER = 'LABOURER',
+  FRUIT_SELLER = 'FRUIT_SELLER', STREET_VENDOR = 'STREET_VENDOR', SMALL_BUSINESS_VENDOR = 'SMALL_BUSINESS_VENDOR',
+  CIVIL_SERVANT = 'CIVIL_SERVANT', GOVERNMENT_OFFICER = 'GOVERNMENT_OFFICER', GRAMA_NILADHARI = 'GRAMA_NILADHARI',
+  POSTMAN = 'POSTMAN', LAWYER = 'LAWYER', LEGAL_OFFICER = 'LEGAL_OFFICER', RESEARCHER = 'RESEARCHER',
+  SCIENTIST = 'SCIENTIST', SOCIAL_WORKER = 'SOCIAL_WORKER', NGO_WORKER = 'NGO_WORKER', NGO_FIELD_OFFICER = 'NGO_FIELD_OFFICER',
+  VOLUNTEER_WORKER = 'VOLUNTEER_WORKER', PRIEST = 'PRIEST', MONK = 'MONK', IMAM = 'IMAM', RELIGIOUS_LEADER = 'RELIGIOUS_LEADER',
+  JOURNALIST = 'JOURNALIST', REPORTER = 'REPORTER', LANDLORD = 'LANDLORD', LANDLADY = 'LANDLADY',
+  STUDENT_SCHOOL = 'STUDENT_SCHOOL', STUDENT_UNIVERSITY = 'STUDENT_UNIVERSITY', RETIRED_PERSON = 'RETIRED_PERSON',
+  UNEMPLOYED = 'UNEMPLOYED'
+}
+
+enum District {
+  COLOMBO = "COLOMBO", GAMPAHA = "GAMPAHA", KALUTARA = "KALUTARA", KANDY = "KANDY", MATALE = "MATALE",
+  NUWARA_ELIYA = "NUWARA_ELIYA", GALLE = "GALLE", MATARA = "MATARA", HAMBANTOTA = "HAMBANTOTA",
+  JAFFNA = "JAFFNA", KILINOCHCHI = "KILINOCHCHI", MANNAR = "MANNAR", MULLAITIVU = "MULLAITIVU",
+  VAVUNIYA = "VAVUNIYA", TRINCOMALEE = "TRINCOMALEE", BATTICALOA = "BATTICALOA", AMPARA = "AMPARA",
+  KURUNEGALA = "KURUNEGALA", PUTTALAM = "PUTTALAM", ANURADHAPURA = "ANURADHAPURA", POLONNARUWA = "POLONNARUWA",
+  BADULLA = "BADULLA", MONARAGALA = "MONARAGALA", RATNAPURA = "RATNAPURA", KEGALLE = "KEGALLE"
+}
+
+enum Province {
+  WESTERN = "WESTERN", CENTRAL = "CENTRAL", SOUTHERN = "SOUTHERN", NORTHERN = "NORTHERN", EASTERN = "EASTERN",
+  NORTH_WESTERN = "NORTH_WESTERN", NORTH_CENTRAL = "NORTH_CENTRAL", UVA = "UVA", SABARAGAMUWA = "SABARAGAMUWA"
+}
 
 const CreateComprehensiveUserForm = ({ onSubmit, onCancel }: CreateComprehensiveUserFormProps) => {
   const { toast } = useToast();
@@ -119,6 +190,34 @@ const CreateComprehensiveUserForm = ({ onSubmit, onCancel }: CreateComprehensive
 
   const showStudentData = userType === 'USER' || userType === 'USER_WITHOUT_PARENT';
   const showParentData = userType === 'USER' || userType === 'USER_WITHOUT_STUDENT';
+
+  const [occupationOpen, setOccupationOpen] = useState(false);
+  const [districtOpen, setDistrictOpen] = useState(false);
+  const [provinceOpen, setProvinceOpen] = useState(false);
+
+  const occupationOptions = useMemo(() => 
+    Object.values(Occupation).map(value => ({
+      value,
+      label: value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
+    })),
+    []
+  );
+
+  const districtOptions = useMemo(() => 
+    Object.values(District).map(value => ({
+      value,
+      label: value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
+    })),
+    []
+  );
+
+  const provinceOptions = useMemo(() => 
+    Object.values(Province).map(value => ({
+      value,
+      label: value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
+    })),
+    []
+  );
 
   return (
     <Dialog open={true} onOpenChange={() => onCancel()}>
@@ -309,23 +408,95 @@ const CreateComprehensiveUserForm = ({ onSubmit, onCancel }: CreateComprehensive
                   </div>
                   <div>
                     <Label htmlFor="district" className="text-base font-semibold">District</Label>
-                    <Input
-                      id="district"
-                      value={formData.district}
-                      onChange={(e) => handleInputChange('district', e.target.value)}
-                      className="mt-2 h-12 text-base"
-                      placeholder="Enter district"
-                    />
+                    <Popover open={districtOpen} onOpenChange={setDistrictOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={districtOpen}
+                          className="w-full justify-between mt-2 h-12 text-base font-normal"
+                        >
+                          {formData.district
+                            ? districtOptions.find((district) => district.value === formData.district)?.label
+                            : "Select district"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search district..." />
+                          <CommandList>
+                            <CommandEmpty>No district found.</CommandEmpty>
+                            <CommandGroup>
+                              {districtOptions.map((district) => (
+                                <CommandItem
+                                  key={district.value}
+                                  value={district.label}
+                                  onSelect={() => {
+                                    handleInputChange('district', district.value);
+                                    setDistrictOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      formData.district === district.value ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {district.label}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <div>
                     <Label htmlFor="province" className="text-base font-semibold">Province</Label>
-                    <Input
-                      id="province"
-                      value={formData.province}
-                      onChange={(e) => handleInputChange('province', e.target.value)}
-                      className="mt-2 h-12 text-base"
-                      placeholder="Enter province"
-                    />
+                    <Popover open={provinceOpen} onOpenChange={setProvinceOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={provinceOpen}
+                          className="w-full justify-between mt-2 h-12 text-base font-normal"
+                        >
+                          {formData.province
+                            ? provinceOptions.find((province) => province.value === formData.province)?.label
+                            : "Select province"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search province..." />
+                          <CommandList>
+                            <CommandEmpty>No province found.</CommandEmpty>
+                            <CommandGroup>
+                              {provinceOptions.map((province) => (
+                                <CommandItem
+                                  key={province.value}
+                                  value={province.label}
+                                  onSelect={() => {
+                                    handleInputChange('province', province.value);
+                                    setProvinceOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      formData.province === province.value ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {province.label}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <div>
                     <Label htmlFor="postalCode" className="text-base font-semibold">Postal Code</Label>
@@ -504,16 +675,52 @@ const CreateComprehensiveUserForm = ({ onSubmit, onCancel }: CreateComprehensive
                   </h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <Label htmlFor="occupation" className="text-base font-semibold">Occupation</Label>
-                      <Input
-                        id="occupation"
-                        value={parentData.occupation}
-                        onChange={(e) => handleParentDataChange('occupation', e.target.value)}
-                        className="mt-2 h-12 text-base"
-                        placeholder="Enter occupation"
-                      />
-                    </div>
+                  <div>
+                    <Label htmlFor="occupation" className="text-base font-semibold">Occupation</Label>
+                    <Popover open={occupationOpen} onOpenChange={setOccupationOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={occupationOpen}
+                          className="w-full justify-between mt-2 h-12 text-base font-normal"
+                        >
+                          {parentData.occupation
+                            ? occupationOptions.find((occ) => occ.value === parentData.occupation)?.label
+                            : "Select occupation"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search occupation..." />
+                          <CommandList>
+                            <CommandEmpty>No occupation found.</CommandEmpty>
+                            <CommandGroup>
+                              {occupationOptions.map((occupation) => (
+                                <CommandItem
+                                  key={occupation.value}
+                                  value={occupation.label}
+                                  onSelect={() => {
+                                    handleParentDataChange('occupation', occupation.value);
+                                    setOccupationOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      parentData.occupation === occupation.value ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {occupation.label}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                     <div>
                       <Label htmlFor="workplace" className="text-base font-semibold">Workplace</Label>
                       <Input

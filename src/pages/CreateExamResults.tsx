@@ -61,6 +61,7 @@ const CreateExamResults = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [gradeRanges, setGradeRanges] = useState<GradeRange[]>(defaultGradeRanges);
+  const [gradeConfigOpen, setGradeConfigOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -246,7 +247,7 @@ const CreateExamResults = () => {
               </p>
             )}
           </div>
-          <Dialog>
+          <Dialog open={gradeConfigOpen} onOpenChange={setGradeConfigOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" size="icon">
                 <img src={donutChartIcon} alt="Grade Configuration" className="h-5 w-5" />
@@ -260,6 +261,13 @@ const CreateExamResults = () => {
                 gradeRanges={gradeRanges}
                 onGradeRangesChange={setGradeRanges}
                 onReset={() => setGradeRanges(defaultGradeRanges)}
+                onSave={() => {
+                  toast({
+                    title: "Success",
+                    description: "Grade configuration saved successfully",
+                  });
+                  setGradeConfigOpen(false);
+                }}
               />
             </DialogContent>
           </Dialog>

@@ -138,15 +138,6 @@ const TeacherHomework = () => {
       )
     },
     {
-      key: 'isActive',
-      header: 'Status',
-      render: (value: boolean) => (
-        <Badge variant={value ? 'default' : 'secondary'}>
-          {value ? 'Active' : 'Inactive'}
-        </Badge>
-      )
-    },
-    {
       key: 'submissions',
       header: 'Submissions',
       render: (value: any, row: TeacherHomework) => (
