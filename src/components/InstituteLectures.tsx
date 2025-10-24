@@ -71,12 +71,16 @@ const InstituteLectures = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'scheduled': return 'bg-gray-100 text-gray-800';
-      case 'live': return 'bg-green-100 text-green-800';
-      case 'completed': return 'bg-blue-100 text-blue-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'scheduled': return 'bg-gray-500 text-white dark:bg-gray-600';
+      case 'live': return 'bg-green-500 text-white dark:bg-green-600';
+      case 'completed': return 'bg-blue-500 text-white dark:bg-blue-600';
+      case 'cancelled': return 'bg-red-500 text-white dark:bg-red-600';
+      default: return 'bg-gray-500 text-white dark:bg-gray-600';
     }
+  };
+
+  const getTypeColor = (type: string) => {
+    return type === 'online' ? 'text-blue-600 dark:text-blue-400 font-medium' : 'text-foreground';
   };
 
   const formatDateTime = (dateString: string | null) => {
@@ -214,7 +218,9 @@ const InstituteLectures = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <Video className="h-4 w-4 text-muted-foreground" />
-                      <span>Type: {lecture.lectureType === 'online' ? 'Online' : 'Physical'}</span>
+                      <span className={getTypeColor(lecture.lectureType)}>
+                        Type: {lecture.lectureType === 'online' ? 'Online' : 'Physical'}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-muted-foreground" />

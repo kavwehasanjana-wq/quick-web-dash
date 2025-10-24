@@ -203,11 +203,11 @@ const SubjectPayments = () => {
     id: 'status',
     label: 'Status',
     minWidth: 100
-  }, {
+  }, ...(instituteRole !== 'Student' ? [{
     id: 'priority',
     label: 'Priority',
     minWidth: 100
-  }, {
+  }] : []), {
     id: 'dueDate',
     label: 'Due Date',
     minWidth: 120
@@ -378,30 +378,34 @@ const SubjectPayments = () => {
                                   {payment.status}
                                 </Badge>
                               </TableCell>
-                              <TableCell>
-                                <Badge className={getPriorityColor(payment.priority)}>
-                                  {payment.priority}
-                                </Badge>
-                              </TableCell>
+                              {instituteRole !== 'Student' && (
+                                <TableCell>
+                                  <Badge className={getPriorityColor(payment.priority)}>
+                                    {payment.priority}
+                                  </Badge>
+                                </TableCell>
+                              )}
                               <TableCell>
                                 {new Date(payment.lastDate).toLocaleDateString()}
                               </TableCell>
-                              <TableCell>
-                                {(instituteRole === 'InstituteAdmin' || instituteRole === 'Teacher') && <div className="text-xs space-y-1">
-                                    <div className="flex items-center space-x-1">
-                                      <FileText className="h-3 w-3" />
-                                      <span>Total: {payment.submissionsCount || 0}</span>
-                                    </div>
-                                    <div className="flex items-center space-x-1 text-green-600">
-                                      <CheckCircle className="h-3 w-3" />
-                                      <span>Verified: {payment.verifiedSubmissionsCount || 0}</span>
-                                    </div>
-                                    <div className="flex items-center space-x-1 text-yellow-600">
-                                      <Clock className="h-3 w-3" />
-                                      <span>Pending: {payment.pendingSubmissionsCount || 0}</span>
-                                    </div>
-                                  </div>}
-                              </TableCell>
+                              {instituteRole !== 'Student' && (
+                                <TableCell>
+                                  {(instituteRole === 'InstituteAdmin' || instituteRole === 'Teacher') && <div className="text-xs space-y-1">
+                                      <div className="flex items-center space-x-1">
+                                        <FileText className="h-3 w-3" />
+                                        <span>Total: {payment.submissionsCount || 0}</span>
+                                      </div>
+                                      <div className="flex items-center space-x-1 text-green-600">
+                                        <CheckCircle className="h-3 w-3" />
+                                        <span>Verified: {payment.verifiedSubmissionsCount || 0}</span>
+                                      </div>
+                                      <div className="flex items-center space-x-1 text-yellow-600">
+                                        <Clock className="h-3 w-3" />
+                                        <span>Pending: {payment.pendingSubmissionsCount || 0}</span>
+                                      </div>
+                                    </div>}
+                                </TableCell>
+                              )}
                               <TableCell>
                                 <div className="flex flex-col space-y-1">
                                   {instituteRole === 'Student' && <Button variant="default" size="sm" onClick={() => {

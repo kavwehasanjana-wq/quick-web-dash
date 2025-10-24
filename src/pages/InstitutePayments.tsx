@@ -147,13 +147,6 @@ const InstitutePayments = () => {
     format: (value: string) => <Badge variant={value === 'ACTIVE' ? 'default' : 'secondary'} className={value === 'ACTIVE' ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' : 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-700'}>
           {value}
         </Badge>
-  }, {
-    id: 'priority',
-    label: 'Priority',
-    minWidth: 100,
-    format: (value: string) => <Badge variant="outline" className={value === 'MANDATORY' ? 'border-red-200 text-red-700 bg-red-50 dark:border-red-800 dark:text-red-400 dark:bg-red-900/20' : 'border-blue-200 text-blue-700 bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:bg-blue-900/20'}>
-          {value}
-        </Badge>
   }, ...(isInstituteAdmin ? [{
     id: 'totalSubmissions',
     label: 'Submissions',
