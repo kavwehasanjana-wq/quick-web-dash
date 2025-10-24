@@ -156,7 +156,7 @@ export default function MUITable({
                           </Button>}
 
                         {/* Custom Actions */}
-                        {customActions.map((action, actionIndex) => <Button key={actionIndex} variant={action.variant || "outline"} size="sm" onClick={() => action.action(row)} title={action.label} className="h-8 px-3 text-xs">
+                        {customActions.map((action, actionIndex) => <Button key={actionIndex} variant={action.variant || "outline"} size="sm" onClick={() => action.action(row)} title={action.label} className={`h-8 px-3 text-xs ${action.variant === 'default' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}>
                             {action.icon && <span className="mr-1">{action.icon}</span>}
                             {action.label}
                           </Button>)}

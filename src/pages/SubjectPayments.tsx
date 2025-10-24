@@ -211,11 +211,11 @@ const SubjectPayments = () => {
     id: 'dueDate',
     label: 'Due Date',
     minWidth: 120
-  }, {
+  }, ...(instituteRole !== 'Student' ? [{
     id: 'submissions',
     label: 'Submissions',
     minWidth: 150
-  }, {
+  }] : []), {
     id: 'actions',
     label: 'Actions',
     minWidth: 200
@@ -404,15 +404,15 @@ const SubjectPayments = () => {
                               </TableCell>
                               <TableCell>
                                 <div className="flex flex-col space-y-1">
-                                  {instituteRole === 'Student' && <Button variant="outline" size="sm" onClick={() => {
+                                  {instituteRole === 'Student' && <Button variant="default" size="sm" onClick={() => {
                           setSelectedPaymentForSubmission(payment);
                           setSubmitPaymentDialogOpen(true);
-                        }} className="flex items-center space-x-1">
+                        }} className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 text-white">
                                       <CreditCard className="h-3 w-3" />
                                       <span>Submit</span>
                                     </Button>}
                                   
-                                  {(instituteRole === 'InstituteAdmin' || instituteRole === 'Teacher') && <Button variant="outline" size="sm" onClick={() => viewSubmissions(payment)} className="flex items-center space-x-1">
+                                  {(instituteRole === 'InstituteAdmin' || instituteRole === 'Teacher') && <Button variant="default" size="sm" onClick={() => viewSubmissions(payment)} className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 text-white">
                                       <Eye className="h-3 w-3" />
                                       <span>View</span>
                                     </Button>}

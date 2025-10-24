@@ -320,7 +320,7 @@ const InstitutePayments = () => {
                     label: 'View Submissions',
                     action: handleViewSubmissions,
                     icon: <Eye className="h-4 w-4" />,
-                    variant: 'outline' as const
+                    variant: 'default' as const
                   }] : [])]} />
                 </div>
               </div>
