@@ -377,14 +377,11 @@ const Homework = ({ apiLevel = 'institute' }: HomeworkProps) => {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {!dataLoaded ? (
-        <div className="text-center py-12">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            {getTitle()}
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
+        <div className="flex flex-col items-center justify-center py-12 px-4">
+          <p className="text-gray-600 dark:text-gray-400 mb-6 text-center">
             {instituteRole === 'Student' && (!currentInstituteId || !currentClassId || !currentSubjectId)
               ? 'Please select institute, class, and subject to view homework.'
-              : 'Click the button below to load homework data'
+              : 'Click the load button to view homework data'
             }
           </p>
           <Button 

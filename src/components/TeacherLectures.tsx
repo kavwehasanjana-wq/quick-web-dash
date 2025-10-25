@@ -246,16 +246,14 @@ const TeacherLectures = () => {
   if (!hasAttemptedLoad) {
     return (
       <div className="container mx-auto p-6 space-y-6">
-        <div className="text-center py-12">
-          <h2 className="text-2xl font-bold mb-4">
-            {getTitle()}
-          </h2>
-          <p className="text-muted-foreground mb-6">
-            Click the button below to load lectures data
+        <div className="flex flex-col items-center justify-center py-12 px-4">
+          <p className="text-gray-600 dark:text-gray-400 mb-6 text-center">
+            Click the load button to view lectures data
           </p>
           <Button 
             onClick={handleLoadData} 
             disabled={loading}
+            className="bg-blue-600 hover:bg-blue-700"
           >
             {loading ? (
               <>

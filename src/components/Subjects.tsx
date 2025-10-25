@@ -227,12 +227,9 @@ const Subjects = () => {
     variant: 'destructive' as const
   }] : [])];
   return <div className="space-y-6">
-      {!dataLoaded ? <div className="text-center py-12">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            {getContextTitle()}
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Click the button below to load subjects data
+      {!dataLoaded ? <div className="flex flex-col items-center justify-center py-12 px-4">
+          <p className="text-gray-600 dark:text-gray-400 mb-6 text-center">
+            Click the load button to view subjects data
           </p>
           <Button onClick={handleLoadData} disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
             {isLoading ? <>

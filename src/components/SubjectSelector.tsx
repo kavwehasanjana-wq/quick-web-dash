@@ -313,9 +313,9 @@ const SubjectSelector = () => {
         </Button>
       </div>
 
-      {!dataLoaded ? <div className="text-center py-12">
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Click the button below to load your subjects
+      {!dataLoaded ? <div className="flex flex-col items-center justify-center py-12 px-4">
+          <p className="text-gray-600 dark:text-gray-400 mb-6 text-center">
+            Click the load button to load your subjects
           </p>
           <Button onClick={() => fetchSubjectsByRole(1, pageSize)} disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
             {isLoading ? <>

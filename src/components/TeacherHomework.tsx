@@ -231,12 +231,9 @@ const TeacherHomework = () => {
   if (!hasAttemptedLoad) {
     return (
       <div className="container mx-auto p-6 space-y-6">
-        <div className="text-center py-12">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            Homework ({getCurrentSelection()})
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Click the button below to load homework data
+        <div className="flex flex-col items-center justify-center py-12 px-4">
+          <p className="text-gray-600 dark:text-gray-400 mb-6 text-center">
+            Click the load button to view homework data
           </p>
           <Button 
             onClick={handleLoadData} 

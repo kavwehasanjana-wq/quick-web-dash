@@ -797,14 +797,14 @@ const ClassSelector = () => {
       )}
 
       {!dataLoaded ? (
-        <div className="text-center py-8 sm:py-12 px-4">
-          <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm sm:text-base">
+        <div className="flex flex-col items-center justify-center py-12 px-4">
+          <p className="text-gray-600 dark:text-gray-400 mb-6 text-center">
             Click the load button to view your enrolled classes
           </p>
           <Button 
             onClick={handleLoadDataClick}
             disabled={isLoading}
-            className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+            className="bg-blue-600 hover:bg-blue-700"
           >
             {isLoading ? (
               <>
