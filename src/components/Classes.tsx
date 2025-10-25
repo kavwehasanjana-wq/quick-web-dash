@@ -373,12 +373,13 @@ const Classes = () => {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {!hasAttemptedLoad ? (
-        <div className="flex flex-col items-center justify-center py-12 px-4">
-          <p className="text-gray-600 dark:text-gray-400 mb-6 text-center">
-            {!selectedInstitute?.id 
-              ? 'Please select an institute first to view classes' 
-              : 'Click the load button to view classes data'
-            }
+        <div className="text-center py-12">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Classes</h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Manage institute classes and their details
+          </p>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Click the button below to load classes data
           </p>
           <Button 
             onClick={handleLoadData} 

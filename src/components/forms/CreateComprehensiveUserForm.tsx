@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/api/client';
-import { CalendarIcon, User, GraduationCap, Users, Camera, Image as ImageIcon } from 'lucide-react';
+import { CalendarIcon, User, GraduationCap, Users } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Check, ChevronsUpDown } from 'lucide-react';
@@ -91,10 +91,6 @@ const CreateComprehensiveUserForm = ({ onSubmit, onCancel }: CreateComprehensive
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [userType, setUserType] = useState<UserType>('USER');
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // Basic user data
   const [formData, setFormData] = useState({
@@ -152,90 +148,39 @@ const CreateComprehensiveUserForm = ({ onSubmit, onCancel }: CreateComprehensive
     setParentData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleCameraCapture = () => {
-    cameraInputRef.current?.click();
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const formDataToSend = new FormData();
-      
-      // Add image file if selected
-      if (imageFile) {
-        formDataToSend.append('image', imageFile);
-      }
-
-      // Add all form fields
-      formDataToSend.append('firstName', formData.firstName);
-      formDataToSend.append('lastName', formData.lastName);
-      formDataToSend.append('email', formData.email);
-      formDataToSend.append('phoneNumber', formData.phoneNumber);
-      formDataToSend.append('userType', userType);
-      formDataToSend.append('gender', formData.gender);
-      formDataToSend.append('dateOfBirth', formData.dateOfBirth);
-      
-      if (formData.nic) formDataToSend.append('nic', formData.nic);
-      if (formData.birthCertificateNo) formDataToSend.append('birthCertificateNo', formData.birthCertificateNo);
-      if (formData.addressLine1) formDataToSend.append('addressLine1', formData.addressLine1);
-      if (formData.addressLine2) formDataToSend.append('addressLine2', formData.addressLine2);
-      if (formData.city) formDataToSend.append('city', formData.city);
-      if (formData.district) formDataToSend.append('district', formData.district);
-      if (formData.province) formDataToSend.append('province', formData.province);
-      if (formData.postalCode) formDataToSend.append('postalCode', formData.postalCode);
-      if (formData.country) formDataToSend.append('country', formData.country);
-      if (formData.idUrl) formDataToSend.append('idUrl', formData.idUrl);
-      formDataToSend.append('isActive', String(formData.isActive));
+      const payload: any = {
+        ...formData,
+        userType,
+      };
 
       // Add student data if applicable
       if (userType === 'USER' || userType === 'USER_WITHOUT_PARENT') {
-        if (studentData.studentId) formDataToSend.append('studentId', studentData.studentId);
-        if (studentData.emergencyContact) formDataToSend.append('emergencyContact', studentData.emergencyContact);
-        if (studentData.medicalConditions) formDataToSend.append('medicalConditions', studentData.medicalConditions);
-        if (studentData.allergies) formDataToSend.append('allergies', studentData.allergies);
-        if (studentData.bloodGroup) formDataToSend.append('bloodGroup', studentData.bloodGroup);
-        if (studentData.fatherId) formDataToSend.append('fatherId', studentData.fatherId);
-        if (studentData.fatherPhoneNumber) formDataToSend.append('fatherPhoneNumber', studentData.fatherPhoneNumber);
-        if (studentData.motherId) formDataToSend.append('motherId', studentData.motherId);
-        if (studentData.motherPhoneNumber) formDataToSend.append('motherPhoneNumber', studentData.motherPhoneNumber);
-        if (studentData.guardianId) formDataToSend.append('guardianId', studentData.guardianId);
-        if (studentData.guardianPhoneNumber) formDataToSend.append('guardianPhoneNumber', studentData.guardianPhoneNumber);
+        payload.studentData = studentData;
       }
 
       // Add parent data if applicable
       if (userType === 'USER' || userType === 'USER_WITHOUT_STUDENT') {
-        if (parentData.occupation) formDataToSend.append('occupation', parentData.occupation);
-        if (parentData.workplace) formDataToSend.append('workplace', parentData.workplace);
-        if (parentData.workPhone) formDataToSend.append('workPhone', parentData.workPhone);
-        if (parentData.educationLevel) formDataToSend.append('educationLevel', parentData.educationLevel);
+        payload.parentData = parentData;
       }
 
-      const result = await apiClient.post('/users', formDataToSend);
+      const response = await apiClient.post('/users/comprehensive', payload);
       
       toast({
         title: "Success",
-        description: result.message || "User created successfully!",
+        description: response.message || "User created successfully!",
       });
-      onSubmit(result);
+      
+      onSubmit(response);
     } catch (error: any) {
       console.error('Error creating user:', error);
       toast({
         title: "Error",
-        description: error?.message || 'Failed to create user',
+        description: error?.response?.data?.message || 'Failed to create user',
         variant: "destructive"
       });
     } finally {
@@ -326,68 +271,6 @@ const CreateComprehensiveUserForm = ({ onSubmit, onCancel }: CreateComprehensive
                 </h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Image Upload with Camera */}
-                  <div className="md:col-span-2">
-                    <Label className="text-base font-semibold">Profile Image</Label>
-                    <div className="mt-2 flex items-center gap-4">
-                      {imagePreview ? (
-                        <div className="relative w-32 h-32 rounded-lg overflow-hidden border-2 border-primary/20">
-                          <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            className="absolute top-1 right-1"
-                            onClick={() => {
-                              setImageFile(null);
-                              setImagePreview(null);
-                            }}
-                          >
-                            ×
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="w-32 h-32 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center bg-muted/50">
-                          <ImageIcon className="h-12 w-12 text-muted-foreground/50" />
-                        </div>
-                      )}
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="flex items-center gap-2"
-                        >
-                          <ImageIcon className="h-4 w-4" />
-                          Choose Image
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handleCameraCapture}
-                          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                          <Camera className="h-4 w-4" />
-                          Take Photo
-                        </Button>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageSelect}
-                          className="hidden"
-                        />
-                        <input
-                          ref={cameraInputRef}
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          onChange={handleImageSelect}
-                          className="hidden"
-                        />
-                      </div>
-                    </div>
-                  </div>
                   <div>
                     <Label htmlFor="firstName" className="text-base font-semibold">First Name *</Label>
                     <Input

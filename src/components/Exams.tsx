@@ -303,11 +303,14 @@ const Exams = ({
     if ((userRole === 'InstituteAdmin' || userRole === 'Teacher') && !currentInstituteId) {
       return 'Please select institute to view exams.';
     }
-    return 'Click the load button to view exams data';
+    return 'Click the button below to load exams data';
   };
   return <div className="container mx-auto p-6 space-y-6">
-      {!hasAttemptedLoad ? <div className="flex flex-col items-center justify-center py-12 px-4">
-          <p className="text-gray-600 dark:text-gray-400 mb-6 text-center">
+      {!hasAttemptedLoad ? <div className="text-center py-12">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            {getTitle()}
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
             {getLoadButtonMessage()}
           </p>
           <Button onClick={() => handleLoadData(false)} disabled={isLoading || !shouldShowLoadButton()} className="bg-blue-600 hover:bg-blue-700">
