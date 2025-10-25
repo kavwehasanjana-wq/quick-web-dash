@@ -150,7 +150,7 @@ useEffect(() => {
   if (!config.endpoint) return;
   loadData(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [config.endpoint, pagination.pagination.page, pagination.pagination.limit, config.autoLoad]);
+}, config.autoLoad !== false ? [config.endpoint, pagination.pagination.page, pagination.pagination.limit] : []);
 
   return {
     ...pagination,

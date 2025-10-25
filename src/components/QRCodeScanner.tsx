@@ -662,13 +662,10 @@ const QRCodeScanner = () => {
                <div className="relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden">
                  <video
                    ref={videoRef}
-                   className="w-full h-full object-cover"
+                   className="hidden"
                    autoPlay
                    playsInline
                    muted
-                   style={{ 
-                     display: isScanning ? 'block' : 'none'
-                   }}
                  />
                  <canvas
                    ref={canvasRef}

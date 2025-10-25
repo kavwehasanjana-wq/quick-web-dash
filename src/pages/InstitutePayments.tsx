@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import AppLayout from '@/components/layout/AppLayout';
 import PageContainer from '@/components/layout/PageContainer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -173,8 +172,7 @@ const InstitutePayments = () => {
         typeof_amount: typeof item.amount
       })) : []
     });
-    return <AppLayout>
-      <PageContainer className="h-full">
+    return <PageContainer className="h-full">
         {/* Header Section */}
         <div className="flex flex-col space-y-3 sm:space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -380,8 +378,7 @@ const InstitutePayments = () => {
             });
           }} />
           </>}
-      </PageContainer>
-    </AppLayout>;
+      </PageContainer>;
   };
   return renderComponent();
 };

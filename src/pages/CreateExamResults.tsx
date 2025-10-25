@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Textarea } from '@/components/ui/textarea';
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ArrowLeft, Save, RefreshCw } from 'lucide-react';
 import donutChartIcon from '@/assets/donut-chart.png';
@@ -339,20 +339,19 @@ const CreateExamResults = () => {
                     </div>
                     <div>
                       <Label htmlFor={`remarks-${student.id}`}>Remarks</Label>
-                      <Textarea
+                      <Input
                         id={`remarks-${student.id}`}
                         placeholder="Enter or auto-fill remarks"
                         value={results[student.id]?.remarks || ''}
                         onChange={(e) => handleResultChange(student.id, 'remarks', e.target.value)}
                         className={cn(
-                          "font-medium resize-none",
+                          "font-medium",
                           results[student.id]?.grade === 'A' && "text-green-600 dark:text-green-400",
                           results[student.id]?.grade === 'B' && "text-blue-600 dark:text-blue-400",
                           results[student.id]?.grade === 'C' && "text-teal-600 dark:text-teal-400",
                           results[student.id]?.grade === 'S' && "text-yellow-600 dark:text-yellow-400",
                           results[student.id]?.grade === 'F' && "text-red-600 dark:text-red-400"
                         )}
-                        rows={2}
                       />
                     </div>
                   </div>

@@ -94,8 +94,8 @@ const InstituteOrganizations = () => {
       )
     },
     {
-      id: 'studentIdByInstitute',
-      label: 'Student ID',
+      id: 'userIdByInstitute',
+      label: 'User ID',
       minWidth: 120,
     },
     {
@@ -114,31 +114,35 @@ const InstituteOrganizations = () => {
       minWidth: 140,
     },
     {
-      id: 'role',
-      label: 'Role',
-      minWidth: 100,
+      id: 'instituteUserType',
+      label: 'User Type',
+      minWidth: 120,
       format: (_value: any, row: any) => (
-        <Badge variant={row.role === 'ADMIN' ? 'default' : 'secondary'}>
-          {row.role}
+        <Badge variant="outline">
+          {row.instituteUserType}
         </Badge>
       )
     },
     {
-      id: 'status',
+      id: 'organizationRole',
+      label: 'Org Role',
+      minWidth: 100,
+      format: (_value: any, row: any) => (
+        <Badge variant={row.organizationRole === 'ADMIN' ? 'default' : 'secondary'}>
+          {row.organizationRole}
+        </Badge>
+      )
+    },
+    {
+      id: 'verificationStatus',
       label: 'Status',
       minWidth: 100,
       format: (_value: any, row: any) => (
-        <Badge variant={row.status === 'verified' ? 'default' : 'outline'}>
-          {row.status}
+        <Badge variant={row.verificationStatus === 'verified' ? 'default' : 'outline'}>
+          {row.verificationStatus}
         </Badge>
       )
-    },
-    {
-      id: 'enrolledDate',
-      label: 'Enrolled Date',
-      minWidth: 140,
-      format: (value: any) => value ? new Date(value).toLocaleDateString() : '-'
-    },
+    }
   ];
 
   const columns = [

@@ -77,10 +77,9 @@ const SMS = () => {
 
   // Bulk SMS state
   const [bulkMessage, setBulkMessage] = useState('');
-  const [recipientType, setRecipientType] = useState<string>('STUDENTS');
   const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
-  const [selectedUserTypes, setSelectedUserTypes] = useState<string[]>([]);
+  const [selectedRecipientTypes, setSelectedRecipientTypes] = useState<string[]>([]);
   const [bulkScheduledAt, setBulkScheduledAt] = useState('');
   const [isBulkSending, setIsBulkSending] = useState(false);
   const [isBulkNow, setIsBulkNow] = useState(true);
@@ -294,10 +293,10 @@ const SMS = () => {
       return;
     }
 
-    if (selectedUserTypes.length === 0) {
+    if (selectedRecipientTypes.length === 0) {
       toast({
         title: 'Error',
-        description: 'Please select at least one user type',
+        description: 'Please select at least one recipient type',
         variant: 'destructive',
       });
       return;
@@ -309,27 +308,24 @@ const SMS = () => {
         `/sms/send-bulk?instituteId=${currentInstituteId}`,
         {
           messageTemplate: bulkMessage,
-          recipientType: recipientType,
+          recipientTypes: selectedRecipientTypes,
           classIds: selectedClasses,
           subjectIds: selectedSubjects,
-          userTypes: selectedUserTypes,
           maskId: selectedMaskId,
           isNow: isBulkNow,
-          scheduledAt: isBulkNow ? new Date().toISOString() : bulkScheduledAt,
         }
       );
 
       toast({
         title: 'Success',
-        description: `${response.message || 'SMS scheduled successfully'}. Recipients: ${response.totalRecipients || 0}. Estimated Credits: ${response.estimatedCredits || 0}`,
+        description: `${response.message || 'SMS created successfully'}. Message ID: ${response.messageId || 'N/A'}. Recipients: ${response.totalRecipients || 0}. Status: ${response.status || 'Unknown'}. Estimated Credits: ${response.estimatedCredits || 0}. Processing Time: ${response.processingTime || 'N/A'}`,
       });
 
       // Reset form
       setBulkMessage('');
-      setRecipientType('STUDENTS');
       setSelectedClasses([]);
       setSelectedSubjects([]);
-      setSelectedUserTypes([]);
+      setSelectedRecipientTypes([]);
       const now = new Date();
       const sriLankaTime = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
       setBulkScheduledAt(sriLankaTime.toISOString().slice(0, 16));
@@ -349,9 +345,9 @@ const SMS = () => {
   };
 
 
-  const toggleUserType = (userType: string) => {
-    setSelectedUserTypes((prev) =>
-      prev.includes(userType) ? prev.filter((t) => t !== userType) : [...prev, userType]
+  const toggleRecipientType = (recipientType: string) => {
+    setSelectedRecipientTypes((prev) =>
+      prev.includes(recipientType) ? prev.filter((t) => t !== recipientType) : [...prev, recipientType]
     );
   };
 
@@ -587,33 +583,16 @@ const SMS = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="recipient-type">Recipient Type</Label>
-                  <Select value={recipientType} onValueChange={setRecipientType}>
-                    <SelectTrigger id="recipient-type" className="mt-2">
-                      <SelectValue placeholder="Select recipient type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="CUSTOM">Custom</SelectItem>
-                      <SelectItem value="STUDENTS">Students</SelectItem>
-                      <SelectItem value="TEACHERS">Teachers</SelectItem>
-                      <SelectItem value="PARENTS">Parents</SelectItem>
-                      <SelectItem value="ADMIN">Admin</SelectItem>
-                      <SelectItem value="ALL">All</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label>User Types</Label>
+                  <Label>Recipient Types</Label>
                   <div className="flex flex-wrap gap-4 mt-2">
-                    {['STUDENT', 'TEACHER', 'PARENT', 'ATTENDANCE_MARKER'].map((type) => (
+                    {['CUSTOM', 'STUDENTS', 'TEACHERS', 'PARENTS', 'ADMIN', 'ALL'].map((type) => (
                       <div key={type} className="flex items-center space-x-2">
                         <Checkbox
-                          id={`usertype-${type}`}
-                          checked={selectedUserTypes.includes(type)}
-                          onCheckedChange={() => toggleUserType(type)}
+                          id={`recipienttype-${type}`}
+                          checked={selectedRecipientTypes.includes(type)}
+                          onCheckedChange={() => toggleRecipientType(type)}
                         />
-                        <label htmlFor={`usertype-${type}`} className="text-sm cursor-pointer">
+                        <label htmlFor={`recipienttype-${type}`} className="text-sm cursor-pointer">
                           {type}
                         </label>
                       </div>

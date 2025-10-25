@@ -122,7 +122,7 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
         ];
       }
 
-      // 2. Student with institute selected - show basic navigation
+      // 2. Student with institute selected - show basic navigation (Enroll Class removed - moved to ClassSelector)
       if (selectedInstitute && !selectedClass) {
         return [
           {
@@ -136,13 +136,6 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
             id: 'my-attendance',
             label: 'My Attendance',
             icon: UserCheck,
-            permission: 'view-dashboard',
-            alwaysShow: false
-          },
-          {
-            id: 'enroll-class',
-            label: 'Enroll Class',
-            icon: School,
             permission: 'view-dashboard',
             alwaysShow: false
           },
@@ -1720,6 +1713,30 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
     if (itemId === 'sms-history') {
       navigateToRoute('/sms-history');
       onPageChange('sms-history');
+      onClose();
+      return;
+    }
+
+    // Handle QR Attendance click
+    if (itemId === 'qr-attendance') {
+      navigateToRoute('/qr-attendance');
+      onPageChange('qr-attendance');
+      onClose();
+      return;
+    }
+
+    // Handle Institute Mark Attendance click
+    if (itemId === 'institute-mark-attendance') {
+      navigateToRoute('/institute-mark-attendance');
+      onPageChange('institute-mark-attendance');
+      onClose();
+      return;
+    }
+
+    // Handle Daily Attendance click
+    if (itemId === 'daily-attendance') {
+      navigateToRoute('/daily-attendance');
+      onPageChange('daily-attendance');
       onClose();
       return;
     }

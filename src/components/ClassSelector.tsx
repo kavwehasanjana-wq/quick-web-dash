@@ -13,6 +13,17 @@ import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { cachedApiClient } from '@/api/cachedClient';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { instituteClassesApi, type EnrollClassData } from '@/api/instituteClasses.api';
+
+const enrollFormSchema = z.object({
+  classId: z.string().min(1, 'Class ID is required'),
+  enrollmentCode: z.string().min(1, 'Enrollment code is required'),
+});
 
 interface ClassData {
   id: string;
@@ -126,6 +137,16 @@ const ClassSelector = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
+  const [isEnrolling, setIsEnrolling] = useState(false);
+
+  const enrollForm = useForm<z.infer<typeof enrollFormSchema>>({
+    resolver: zodResolver(enrollFormSchema),
+    defaultValues: {
+      classId: '',
+      enrollmentCode: '',
+    },
+  });
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -430,6 +451,62 @@ const ClassSelector = () => {
     fetchClassesByRole(1, newPageSize, false);
   };
 
+  const handleEnrollSubmit = async (values: z.infer<typeof enrollFormSchema>) => {
+    setIsEnrolling(true);
+    try {
+      const enrollData: EnrollClassData = {
+        classId: values.classId,
+        enrollmentCode: values.enrollmentCode,
+      };
+
+      const result = await instituteClassesApi.enroll(enrollData);
+      
+      setEnrollDialogOpen(false);
+      
+      if (result.requiresVerification) {
+        toast({
+          title: "Enrollment Submitted",
+          description: result.message || "Waiting for teacher verification.",
+        });
+      } else {
+        toast({
+          title: "Successfully Enrolled",
+          description: result.message || "You have been enrolled in the class!",
+        });
+      }
+      
+      enrollForm.reset();
+      fetchClassesByRole(currentPage, pageSize, true);
+    } catch (error) {
+      console.error('Enrollment error:', error);
+      const errorMessage = error instanceof Error ? error.message : '';
+      
+      if (errorMessage.toLowerCase().includes('invalid') || 
+          errorMessage.toLowerCase().includes('code') || 
+          errorMessage.toLowerCase().includes('not found') ||
+          errorMessage.toLowerCase().includes('incorrect')) {
+        toast({
+          title: "Invalid Enrollment Code",
+          description: "The enrollment code is invalid. Please try again.",
+          variant: "destructive"
+        });
+      } else if (errorMessage.toLowerCase().includes('already enrolled')) {
+        toast({
+          title: "Already Enrolled",
+          description: "You are already enrolled in this class.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Enrollment Success",
+          description: "Please wait for verification.",
+        });
+      }
+    } finally {
+      setIsEnrolling(false);
+    }
+  };
+
   const tableColumns = [
     {
       key: 'imageUrl',
@@ -497,6 +574,14 @@ const ClassSelector = () => {
     }
   ];
 
+  const handleOpenEnrollDialog = () => {
+    enrollForm.reset({
+      classId: '',
+      enrollmentCode: '',
+    });
+    setEnrollDialogOpen(true);
+  };
+
   if (!user) {
     return (
       <div className="text-center py-8 px-4">
@@ -537,6 +622,17 @@ const ClassSelector = () => {
             <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 mt-2">
               Institute: {selectedInstitute.name}
             </p>
+          )}
+          {effectiveRole === 'Student' && (
+            <Button
+              onClick={handleOpenEnrollDialog}
+              variant="default"
+              size="sm"
+              className="mt-3 w-full sm:w-auto"
+            >
+              <School className="h-4 w-4 mr-2" />
+              Enroll Class
+            </Button>
           )}
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
@@ -985,6 +1081,69 @@ const ClassSelector = () => {
           </div>
         </>
       )}
+
+      {/* Enrollment Dialog */}
+      <Dialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enroll in Class</DialogTitle>
+            <DialogDescription>
+              Enter the class ID and enrollment code to join a class.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...enrollForm}>
+            <form onSubmit={enrollForm.handleSubmit(handleEnrollSubmit)} className="space-y-4">
+              <FormField
+                control={enrollForm.control}
+                name="classId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Class ID</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Enter class ID" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={enrollForm.control}
+                name="enrollmentCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Enrollment Code</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Enter enrollment code" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setEnrollDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isEnrolling}>
+                  {isEnrolling ? 'Enrolling...' : 'Enroll'}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

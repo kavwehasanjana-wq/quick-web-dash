@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import AppLayout from '@/components/layout/AppLayout';
 import PageContainer from '@/components/layout/PageContainer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -220,8 +219,7 @@ const SubjectPayments = () => {
     label: 'Actions',
     minWidth: 200
   }];
-  return <AppLayout>
-    <PageContainer className="h-full">
+  return <PageContainer className="h-full">
       {/* Header Section */}
       <div className="flex flex-col space-y-4">
         <div className="flex items-center justify-between">
@@ -493,7 +491,6 @@ const SubjectPayments = () => {
         loadSubjectPayments();
       }} />}
 
-    </PageContainer>
-  </AppLayout>;
+    </PageContainer>;
 };
 export default SubjectPayments;

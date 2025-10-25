@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { usersApi, UserCreateData } from '@/api';
 import { toast } from 'sonner';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Camera, Upload } from 'lucide-react';
 
 interface CreateUserFormProps {
   onSubmit: (data: any) => void;
@@ -45,12 +46,11 @@ const CreateUserForm = ({ onSubmit, onCancel, loading = false, initialData }: Cr
     firstName: initialData?.firstName || '',
     lastName: initialData?.lastName || '',
     email: initialData?.email || '',
-    phone: initialData?.phone || '',
-    userType: initialData?.userType || 'STUDENT',
+    phoneNumber: initialData?.phoneNumber || '',
+    userType: initialData?.userType || 'USER',
     dateOfBirth: formatDateForInput(initialData?.dateOfBirth),
     gender: initialData?.gender || '',
     nic: initialData?.nic || '',
-    birthCertificateNo: initialData?.birthCertificateNo || '',
     addressLine1: initialData?.addressLine1 || '',
     addressLine2: initialData?.addressLine2 || '',
     city: initialData?.city || '',
@@ -60,10 +60,29 @@ const CreateUserForm = ({ onSubmit, onCancel, loading = false, initialData }: Cr
     country: initialData?.country || 'Sri Lanka',
     imageUrl: initialData?.imageUrl || '',
     idUrl: initialData?.idUrl || '',
-    isActive: initialData?.isActive ?? true
+    isActive: initialData?.isActive ?? true,
+    studentId: initialData?.studentId || '',
+    emergencyContact: initialData?.emergencyContact || '',
+    medicalConditions: initialData?.medicalConditions || '',
+    allergies: initialData?.allergies || '',
+    bloodGroup: initialData?.bloodGroup || '',
+    fatherId: initialData?.fatherId || '',
+    fatherPhoneNumber: initialData?.fatherPhoneNumber || '',
+    motherId: initialData?.motherId || '',
+    motherPhoneNumber: initialData?.motherPhoneNumber || '',
+    guardianId: initialData?.guardianId || '',
+    guardianPhoneNumber: initialData?.guardianPhoneNumber || '',
+    occupation: initialData?.occupation || '',
+    workplace: initialData?.workplace || '',
+    workPhone: initialData?.workPhone || '',
+    educationLevel: initialData?.educationLevel || ''
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>(initialData?.imageUrl || '');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
@@ -72,22 +91,41 @@ const CreateUserForm = ({ onSubmit, onCancel, loading = false, initialData }: Cr
     }));
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+        handleInputChange('imageUrl', reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCameraClick = () => {
+    cameraInputRef.current?.click();
+  };
+
+  const handleFileClick = () => {
+    fileInputRef.current?.click();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
-      const formattedData: UserCreateData = {
+      const formattedData: any = {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
-        password: 'defaultPassword123',
-        phone: formData.phone,
+        phoneNumber: formData.phoneNumber,
         userType: formData.userType,
         dateOfBirth: formData.dateOfBirth,
         gender: formData.gender,
         nic: formData.nic,
-        birthCertificateNo: formData.birthCertificateNo,
         addressLine1: formData.addressLine1,
         addressLine2: formData.addressLine2,
         city: formData.city,
@@ -97,7 +135,22 @@ const CreateUserForm = ({ onSubmit, onCancel, loading = false, initialData }: Cr
         country: formData.country,
         imageUrl: formData.imageUrl,
         idUrl: formData.idUrl,
-        isActive: formData.isActive
+        isActive: formData.isActive,
+        studentId: formData.studentId,
+        emergencyContact: formData.emergencyContact,
+        medicalConditions: formData.medicalConditions,
+        allergies: formData.allergies,
+        bloodGroup: formData.bloodGroup,
+        fatherId: formData.fatherId,
+        fatherPhoneNumber: formData.fatherPhoneNumber,
+        motherId: formData.motherId,
+        motherPhoneNumber: formData.motherPhoneNumber,
+        guardianId: formData.guardianId,
+        guardianPhoneNumber: formData.guardianPhoneNumber,
+        occupation: formData.occupation,
+        workplace: formData.workplace,
+        workPhone: formData.workPhone,
+        educationLevel: formData.educationLevel
       };
       
       console.log('Submitting user data with formatted date:', formattedData);
@@ -130,11 +183,54 @@ const CreateUserForm = ({ onSubmit, onCancel, loading = false, initialData }: Cr
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="max-w-4xl mx-auto">
             <div className="space-y-8">
-              {/* Personal Information Section */}
+              {/* Photo Upload Section */}
               <div className="bg-gradient-to-r from-primary/5 to-primary/10 p-6 rounded-lg border">
                 <h3 className="text-2xl font-semibold flex items-center gap-2 mb-6">
                   <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center">
                     <span className="text-primary font-bold">1</span>
+                  </div>
+                  Photo Upload
+                </h3>
+                
+                <div className="flex flex-col items-center gap-4">
+                  {imagePreview && (
+                    <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-primary/20">
+                      <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                    <input
+                      ref={cameraInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                    <Button type="button" onClick={handleCameraClick} variant="outline" className="gap-2">
+                      <Camera className="h-4 w-4" />
+                      Take Photo
+                    </Button>
+                    <Button type="button" onClick={handleFileClick} variant="outline" className="gap-2">
+                      <Upload className="h-4 w-4" />
+                      Upload Photo
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Personal Information Section */}
+              <div className="bg-gradient-to-r from-primary/5 to-primary/10 p-6 rounded-lg border">
+                <h3 className="text-2xl font-semibold flex items-center gap-2 mb-6">
+                  <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center">
+                    <span className="text-primary font-bold">2</span>
                   </div>
                   Personal Information
                 </h3>
@@ -176,11 +272,11 @@ const CreateUserForm = ({ onSubmit, onCancel, loading = false, initialData }: Cr
                   </div>
 
                   <div>
-                    <Label htmlFor="phone" className="text-base font-semibold text-foreground">Phone Number *</Label>
+                    <Label htmlFor="phoneNumber" className="text-base font-semibold text-foreground">Phone Number *</Label>
                     <Input
-                      id="phone"
-                      value={formData.phone}
-                      onChange={(e) => handleInputChange('phone', e.target.value)}
+                      id="phoneNumber"
+                      value={formData.phoneNumber}
+                      onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
                       className="mt-2 h-12 text-base"
                       placeholder="Enter phone number"
                       required
@@ -194,6 +290,7 @@ const CreateUserForm = ({ onSubmit, onCancel, loading = false, initialData }: Cr
                         <SelectValue placeholder="Select user type" />
                       </SelectTrigger>
                        <SelectContent>
+                         <SelectItem value="USER">User</SelectItem>
                          <SelectItem value="INSTITUTE_ADMIN">Institute Admin</SelectItem>
                          <SelectItem value="ATTENDANCE_MARKER">Attendance Marker</SelectItem>
                          <SelectItem value="TEACHER">Teacher</SelectItem>
@@ -241,16 +338,18 @@ const CreateUserForm = ({ onSubmit, onCancel, loading = false, initialData }: Cr
                       placeholder="Enter NIC number"
                     />
                   </div>
+                  
                   <div>
-                    <Label htmlFor="birthCertificateNo" className="text-base font-semibold text-foreground">Birth Certificate No</Label>
+                    <Label htmlFor="studentId" className="text-base font-semibold text-foreground">Student ID</Label>
                     <Input
-                      id="birthCertificateNo"
-                      value={formData.birthCertificateNo}
-                      onChange={(e) => handleInputChange('birthCertificateNo', e.target.value)}
+                      id="studentId"
+                      value={formData.studentId}
+                      onChange={(e) => handleInputChange('studentId', e.target.value)}
                       className="mt-2 h-12 text-base"
-                      placeholder="Enter birth certificate number"
+                      placeholder="Enter student ID"
                     />
                   </div>
+                  
                   <div>
                     <Label htmlFor="idUrl" className="text-base font-semibold text-foreground">ID Document URL</Label>
                     <Input
@@ -264,11 +363,211 @@ const CreateUserForm = ({ onSubmit, onCancel, loading = false, initialData }: Cr
                 </div>
               </div>
 
+              {/* Medical & Emergency Information Section */}
+              <div className="bg-gradient-to-r from-accent/5 to-accent/10 p-6 rounded-lg border">
+                <h3 className="text-2xl font-semibold flex items-center gap-2 mb-6">
+                  <div className="w-8 h-8 bg-accent/20 rounded-full flex items-center justify-center">
+                    <span className="text-accent-foreground font-bold">3</span>
+                  </div>
+                  Medical & Emergency Information
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="emergencyContact" className="text-base font-semibold">Emergency Contact</Label>
+                    <Input
+                      id="emergencyContact"
+                      value={formData.emergencyContact}
+                      onChange={(e) => handleInputChange('emergencyContact', e.target.value)}
+                      className="mt-2 h-12 text-base"
+                      placeholder="+94771234567"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="bloodGroup" className="text-base font-semibold">Blood Group</Label>
+                    <Select value={formData.bloodGroup} onValueChange={(value) => handleInputChange('bloodGroup', value)}>
+                      <SelectTrigger className="mt-2 h-12 text-base">
+                        <SelectValue placeholder="Select blood group" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="A_POSITIVE">A+</SelectItem>
+                        <SelectItem value="A_NEGATIVE">A-</SelectItem>
+                        <SelectItem value="B_POSITIVE">B+</SelectItem>
+                        <SelectItem value="B_NEGATIVE">B-</SelectItem>
+                        <SelectItem value="O_POSITIVE">O+</SelectItem>
+                        <SelectItem value="O_NEGATIVE">O-</SelectItem>
+                        <SelectItem value="AB_POSITIVE">AB+</SelectItem>
+                        <SelectItem value="AB_NEGATIVE">AB-</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Label htmlFor="medicalConditions" className="text-base font-semibold">Medical Conditions</Label>
+                    <Textarea
+                      id="medicalConditions"
+                      value={formData.medicalConditions}
+                      onChange={(e) => handleInputChange('medicalConditions', e.target.value)}
+                      className="mt-2"
+                      placeholder="Any medical conditions..."
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Label htmlFor="allergies" className="text-base font-semibold">Allergies</Label>
+                    <Textarea
+                      id="allergies"
+                      value={formData.allergies}
+                      onChange={(e) => handleInputChange('allergies', e.target.value)}
+                      className="mt-2"
+                      placeholder="Any allergies..."
+                      rows={3}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Parent/Guardian Information Section */}
+              <div className="bg-gradient-to-r from-secondary/5 to-secondary/10 p-6 rounded-lg border">
+                <h3 className="text-2xl font-semibold flex items-center gap-2 mb-6">
+                  <div className="w-8 h-8 bg-secondary/20 rounded-full flex items-center justify-center">
+                    <span className="text-secondary-foreground font-bold">4</span>
+                  </div>
+                  Parent/Guardian Information
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="fatherId" className="text-base font-semibold">Father ID</Label>
+                    <Input
+                      id="fatherId"
+                      value={formData.fatherId}
+                      onChange={(e) => handleInputChange('fatherId', e.target.value)}
+                      className="mt-2 h-12 text-base"
+                      placeholder="Enter father's ID"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="fatherPhoneNumber" className="text-base font-semibold">Father Phone Number</Label>
+                    <Input
+                      id="fatherPhoneNumber"
+                      value={formData.fatherPhoneNumber}
+                      onChange={(e) => handleInputChange('fatherPhoneNumber', e.target.value)}
+                      className="mt-2 h-12 text-base"
+                      placeholder="+94771234567"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="motherId" className="text-base font-semibold">Mother ID</Label>
+                    <Input
+                      id="motherId"
+                      value={formData.motherId}
+                      onChange={(e) => handleInputChange('motherId', e.target.value)}
+                      className="mt-2 h-12 text-base"
+                      placeholder="Enter mother's ID"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="motherPhoneNumber" className="text-base font-semibold">Mother Phone Number</Label>
+                    <Input
+                      id="motherPhoneNumber"
+                      value={formData.motherPhoneNumber}
+                      onChange={(e) => handleInputChange('motherPhoneNumber', e.target.value)}
+                      className="mt-2 h-12 text-base"
+                      placeholder="+94777654321"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="guardianId" className="text-base font-semibold">Guardian ID</Label>
+                    <Input
+                      id="guardianId"
+                      value={formData.guardianId}
+                      onChange={(e) => handleInputChange('guardianId', e.target.value)}
+                      className="mt-2 h-12 text-base"
+                      placeholder="Enter guardian's ID"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="guardianPhoneNumber" className="text-base font-semibold">Guardian Phone Number</Label>
+                    <Input
+                      id="guardianPhoneNumber"
+                      value={formData.guardianPhoneNumber}
+                      onChange={(e) => handleInputChange('guardianPhoneNumber', e.target.value)}
+                      className="mt-2 h-12 text-base"
+                      placeholder="+94773333333"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Professional Information Section */}
+              <div className="bg-gradient-to-r from-primary/5 to-primary/10 p-6 rounded-lg border">
+                <h3 className="text-2xl font-semibold flex items-center gap-2 mb-6">
+                  <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center">
+                    <span className="text-primary font-bold">5</span>
+                  </div>
+                  Professional Information
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="occupation" className="text-base font-semibold">Occupation</Label>
+                    <Input
+                      id="occupation"
+                      value={formData.occupation}
+                      onChange={(e) => handleInputChange('occupation', e.target.value)}
+                      className="mt-2 h-12 text-base"
+                      placeholder="e.g., ENGINEER"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="workplace" className="text-base font-semibold">Workplace</Label>
+                    <Input
+                      id="workplace"
+                      value={formData.workplace}
+                      onChange={(e) => handleInputChange('workplace', e.target.value)}
+                      className="mt-2 h-12 text-base"
+                      placeholder="Enter workplace"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="workPhone" className="text-base font-semibold">Work Phone</Label>
+                    <Input
+                      id="workPhone"
+                      value={formData.workPhone}
+                      onChange={(e) => handleInputChange('workPhone', e.target.value)}
+                      className="mt-2 h-12 text-base"
+                      placeholder="+94112345678"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="educationLevel" className="text-base font-semibold">Education Level</Label>
+                    <Input
+                      id="educationLevel"
+                      value={formData.educationLevel}
+                      onChange={(e) => handleInputChange('educationLevel', e.target.value)}
+                      className="mt-2 h-12 text-base"
+                      placeholder="e.g., Bachelor of Engineering"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Address Information Section */}
               <div className="bg-gradient-to-r from-secondary/5 to-secondary/10 p-6 rounded-lg border">
                 <h3 className="text-2xl font-semibold flex items-center gap-2 mb-6">
                   <div className="w-8 h-8 bg-secondary/20 rounded-full flex items-center justify-center">
-                    <span className="text-secondary-foreground font-bold">2</span>
+                    <span className="text-secondary-foreground font-bold">6</span>
                   </div>
                   Address Information
                 </h3>

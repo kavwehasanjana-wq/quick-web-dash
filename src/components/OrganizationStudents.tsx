@@ -1,8 +1,9 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Users, Calendar, Shield, Mail, Phone, User } from 'lucide-react';
+import { Users, Mail, Phone, User } from 'lucide-react';
 import { useTableData } from '@/hooks/useTableData';
 import { useAuth } from '@/contexts/AuthContext';
 import UserOrganizationsDialog from './forms/UserOrganizationsDialog';
@@ -14,29 +15,30 @@ interface OrganizationStudentsProps {
 
 interface OrganizationStudent {
   userId: string;
-  studentIdByInstitute: string;
+  userIdByInstitute: string;
   firstName: string;
   lastName: string;
   name: string;
   email: string;
   phoneNumber: string;
   imageUrl: string | null;
-  role: string;
-  status: string;
-  enrolledDate: string;
+  mainUserType: string;
+  instituteUserType: string;
+  organizationRole: string;
+  verificationStatus: string;
 }
 
 const OrganizationStudents = ({ organizationId, userRole }: OrganizationStudentsProps) => {
   const { currentInstituteId } = useAuth();
   const [selectedUser, setSelectedUser] = React.useState<{ userId: string; userName: string } | null>(null);
 
-  const { state, pagination } = useTableData<OrganizationStudent>({
+  const { state, pagination, actions } = useTableData<OrganizationStudent>({
     endpoint: `/organizations/institute/${currentInstituteId}/organization/${organizationId}/students`,
     pagination: {
       defaultLimit: 50,
       availableLimits: [25, 50, 100]
     },
-    autoLoad: true
+    autoLoad: false
   });
 
   const getRoleBadgeVariant = (role: string) => {
@@ -61,17 +63,16 @@ const OrganizationStudents = ({ organizationId, userRole }: OrganizationStudents
     }
   };
 
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return 'N/A';
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-    } catch {
-      return 'N/A';
+  const getUserTypeBadgeVariant = (userType: string) => {
+    switch (userType.toUpperCase()) {
+      case 'INSTITUTE_ADMIN':
+        return 'default';
+      case 'TEACHER':
+        return 'secondary';
+      case 'STUDENT':
+        return 'outline';
+      default:
+        return 'outline';
     }
   };
 
@@ -94,6 +95,14 @@ const OrganizationStudents = ({ organizationId, userRole }: OrganizationStudents
             Organization members enrolled from the institute
           </p>
         </div>
+        <Button 
+          onClick={() => actions.loadData(true)}
+          disabled={state.loading}
+          className="shrink-0"
+        >
+          <Users className="h-4 w-4 mr-2" />
+          {state.loading ? 'Loading...' : 'Load Members'}
+        </Button>
       </div>
 
       {/* Members Table */}
@@ -115,12 +124,12 @@ const OrganizationStudents = ({ organizationId, userRole }: OrganizationStudents
               <TableHeader>
                 <TableRow>
                   <TableHead className="min-w-[150px]">Name</TableHead>
-                  <TableHead className="hidden sm:table-cell min-w-[120px]">Student ID</TableHead>
+                  <TableHead className="hidden sm:table-cell min-w-[100px]">User ID</TableHead>
                   <TableHead className="hidden md:table-cell min-w-[200px]">Email</TableHead>
                   <TableHead className="hidden lg:table-cell min-w-[120px]">Phone</TableHead>
-                  <TableHead className="min-w-[80px]">Role</TableHead>
-                  <TableHead className="hidden md:table-cell min-w-[80px]">Status</TableHead>
-                  <TableHead className="hidden lg:table-cell min-w-[120px]">Enrolled</TableHead>
+                  <TableHead className="min-w-[100px]">User Type</TableHead>
+                  <TableHead className="hidden md:table-cell min-w-[80px]">Org Role</TableHead>
+                  <TableHead className="hidden lg:table-cell min-w-[80px]">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -134,17 +143,14 @@ const OrganizationStudents = ({ organizationId, userRole }: OrganizationStudents
                       <div className="min-w-0">
                         <div className="font-medium truncate">{student.name}</div>
                         <div className="text-xs text-muted-foreground truncate">
-                          ID: {student.userId}
-                        </div>
-                        <div className="sm:hidden text-xs text-muted-foreground truncate">
-                          {student.studentIdByInstitute}
+                          {student.userIdByInstitute}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
                       <div className="flex items-center gap-1">
                         <User className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-sm">{student.studentIdByInstitute}</span>
+                        <span className="text-sm">{student.userIdByInstitute}</span>
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
@@ -160,25 +166,24 @@ const OrganizationStudents = ({ organizationId, userRole }: OrganizationStudents
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={getRoleBadgeVariant(student.role)} className="text-xs">
-                        {student.role}
+                      <Badge variant={getUserTypeBadgeVariant(student.instituteUserType)} className="text-xs">
+                        {student.instituteUserType.replace('_', ' ')}
                       </Badge>
                       <div className="md:hidden mt-1">
-                        <Badge variant={getStatusBadgeVariant(student.status)} className="text-xs">
-                          {student.status}
+                        <Badge variant={getRoleBadgeVariant(student.organizationRole)} className="text-xs">
+                          {student.organizationRole}
                         </Badge>
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      <Badge variant={getStatusBadgeVariant(student.status)}>
-                        {student.status}
+                      <Badge variant={getRoleBadgeVariant(student.organizationRole)} className="text-xs">
+                        {student.organizationRole}
                       </Badge>
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        {formatDate(student.enrolledDate)}
-                      </div>
+                      <Badge variant={getStatusBadgeVariant(student.verificationStatus)} className="text-xs">
+                        {student.verificationStatus}
+                      </Badge>
                     </TableCell>
                   </TableRow>
                 ))}

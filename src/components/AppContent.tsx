@@ -74,6 +74,8 @@ import ChildResultsPage from '@/pages/ChildResultsPage';
 import ChildAttendancePage from '@/pages/ChildAttendancePage';
 import ChildTransportPage from '@/pages/ChildTransportPage';
 import InstituteOrganizations from '@/pages/InstituteOrganizations';
+import InstitutePayments from '@/pages/InstitutePayments';
+import SubjectPayments from '@/pages/SubjectPayments';
 
 interface AppContentProps {
   initialPage?: string;
@@ -747,8 +749,8 @@ const AppContent = ({ initialPage }: AppContentProps) => {
     }
 
     // For InstituteAdmin and other roles - full access within their institute
-    // Pages that don't require institute selection
-    const pagesWithoutInstituteRequirement = [
+    // Pages that don't require class/subject selection
+    const pagesWithoutClassRequirement = [
       'transport', 
       'parent-transport', 
       'transport-selection', 
@@ -757,9 +759,11 @@ const AppContent = ({ initialPage }: AppContentProps) => {
       'child/:childId/dashboard',
       'child/:childId/results',
       'child/:childId/attendance',
-      'child/:childId/transport'
+      'child/:childId/transport',
+      'institute-payments',
+      'subject-payments'
     ];
-    if (!selectedInstitute && currentPage !== 'institutes' && currentPage !== 'select-institute' && !pagesWithoutInstituteRequirement.includes(currentPage)) {
+    if (!selectedInstitute && currentPage !== 'institutes' && currentPage !== 'select-institute' && !pagesWithoutClassRequirement.includes(currentPage)) {
       return <InstituteSelector />;
     }
 
@@ -772,12 +776,12 @@ const AppContent = ({ initialPage }: AppContentProps) => {
     }
 
     const classRequiredPages = ['grading'];
-    if (selectedInstitute && !selectedClass && classRequiredPages.includes(currentPage)) {
+    if (selectedInstitute && !selectedClass && classRequiredPages.includes(currentPage) && !pagesWithoutClassRequirement.includes(currentPage)) {
       return <ClassSelector />;
     }
 
     const subjectRequiredPages = ['lectures'];
-    if (selectedClass && !selectedSubject && subjectRequiredPages.includes(currentPage)) {
+    if (selectedClass && !selectedSubject && subjectRequiredPages.includes(currentPage) && !pagesWithoutClassRequirement.includes(currentPage)) {
       return <SubjectSelector />;
     }
 
@@ -878,6 +882,10 @@ const AppContent = ({ initialPage }: AppContentProps) => {
         return <SMS />;
       case 'sms-history':
         return <SMSHistory />;
+      case 'institute-payments':
+        return <InstitutePayments />;
+      case 'subject-payments':
+        return <SubjectPayments />;
       case 'my-children':
         return <MyChildren />;
       case 'child/:childId/dashboard':

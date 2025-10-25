@@ -13,7 +13,7 @@ import { ArrowLeft, Camera, QrCode, UserCheck, CheckCircle, MapPin, X, BarChart3
 import jsQR from 'jsqr';
 import { childAttendanceApi, MarkAttendanceByCardRequest, MarkAttendanceRequest } from '@/api/childAttendance.api';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
-import AppLayout from '@/components/layout/AppLayout';
+
 
 interface AttendanceAlert {
   id: string;
@@ -675,7 +675,6 @@ const QRAttendance = () => {
   }
 
   return (
-    <AppLayout>
       <div className="min-h-screen bg-background">
       {/* Attendance Alerts */}
       <div className="fixed top-4 left-4 z-50 space-y-2 max-w-sm">
@@ -1029,7 +1028,6 @@ const QRAttendance = () => {
         </DialogContent>
       </Dialog>
       </div>
-    </AppLayout>
   );
 };
 

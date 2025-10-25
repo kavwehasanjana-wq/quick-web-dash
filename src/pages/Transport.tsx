@@ -141,81 +141,63 @@ const Transport: React.FC = () => {
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {enrollments.map((enrollment) => (
-              <Card key={enrollment.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between mb-2">
-                    <Truck className="h-8 w-8 text-primary" />
+              <div key={enrollment.id} className="relative flex w-80 flex-col rounded-xl bg-white dark:bg-card bg-clip-border text-gray-700 dark:text-foreground shadow-md">
+                {/* Header with gradient and optional image */}
+                <div className="relative mx-4 -mt-6 h-40 overflow-hidden rounded-xl bg-blue-gray-500 bg-clip-border text-white shadow-lg shadow-blue-gray-500/40 bg-gradient-to-r from-blue-500 to-blue-600">
+                  {enrollment.imageUrl ? (
+                    <img
+                      src={enrollment.imageUrl}
+                      alt={enrollment.bookhireTitle || 'Transport vehicle'}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.display = 'none'
+                      }}
+                    />
+                  ) : null}
+                </div>
+
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <h5 className="mb-0 block font-sans text-xl font-semibold leading-snug tracking-normal text-blue-gray-900 dark:text-foreground antialiased">
+                      {enrollment.bookhireTitle || 'Transport Service'}{enrollment.vehicleNumber ? ` - ${enrollment.vehicleNumber}` : ''}
+                    </h5>
                     <Badge className={getStatusColor(enrollment.status)}>
                       {enrollment.status}
                     </Badge>
                   </div>
-                  {enrollment.imageUrl && (
-                    <div className="w-full h-32 mb-3 rounded-md overflow-hidden bg-muted">
-                      <img 
-                        src={enrollment.imageUrl} 
-                        alt={enrollment.bookhireTitle || 'Transport vehicle'}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    </div>
-                  )}
-                  <CardTitle className="text-xl">
-                    {enrollment.bookhireTitle || 'Transport Service'}
-                  </CardTitle>
-                  <CardDescription>
-                    {enrollment.vehicleNumber}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+
                   {enrollment.pickupLocation && (
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                      <div className="text-sm">
-                        <p className="font-medium">Pickup</p>
-                        <p className="text-muted-foreground">{enrollment.pickupLocation}</p>
-                      </div>
-                    </div>
+                    <p className="block font-sans text-base font-light leading-relaxed text-inherit antialiased mb-2">
+                      <span className="font-medium">Pickup: </span>
+                      {enrollment.pickupLocation}
+                    </p>
                   )}
 
                   {enrollment.dropoffLocation && (
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 text-destructive mt-1 flex-shrink-0" />
-                      <div className="text-sm">
-                        <p className="font-medium">Drop-off</p>
-                        <p className="text-muted-foreground">{enrollment.dropoffLocation}</p>
-                      </div>
-                    </div>
+                    <p className="block font-sans text-base font-light leading-relaxed text-inherit antialiased mb-3">
+                      <span className="font-medium">Drop-off: </span>
+                      {enrollment.dropoffLocation}
+                    </p>
                   )}
 
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-primary" />
-                    <div className="text-sm">
-                      <span className="font-medium">Start Date: </span>
-                      <span className="text-muted-foreground">
-                        {new Date(enrollment.startDate).toLocaleDateString()}
-                      </span>
-                    </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-border">
+                    <span className="text-sm font-medium text-gray-600 dark:text-muted-foreground">Monthly Fee:</span>
+                    <span className="font-bold text-blue-600 dark:text-primary text-lg">
+                      LKR {Number(enrollment.monthlyFee || 0).toLocaleString()}
+                    </span>
                   </div>
+                </div>
 
-                  {enrollment.monthlyFee > 0 && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">Monthly Fee:</span>
-                      <span className="text-lg font-bold text-primary">
-                        LKR {enrollment.monthlyFee.toLocaleString()}
-                      </span>
-                    </div>
-                  )}
-
-                  <Button 
-                    className="w-full" 
+                <div className="p-6 pt-0">
+                  <button
                     onClick={() => handleSelectTransport(enrollment)}
+                    className="select-none rounded-lg bg-blue-500 py-3 px-6 text-center align-middle font-sans text-xs font-bold uppercase text-white shadow-md shadow-blue-500/20 transition-all hover:shadow-lg hover:shadow-blue-500/40 focus:opacity-[0.85] focus:shadow-none active:opacity-[0.85] active:shadow-none disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none w-full"
                   >
                     Select Transport
-                  </Button>
-                </CardContent>
-              </Card>
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
         </div>

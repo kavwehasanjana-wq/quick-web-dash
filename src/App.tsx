@@ -95,9 +95,9 @@ const App = () => {
               <Route path="/daily-attendance" element={<Index />} />
               
               <Route path="/attendance-markers" element={<Index />} />
-              <Route path="/qr-attendance" element={<QRAttendance />} />
+              <Route path="/qr-attendance" element={<Index />} />
               <Route path="/rfid-attendance" element={<RFIDAttendance />} />
-              <Route path="/institute-mark-attendance" element={<InstituteMarkAttendance />} />
+              <Route path="/institute-mark-attendance" element={<Index />} />
               
               {/* Academic Content Routes */}
               <Route path="/lectures" element={<Index />} />
@@ -164,8 +164,8 @@ const App = () => {
               <Route path="/payment-submissions/:paymentId" element={<PaymentSubmissions />} />
               <Route path="/payment-submissions" element={<PaymentSubmissionsPage />} />
               <Route path="/my-submissions" element={<MySubmissions />} />
-              <Route path="/institute-payments" element={<InstitutePayments />} />
-              <Route path="/subject-payments" element={<SubjectPayments />} />
+              <Route path="/institute-payments" element={<Index />} />
+              <Route path="/subject-payments" element={<Index />} />
               <Route path="/subject-submissions" element={<SubjectSubmissions />} />
               <Route path="/subject-pay-submission" element={<SubjectPaymentSubmissions />} />
               

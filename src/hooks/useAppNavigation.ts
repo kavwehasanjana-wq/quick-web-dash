@@ -30,6 +30,7 @@ export const useAppNavigation = () => {
       
       'attendance-markers': '/attendance-markers',
       'qr-attendance': '/qr-attendance',
+      'institute-mark-attendance': '/institute-mark-attendance',
       'lectures': '/lectures',
       'live-lectures': '/live-lectures',
       'homework': '/homework',

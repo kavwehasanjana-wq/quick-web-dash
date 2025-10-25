@@ -94,59 +94,54 @@ const ChildTransportPage = () => {
         </CardHeader>
         <CardContent>
           {enrollments.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {enrollments.map((enrollment) => (
-                <div key={enrollment.id} className="relative flex flex-col rounded-xl bg-card shadow-lg">
-                  <div className="relative mx-4 -mt-6 h-48 overflow-hidden rounded-xl bg-gradient-to-r from-primary to-primary/80 shadow-lg">
+                <div key={enrollment.id} className="relative flex w-80 flex-col rounded-xl bg-white dark:bg-card bg-clip-border text-gray-700 dark:text-foreground shadow-md">
+                  <div className="relative mx-4 -mt-6 h-40 overflow-hidden rounded-xl bg-blue-gray-500 bg-clip-border text-white shadow-lg shadow-blue-gray-500/40 bg-gradient-to-r from-blue-500 to-blue-600">
                     {enrollment.imageUrl ? (
                       <img
                         src={enrollment.imageUrl}
-                        alt={enrollment.bookhireTitle}
+                        alt={enrollment.bookhireTitle || 'Transport vehicle'}
                         className="w-full h-full object-cover"
+                        loading="lazy"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <Bus className="h-8 w-8 text-white/80" />
+                        <Bus className="h-16 w-16 text-white/90" />
                       </div>
                     )}
                   </div>
-                  <div className="p-6 flex-1 flex flex-col">
-                    <div className="mb-4">
-                      <h5 className="mb-2 text-xl font-bold text-foreground line-clamp-2">
-                        {enrollment.bookhireTitle}
-                      </h5>
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <Badge className="text-sm bg-primary/10 text-primary border-primary/20 px-3 py-1">
-                          {enrollment.vehicleNumber}
-                        </Badge>
-                        <Badge className={`text-sm px-3 py-1 ${getStatusColor(enrollment.status)}`}>
-                          {enrollment.status}
-                        </Badge>
-                      </div>
+                  <div className="p-6">
+                    <h5 className="mb-2 block font-sans text-xl font-semibold leading-snug tracking-normal text-blue-gray-900 dark:text-foreground antialiased">
+                      {enrollment.bookhireTitle}
+                    </h5>
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <Badge className="text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-0 px-3 py-1">
+                        {enrollment.vehicleNumber}
+                      </Badge>
+                      <Badge className={`text-sm px-3 py-1 ${getStatusColor(enrollment.status)}`}>
+                        {enrollment.status}
+                      </Badge>
                     </div>
-                    
-                    <div className="space-y-3 mb-4 flex-1 text-sm">
-                      <div className="flex items-start gap-2">
-                        <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                        <div className="line-clamp-3">
-                          <span className="font-semibold">Pickup: </span>
-                          <span className="text-muted-foreground">{enrollment.pickupLocation || 'Not specified'}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between pt-2 border-t">
-                        <span className="font-semibold">Monthly Fee:</span>
-                        <span className="font-bold text-primary text-lg">
-                          Rs. {enrollment.monthlyFee.toLocaleString()}
-                        </span>
-                      </div>
+                    <p className="block font-sans text-base font-light leading-relaxed text-inherit antialiased mb-3">
+                      <span className="font-medium">Pickup: </span>
+                      {enrollment.pickupLocation || 'Not specified'}
+                    </p>
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-border">
+                      <span className="text-sm font-medium text-gray-600 dark:text-muted-foreground">Monthly Fee:</span>
+                      <span className="font-bold text-blue-600 dark:text-blue-400 text-lg">
+                        Rs. {enrollment.monthlyFee.toLocaleString()}
+                      </span>
                     </div>
-                    
-                    <Button 
-                      className="w-full text-base h-12 font-semibold" 
+                  </div>
+                  <div className="p-6 pt-0">
+                    <button
                       onClick={() => handleSelectTransport(enrollment)}
+                      className="select-none rounded-lg bg-blue-500 py-3 px-6 text-center align-middle font-sans text-xs font-bold uppercase text-white shadow-md shadow-blue-500/20 transition-all hover:shadow-lg hover:shadow-blue-500/40 focus:opacity-[0.85] focus:shadow-none active:opacity-[0.85] active:shadow-none disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none w-full"
                     >
                       Select Transport
-                    </Button>
+                    </button>
                   </div>
                 </div>
               ))}

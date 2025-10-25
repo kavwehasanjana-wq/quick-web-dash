@@ -169,12 +169,9 @@ const AssignParentByPhoneForm: React.FC<AssignParentByPhoneFormProps> = ({
                       onChange={(e) => handlePhoneNumberChange(e.target.value)}
                       placeholder="+94772261284"
                       type="tel"
-                      className="pl-12 pr-10"
+                      className="pr-10"
                       maxLength={12}
                     />
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
-                      +94
-                    </div>
                     <Button
                       type="button"
                       variant="ghost"
