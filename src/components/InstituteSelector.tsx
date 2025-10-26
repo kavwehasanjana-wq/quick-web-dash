@@ -179,18 +179,20 @@ const InstituteSelector = ({ useChildId = false }: InstituteSelectorProps) => {
         </p>
       </div>
 
-      <div className="text-center py-12">
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
-          Click the button below to load your institutes.
-        </p>
-        <Button 
-          onClick={handleLoadInstitutes}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
-        >
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Load Institutes
-        </Button>
-      </div>
+      {institutes.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-12 px-4">
+          <p className="text-gray-600 dark:text-gray-400 mb-6 text-center">
+            Click the button below to load your institutes.
+          </p>
+          <Button 
+            onClick={handleLoadInstitutes}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Load Institutes
+          </Button>
+        </div>
+      )}
 
       {institutes.length > 0 && (
         <>
