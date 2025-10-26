@@ -32,6 +32,7 @@ const InstituteSelector = ({ useChildId = false }: InstituteSelectorProps) => {
   const { user, setSelectedInstitute, selectedChild } = useAuth();
   const { toast } = useToast();
   const [institutes, setInstitutes] = useState<InstituteApiResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const userRole = useInstituteRole();
 
   const handleLoadInstitutes = async () => {
@@ -47,6 +48,7 @@ const InstituteSelector = ({ useChildId = false }: InstituteSelectorProps) => {
       return;
     }
 
+    setIsLoading(true);
     try {
       console.log('Loading institutes for user ID:', userId, useChildId ? '(child)' : '(user)');
 
@@ -135,6 +137,8 @@ const InstituteSelector = ({ useChildId = false }: InstituteSelectorProps) => {
         description: "Failed to load institutes",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -179,7 +183,7 @@ const InstituteSelector = ({ useChildId = false }: InstituteSelectorProps) => {
         </p>
       </div>
 
-      {institutes.length === 0 && (
+      {institutes.length === 0 && !isLoading && (
         <div className="flex flex-col items-center justify-center py-12 px-4">
           <p className="text-gray-600 dark:text-gray-400 mb-6 text-center">
             Click the button below to load your institutes.
@@ -191,6 +195,13 @@ const InstituteSelector = ({ useChildId = false }: InstituteSelectorProps) => {
             <RefreshCw className="h-4 w-4 mr-2" />
             Load Institutes
           </Button>
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading institutes...</p>
         </div>
       )}
 

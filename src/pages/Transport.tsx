@@ -86,25 +86,15 @@ const Transport: React.FC = () => {
               />
             </div>
             
-            <div className="flex flex-col items-center justify-center py-12 px-4">
+            <div className="flex flex-col items-center justify-center min-h-[400px] py-12 px-4">
+              <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Transport Enrollments</h3>
               <p className="text-muted-foreground mb-6 text-center">
                 Click the button below to load your transport enrollments.
               </p>
-              <Button onClick={loadEnrollments} disabled={loading} className="bg-blue-600 hover:bg-blue-700">
+              <Button onClick={loadEnrollments} disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white">
                 {loading ? 'Loading...' : 'Load Transport Enrollments'}
               </Button>
-            </div>
-
-            <div className="flex items-center justify-center min-h-[400px]">
-              <Card className="max-w-md">
-                <CardContent className="pt-6 text-center">
-                  <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Transport Enrollments</h3>
-                  <p className="text-muted-foreground">
-                    Click the button above to load your transport enrollments.
-                  </p>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </PageContainer>
