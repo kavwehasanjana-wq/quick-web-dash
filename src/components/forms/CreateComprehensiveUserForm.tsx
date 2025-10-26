@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -6,11 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/api/client';
-import { CalendarIcon, User, GraduationCap, Users, Camera, ImageIcon } from 'lucide-react';
+import { CalendarIcon, User, GraduationCap, Users, Camera, ImageIcon, X } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast as sonnerToast } from 'sonner';
 
 interface CreateComprehensiveUserFormProps {
   onSubmit: (data: any) => void;
@@ -93,8 +94,11 @@ const CreateComprehensiveUserForm = ({ onSubmit, onCancel }: CreateComprehensive
   const [userType, setUserType] = useState<UserType>('USER');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Basic user data
   const [formData, setFormData] = useState({
@@ -164,17 +168,65 @@ const CreateComprehensiveUserForm = ({ onSubmit, onCancel }: CreateComprehensive
     }
   };
 
-  const handleCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  const openCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' } 
+      });
+      streamRef.current = stream;
+      setIsCameraOpen(true);
+      
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }, 100);
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      sonnerToast.error('Failed to access camera. Please check permissions.');
     }
   };
+
+  const closeCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setIsCameraOpen(false);
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      if (context) {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+            setImageFile(file);
+            setImagePreview(canvas.toDataURL('image/jpeg'));
+            closeCamera();
+            sonnerToast.success('Photo captured successfully');
+          }
+        }, 'image/jpeg', 0.9);
+      }
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -349,14 +401,6 @@ const CreateComprehensiveUserForm = ({ onSubmit, onCancel }: CreateComprehensive
                       accept="image/*"
                       className="hidden"
                     />
-                    <input
-                      type="file"
-                      ref={cameraInputRef}
-                      onChange={handleCameraCapture}
-                      accept="image/*"
-                      capture="environment"
-                      className="hidden"
-                    />
                     <Button
                       type="button"
                       variant="outline"
@@ -369,7 +413,7 @@ const CreateComprehensiveUserForm = ({ onSubmit, onCancel }: CreateComprehensive
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => cameraInputRef.current?.click()}
+                      onClick={openCamera}
                       className="flex items-center gap-2"
                     >
                       <Camera className="h-4 w-4" />
@@ -885,6 +929,44 @@ const CreateComprehensiveUserForm = ({ onSubmit, onCancel }: CreateComprehensive
           </div>
         </form>
       </DialogContent>
+
+      {/* Camera Modal */}
+      <Dialog open={isCameraOpen} onOpenChange={(open) => !open && closeCamera()}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Take Photo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="relative bg-black rounded-lg overflow-hidden">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className="w-full h-auto"
+              />
+            </div>
+            <canvas ref={canvasRef} className="hidden" />
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                onClick={capturePhoto}
+                className="flex-1"
+              >
+                <Camera className="h-4 w-4 mr-2" />
+                Capture Photo
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeCamera}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };
