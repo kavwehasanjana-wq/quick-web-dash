@@ -163,23 +163,25 @@ const ExamResults = () => {
       <div className="w-full min-h-full">
         <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           <Button variant="ghost" size="sm" onClick={handleGoBack} className="-ml-2 w-fit">
             <ArrowLeft className="h-4 w-4 mr-2 flex-shrink-0" />
-            <span className="text-sm truncate">{getContextBreadcrumb()}</span>
+            <span className="text-sm truncate max-w-[200px] sm:max-w-none">{getContextBreadcrumb()}</span>
           </Button>
-          <div className="space-y-2">
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground break-words leading-tight">
+          <div className="space-y-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground break-words leading-tight">
               Exam Results{examDetails.title ? `: ${examDetails.title}` : ''}
             </h1>
-            <p className="text-sm text-muted-foreground">
-              View and analyze exam results
-            </p>
-            {lastRefresh && (
-              <p className="text-xs text-muted-foreground">
-                Last refreshed: {lastRefresh.toLocaleTimeString()}
+            <div className="flex flex-col gap-1">
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                View and analyze exam results
               </p>
-            )}
+              {lastRefresh && (
+                <p className="text-xs text-muted-foreground">
+                  Last refreshed: {lastRefresh.toLocaleTimeString()}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -238,19 +240,20 @@ const ExamResults = () => {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-xs sm:text-sm font-medium">Performance</CardTitle>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-12 w-12 flex-shrink-0" 
-                    onClick={() => setShowPerformanceDialog(true)}
-                  >
-                    <TrendingUp className="h-5 w-5 text-purple-600" />
-                  </Button>
+                  <TrendingUp className="h-4 w-4 text-purple-600 flex-shrink-0" />
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-2">
                   <div className="text-xl sm:text-2xl font-bold text-purple-600">
                     {averageScore >= 85 ? 'Excellent' : averageScore >= 70 ? 'Good' : averageScore >= 50 ? 'Average' : 'Poor'}
                   </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setShowPerformanceDialog(true)}
+                  >
+                    View Details
+                  </Button>
                 </CardContent>
               </Card>
             </div>
