@@ -222,39 +222,14 @@ const ExamResults = () => {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Average Score</CardTitle>
-                  <Target className="h-4 w-4 text-green-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-600">
-                    {averageScore}%
-                  </div>
-                </CardContent>
-              </Card>
+              
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">A Grades</CardTitle>
-                  <Award className="h-4 w-4 text-yellow-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-yellow-600">
-                    {(gradeDistribution.A || 0) + (gradeDistribution['A+'] || 0)}
-                  </div>
-                </CardContent>
-              </Card>
+              
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Performance</CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setShowPerformanceDialog(true)}
-                  >
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowPerformanceDialog(true)}>
                     <TrendingUp className="h-4 w-4 text-purple-600" />
                   </Button>
                 </CardHeader>
@@ -359,8 +334,8 @@ const ExamResults = () => {
               format: (value: any, row: ExamResult) => <Badge variant={parseFloat(row.score) >= parseFloat(examDetails.passingMarks!) ? "default" : "destructive"}>
                             {parseFloat(row.score) >= parseFloat(examDetails.passingMarks!) ? "Pass" : "Fail"}
                           </Badge>
-             }] : []), {
-               id: 'remarks',
+            }] : []), {
+              id: 'remarks',
               label: 'Remarks',
               minWidth: 150,
               format: (value: string) => <span className="text-sm">
@@ -428,10 +403,9 @@ const ExamResults = () => {
                       <span className="font-semibold">{averageScore}%</span>
                     </div>
                     <div className="w-full bg-secondary rounded-full h-2">
-                      <div 
-                        className="bg-purple-600 h-2 rounded-full transition-all" 
-                        style={{ width: `${Math.min(averageScore, 100)}%` }}
-                      />
+                      <div className="bg-purple-600 h-2 rounded-full transition-all" style={{
+                      width: `${Math.min(averageScore, 100)}%`
+                    }} />
                     </div>
                   </div>
                 </CardContent>
@@ -447,8 +421,7 @@ const ExamResults = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {Object.entries(gradeDistribution).map(([grade, count]) => (
-                      <div key={grade} className="flex items-center justify-between">
+                    {Object.entries(gradeDistribution).map(([grade, count]) => <div key={grade} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Badge className={getGradeColor(grade)}>
                             Grade {grade}
@@ -458,16 +431,14 @@ const ExamResults = () => {
                           </span>
                         </div>
                         <div className="flex-1 mx-4 bg-secondary rounded-full h-2">
-                          <div 
-                            className="bg-primary h-2 rounded-full transition-all" 
-                            style={{ width: `${(count / totalResults) * 100}%` }}
-                          />
+                          <div className="bg-primary h-2 rounded-full transition-all" style={{
+                        width: `${count / totalResults * 100}%`
+                      }} />
                         </div>
                         <span className="text-sm font-semibold">
-                          {Math.round((count / totalResults) * 100)}%
+                          {Math.round(count / totalResults * 100)}%
                         </span>
-                      </div>
-                    ))}
+                      </div>)}
                   </div>
                 </CardContent>
               </Card>
@@ -491,7 +462,7 @@ const ExamResults = () => {
                     <div className="text-right">
                       <p className="text-sm text-muted-foreground mb-1">Percentage</p>
                       <p className="text-3xl font-bold text-yellow-600">
-                        {Math.round((((gradeDistribution.A || 0) + (gradeDistribution['A+'] || 0)) / totalResults) * 100)}%
+                        {Math.round(((gradeDistribution.A || 0) + (gradeDistribution['A+'] || 0)) / totalResults * 100)}%
                       </p>
                     </div>
                   </div>
