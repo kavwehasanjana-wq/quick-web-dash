@@ -252,12 +252,11 @@ const ExamResults = () => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 lg:hidden"
+                    className="h-8 w-8"
                     onClick={() => setShowPerformanceDialog(true)}
                   >
                     <TrendingUp className="h-4 w-4 text-purple-600" />
                   </Button>
-                  <TrendingUp className="hidden lg:block h-4 w-4 text-purple-600" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-purple-600">
