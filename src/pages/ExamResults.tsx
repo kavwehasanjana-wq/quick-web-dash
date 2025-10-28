@@ -241,10 +241,10 @@ const ExamResults = () => {
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="h-8 w-8 flex-shrink-0" 
+                    className="h-12 w-12 flex-shrink-0" 
                     onClick={() => setShowPerformanceDialog(true)}
                   >
-                    <TrendingUp className="h-4 w-4 text-purple-600" />
+                    <TrendingUp className="h-5 w-5 text-purple-600" />
                   </Button>
                 </CardHeader>
                 <CardContent>
