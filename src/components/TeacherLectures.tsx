@@ -13,6 +13,7 @@ import CreateLectureForm from '@/components/forms/CreateLectureForm';
 import UpdateLectureForm from '@/components/forms/UpdateLectureForm';
 import { useTableData } from '@/hooks/useTableData';
 import { cachedApiClient } from '@/api/cachedClient';
+import VideoPreviewDialog from '@/components/VideoPreviewDialog';
 
 interface TeacherLecture {
   id: string;
@@ -51,6 +52,8 @@ const TeacherLectures = () => {
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
   const [selectedLecture, setSelectedLecture] = useState<TeacherLecture | null>(null);
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+  const [videoPreviewTitle, setVideoPreviewTitle] = useState<string>('');
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -123,12 +126,28 @@ const TeacherLectures = () => {
       header: 'Recording',
       render: (value: string, row: any) => {
         const recUrl = value || row.recordingUrl || row.recording_url || row.recUrl || row.videoUrl || row.video_url;
+        
+        const isYouTubeOrDrive = (url: string) => {
+          return url.includes('youtube.com') || 
+                 url.includes('youtu.be') || 
+                 url.includes('drive.google.com');
+        };
+        
+        const handleRecordingClick = (url: string) => {
+          if (isYouTubeOrDrive(url)) {
+            setVideoPreviewUrl(url);
+            setVideoPreviewTitle(row.title || 'Lecture Recording');
+          } else {
+            window.open(url, '_blank');
+          }
+        };
+        
         return recUrl ? (
           <Button
             size="sm"
             variant="default"
             className="hover:opacity-90"
-            onClick={() => window.open(recUrl, '_blank')}
+            onClick={() => handleRecordingClick(recUrl)}
           >
             <Video className="h-3 w-3 mr-1" />
             View Rec
@@ -446,6 +465,14 @@ const TeacherLectures = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Video Preview Dialog */}
+      <VideoPreviewDialog
+        open={!!videoPreviewUrl}
+        onOpenChange={(open) => !open && setVideoPreviewUrl(null)}
+        url={videoPreviewUrl || ''}
+        title={videoPreviewTitle}
+      />
 
     </div>
   );

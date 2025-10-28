@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -8,13 +8,35 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/api/client';
 import { Upload, X } from 'lucide-react';
 
+export interface HomeworkSubmission {
+  id: string;
+  homeworkId: string;
+  studentId: string;
+  submissionDate: string;
+  fileUrl?: string;
+  teacherCorrectionFileUrl?: string;
+  remarks?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  student?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+}
+
 interface UploadCorrectionDialogProps {
   submissionId: string;
   studentName: string;
+  submission?: HomeworkSubmission;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
@@ -22,7 +44,8 @@ interface UploadCorrectionDialogProps {
 
 const UploadCorrectionDialog = ({ 
   submissionId, 
-  studentName, 
+  studentName,
+  submission,
   isOpen, 
   onClose, 
   onSuccess 
@@ -30,6 +53,25 @@ const UploadCorrectionDialog = ({
   const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [formData, setFormData] = useState({
+    homeworkId: '',
+    studentId: '',
+    submissionDate: '',
+    remarks: '',
+    isActive: true
+  });
+
+  useEffect(() => {
+    if (submission && isOpen) {
+      setFormData({
+        homeworkId: submission.homeworkId,
+        studentId: submission.studentId,
+        submissionDate: submission.submissionDate.split('T')[0],
+        remarks: '',
+        isActive: submission.isActive
+      });
+    }
+  }, [submission, isOpen]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -44,7 +86,7 @@ const UploadCorrectionDialog = ({
     if (!file) {
       toast({
         title: "Error",
-        description: "Please select a file to upload",
+        description: "Please select a correction file to upload",
         variant: "destructive"
       });
       return;
@@ -52,27 +94,31 @@ const UploadCorrectionDialog = ({
 
     setIsUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      const formDataToSend = new FormData();
+      formDataToSend.append('homeworkId', formData.homeworkId);
+      formDataToSend.append('studentId', formData.studentId);
+      formDataToSend.append('submissionDate', formData.submissionDate);
+      formDataToSend.append('remarks', formData.remarks);
+      formDataToSend.append('isActive', formData.isActive.toString());
+      formDataToSend.append('teacherCorrectionFileUrl', file);
 
-      const response = await apiClient.post(
-        `/institute-class-subject-homework-submissions/${submissionId}/correction-file`,
-        formData
+      const response = await apiClient.patch(
+        `/institute-class-subject-homeworks-submissions/${submissionId}`,
+        formDataToSend
       );
 
       toast({
         title: "Success",
-        description: "Correction file uploaded successfully",
+        description: "Submission updated successfully",
       });
 
       onSuccess();
-      onClose();
-      setFile(null);
+      handleClose();
     } catch (error: any) {
-      console.error('Error uploading correction file:', error);
+      console.error('Error updating submission:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to upload correction file",
+        description: error.message || "Failed to update submission",
         variant: "destructive"
       });
     } finally {
@@ -82,34 +128,99 @@ const UploadCorrectionDialog = ({
 
   const handleClose = () => {
     setFile(null);
+    setFormData({
+      homeworkId: '',
+      studentId: '',
+      submissionDate: '',
+      remarks: '',
+      isActive: true
+    });
     onClose();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
-            Upload Correction File
+            Update Submission & Upload Correction
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <p className="text-sm text-muted-foreground mb-4">
-              Upload correction file for <strong>{studentName}</strong>'s submission
+              Update submission details for <strong>{studentName}</strong>
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="correction-file">Correction File</Label>
+            <Label htmlFor="homeworkId">Homework ID</Label>
+            <Input
+              id="homeworkId"
+              value={formData.homeworkId}
+              disabled
+              readOnly
+              required
+              className="bg-muted/50 cursor-not-allowed"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="studentId">Student ID</Label>
+            <Input
+              id="studentId"
+              value={formData.studentId}
+              disabled
+              readOnly
+              required
+              className="bg-muted/50 cursor-not-allowed"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="submissionDate">Submission Date</Label>
+            <Input
+              id="submissionDate"
+              type="date"
+              value={formData.submissionDate}
+              onChange={(e) => setFormData({ ...formData, submissionDate: e.target.value })}
+              disabled={isUploading}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="remarks">Remarks</Label>
+            <Textarea
+              id="remarks"
+              value={formData.remarks}
+              onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+              disabled={isUploading}
+              rows={3}
+            />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="isActive"
+              checked={formData.isActive}
+              onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+              disabled={isUploading}
+            />
+            <Label htmlFor="isActive">Active Status</Label>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="correction-file">Teacher Correction File *</Label>
             <Input
               id="correction-file"
               type="file"
               accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
               onChange={handleFileChange}
               disabled={isUploading}
+              required
             />
             {file && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -140,7 +251,7 @@ const UploadCorrectionDialog = ({
               type="submit"
               disabled={!file || isUploading}
             >
-              {isUploading ? 'Uploading...' : 'Upload Correction'}
+              {isUploading ? 'Updating...' : 'Update Submission'}
             </Button>
           </div>
         </form>

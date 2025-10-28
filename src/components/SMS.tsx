@@ -130,13 +130,12 @@ const SMS = () => {
     setCustomScheduledAt(sriLankaTime);
   }, []);
 
-  // Fetch SMS credentials on mount and when institute changes
+  // Auto-load credentials when component mounts
   useEffect(() => {
     if (currentInstituteId) {
       fetchCredentials();
-      fetchPaymentSubmissions();
     }
-  }, [currentInstituteId, paymentsPage]);
+  }, [currentInstituteId]);
 
   const fetchPaymentSubmissions = async () => {
     if (!currentInstituteId) return;
@@ -168,9 +167,9 @@ const SMS = () => {
     }
   };
 
-  // Refetch payment submissions when pagination changes
+  // Only refetch when pagination changes if data is already loaded
   useEffect(() => {
-    if (paymentsPage >= 0) {
+    if (paymentsPage >= 0 && paymentSubmissions.length > 0) {
       fetchPaymentSubmissions();
     }
   }, [paymentsPage, paymentsRowsPerPage]);
@@ -492,12 +491,19 @@ const SMS = () => {
               )}
               <Button variant="outline" size="sm" onClick={fetchCredentials} disabled={loadingCredentials}>
                 <RefreshCw className={`h-4 w-4 ${loadingCredentials ? 'animate-spin' : ''}`} />
+                <span className="ml-2 hidden sm:inline">{loadingCredentials ? 'Loading...' : 'Load Data'}</span>
               </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {loadingCredentials ? (
+          {!credentials && !loadingCredentials ? (
+            <div className="text-center py-8">
+              <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground text-lg mb-2">Click "Load Data" to view SMS credits</p>
+              <p className="text-muted-foreground text-sm">Credits information will appear here</p>
+            </div>
+          ) : loadingCredentials ? (
             <p className="text-muted-foreground">Loading SMS credentials...</p>
           ) : credentials ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -577,9 +583,6 @@ const SMS = () => {
                     rows={4}
                     className="mt-2"
                   />
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Use {`{{firstName}}`} and {`{{lastName}}`} as placeholders
-                  </p>
                 </div>
 
                 <div>
@@ -699,9 +702,6 @@ const SMS = () => {
                     rows={4}
                     className="mt-2"
                   />
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Use {`{{name}}`} as placeholder for recipient name
-                  </p>
                 </div>
 
                 <div>

@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Award, RefreshCw, AlertTriangle, TrendingUp, BookOpen, Calendar, Target, Download, Filter, ArrowLeft, Search, Users } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Award, RefreshCw, AlertTriangle, TrendingUp, BookOpen, Target, Download, Filter, ArrowLeft, Search, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { examResultsApi, type ExamResult, type ExamResultsQueryParams } from '@/api/examResults.api';
@@ -44,6 +45,7 @@ const ExamResults = () => {
   const [hasPreviousPage, setHasPreviousPage] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [showPerformanceDialog, setShowPerformanceDialog] = useState(false);
   const {
     execute: fetchResults,
     loading
@@ -116,13 +118,6 @@ const ExamResults = () => {
     if (selectedSubject) parts.push(selectedSubject.name);
     return parts.length > 0 ? `Exams (${parts.join(' → ')})` : 'Exams';
   };
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
   const getGradeColor = (grade: string) => {
     switch (grade.toUpperCase()) {
       case 'A+':
@@ -168,15 +163,15 @@ const ExamResults = () => {
       <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <Button variant="ghost" size="sm" onClick={handleGoBack} className="mb-2 -ml-2">
-              <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-2 flex-shrink-0" />
               <span className="text-sm sm:text-base truncate">{getContextBreadcrumb()}</span>
             </Button>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground break-words">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground break-words">
               Exam Results{examDetails.title ? `: ${examDetails.title}` : ''}
             </h1>
-            <p className="text-sm sm:text-base text-muted-foreground mt-1">
+            <p className="text-xs sm:text-sm md:text-base text-muted-foreground mt-1">
               View and analyze exam results
             </p>
             {lastRefresh && <p className="text-xs sm:text-sm text-muted-foreground mt-1">
@@ -254,7 +249,15 @@ const ExamResults = () => {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Performance</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-purple-600" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 lg:hidden"
+                    onClick={() => setShowPerformanceDialog(true)}
+                  >
+                    <TrendingUp className="h-4 w-4 text-purple-600" />
+                  </Button>
+                  <TrendingUp className="hidden lg:block h-4 w-4 text-purple-600" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-purple-600">
@@ -357,16 +360,8 @@ const ExamResults = () => {
               format: (value: any, row: ExamResult) => <Badge variant={parseFloat(row.score) >= parseFloat(examDetails.passingMarks!) ? "default" : "destructive"}>
                             {parseFloat(row.score) >= parseFloat(examDetails.passingMarks!) ? "Pass" : "Fail"}
                           </Badge>
-            }] : []), {
-              id: 'createdAt',
-              label: 'Date',
-              minWidth: 120,
-              format: (value: string) => <div className="flex items-center gap-1 text-sm">
-                            <Calendar className="h-3 w-3" />
-                            {formatDate(value)}
-                          </div>
-            }, {
-              id: 'remarks',
+             }] : []), {
+               id: 'remarks',
               label: 'Remarks',
               minWidth: 150,
               format: (value: string) => <span className="text-sm">
@@ -384,6 +379,134 @@ const ExamResults = () => {
               </CardContent>
             </Card>
           </>}
+
+        {/* Performance Details Dialog */}
+        <Dialog open={showPerformanceDialog} onOpenChange={setShowPerformanceDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Performance Analytics
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              {/* Summary Stats */}
+              <div className="grid grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Total Results</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-blue-600">{totalResults}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Average Score</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-green-600">{averageScore}%</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Performance Level */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Overall Performance</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <span className="text-4xl font-bold text-purple-600">
+                      {averageScore >= 85 ? 'Excellent' : averageScore >= 70 ? 'Good' : averageScore >= 50 ? 'Average' : 'Poor'}
+                    </span>
+                    <TrendingUp className="h-12 w-12 text-purple-600" />
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Performance Score</span>
+                      <span className="font-semibold">{averageScore}%</span>
+                    </div>
+                    <div className="w-full bg-secondary rounded-full h-2">
+                      <div 
+                        className="bg-purple-600 h-2 rounded-full transition-all" 
+                        style={{ width: `${Math.min(averageScore, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Grade Distribution */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Award className="h-4 w-4" />
+                    Grade Distribution
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {Object.entries(gradeDistribution).map(([grade, count]) => (
+                      <div key={grade} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge className={getGradeColor(grade)}>
+                            Grade {grade}
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">
+                            {count} student{count !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        <div className="flex-1 mx-4 bg-secondary rounded-full h-2">
+                          <div 
+                            className="bg-primary h-2 rounded-full transition-all" 
+                            style={{ width: `${(count / totalResults) * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-semibold">
+                          {Math.round((count / totalResults) * 100)}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* A Grades Highlight */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Award className="h-4 w-4 text-yellow-600" />
+                    Excellence Metrics
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Students with A Grades</p>
+                      <p className="text-3xl font-bold text-yellow-600">
+                        {(gradeDistribution.A || 0) + (gradeDistribution['A+'] || 0)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground mb-1">Percentage</p>
+                      <p className="text-3xl font-bold text-yellow-600">
+                        {Math.round((((gradeDistribution.A || 0) + (gradeDistribution['A+'] || 0)) / totalResults) * 100)}%
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setShowPerformanceDialog(false)}>
+                Close
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>;
 };

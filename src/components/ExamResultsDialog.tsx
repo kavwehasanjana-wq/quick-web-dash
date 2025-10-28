@@ -227,7 +227,6 @@ export const ExamResultsDialog = ({ isOpen, onClose, exam }: ExamResultsDialogPr
                         <TableHead>Grade</TableHead>
                         <TableHead>Pass/Fail</TableHead>
                         <TableHead>Remarks</TableHead>
-                        <TableHead>Submitted</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -258,12 +257,6 @@ export const ExamResultsDialog = ({ isOpen, onClose, exam }: ExamResultsDialogPr
                             )}
                           </TableCell>
                           <TableCell>{result.remarks || "No remarks"}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <Calendar className="h-3 w-3" />
-                              {new Date(result.createdAt).toLocaleDateString()}
-                            </div>
-                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

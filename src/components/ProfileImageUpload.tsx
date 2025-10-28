@@ -215,6 +215,22 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
         >
           <Camera className="h-4 w-4" />
         </Button>
+        {currentImageUrl && (
+          <Button
+            size="sm"
+            variant="destructive"
+            className="absolute -top-2 -right-2 rounded-full h-8 w-8 p-0"
+            onClick={() => {
+              onImageUpdate('');
+              toast({
+                title: "Image Removed",
+                description: "Profile image has been removed."
+              });
+            }}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       <Button

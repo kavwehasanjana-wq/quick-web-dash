@@ -99,6 +99,7 @@ const CreateComprehensiveUserForm = ({ onSubmit, onCancel }: CreateComprehensive
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
 
   // Basic user data
   const [formData, setFormData] = useState({
@@ -171,7 +172,7 @@ const CreateComprehensiveUserForm = ({ onSubmit, onCancel }: CreateComprehensive
   const openCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
+        video: { facingMode } 
       });
       streamRef.current = stream;
       setIsCameraOpen(true);
@@ -184,6 +185,32 @@ const CreateComprehensiveUserForm = ({ onSubmit, onCancel }: CreateComprehensive
     } catch (error) {
       console.error('Error accessing camera:', error);
       sonnerToast.error('Failed to access camera. Please check permissions.');
+    }
+  };
+
+  const switchCamera = async () => {
+    const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(newFacingMode);
+    
+    // Close current stream
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+    
+    // Open with new facing mode
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: newFacingMode } 
+      });
+      streamRef.current = stream;
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      sonnerToast.success(`Switched to ${newFacingMode === 'user' ? 'front' : 'back'} camera`);
+    } catch (error) {
+      console.error('Error switching camera:', error);
+      sonnerToast.error('Failed to switch camera.');
     }
   };
 
@@ -388,8 +415,25 @@ const CreateComprehensiveUserForm = ({ onSubmit, onCancel }: CreateComprehensive
                 
                 <div className="space-y-4">
                   {imagePreview && (
-                    <div className="flex justify-center">
-                      <img src={imagePreview} alt="Preview" className="w-32 h-32 rounded-full object-cover border-4 border-primary/20" />
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="relative">
+                        <img src={imagePreview} alt="Preview" className="w-32 h-32 rounded-full object-cover border-4 border-primary/20" />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute -top-2 -right-2 h-8 w-8 rounded-full"
+                          onClick={() => {
+                            setImagePreview(null);
+                            setImageFile(null);
+                            if (fileInputRef.current) {
+                              fileInputRef.current.value = '';
+                            }
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   )}
                   
@@ -947,6 +991,15 @@ const CreateComprehensiveUserForm = ({ onSubmit, onCancel }: CreateComprehensive
             </div>
             <canvas ref={canvasRef} className="hidden" />
             <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={switchCamera}
+                className="flex-1"
+              >
+                <Camera className="h-4 w-4 mr-2" />
+                Switch to {facingMode === 'user' ? 'Back' : 'Front'} Camera
+              </Button>
               <Button
                 type="button"
                 onClick={capturePhoto}

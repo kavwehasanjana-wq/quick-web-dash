@@ -292,7 +292,7 @@ const SubjectPayments = () => {
         </Card>}
 
       {/* Subject Payments Table */}
-      {!loading && <Card>
+      {!loading && <Card className="mx-auto max-w-5xl w-full">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -305,14 +305,22 @@ const SubjectPayments = () => {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            {!subjectPaymentsData ? <div className="text-center py-12">
-                <CreditCard className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground text-lg mb-2">
-                  Click "Load Data" to view payments
+            {!subjectPaymentsData ? <div className="flex flex-col items-center justify-center py-20 px-6">
+                <h2 className="text-3xl font-bold text-foreground mb-4">
+                  Subject Payments
+                </h2>
+                <p className="text-muted-foreground text-base mb-8 text-center max-w-md">
+                  Click the button below to load payments data
                 </p>
-                <p className="text-muted-foreground text-sm">
-                  Select institute, class, and subject first, then click Load Data.
-                </p>
+                <Button 
+                  onClick={() => loadSubjectPayments()} 
+                  disabled={loading || !selectedInstitute || !selectedClass || !selectedSubject}
+                  size="lg"
+                  className="px-8 py-6 text-base"
+                >
+                  <RefreshCw className={`h-5 w-5 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  {loading ? 'Loading...' : 'Load Data'}
+                </Button>
               </div> : <Paper sx={{
             width: '100%',
             overflow: 'hidden'

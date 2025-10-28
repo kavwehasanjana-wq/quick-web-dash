@@ -1827,9 +1827,11 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
 
     return (
       <div className="mb-4 sm:mb-6">
-        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-3">
-          {title}
-        </h3>
+        {!isCollapsed && (
+          <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-3">
+            {title}
+          </h3>
+        )}
         <div className="space-y-1">
           {filteredItems.map((item) => (
             <Button
@@ -1912,7 +1914,7 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
         </div>
 
         {/* Context Info - Child-only on child routes, otherwise full context like before */}
-        {currentPage.startsWith('child/:childId/') && selectedChild ? (
+        {!isCollapsed && (currentPage.startsWith('child/:childId/') && selectedChild ? (
           <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Current Selection</span>
@@ -1958,7 +1960,7 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
               </div>
             </div>
           )
-        )}
+        ))}
 
         {/* Navigation */}
         <ScrollArea className="flex-1 px-2 sm:px-3 py-3 sm:py-4">

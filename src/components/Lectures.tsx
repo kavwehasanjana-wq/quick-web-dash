@@ -16,6 +16,7 @@ import UpdateLectureForm from '@/components/forms/UpdateLectureForm';
 import { DataCardView } from '@/components/ui/data-card-view';
 import { useTableData } from '@/hooks/useTableData';
 import { cachedApiClient } from '@/api/cachedClient';
+import VideoPreviewDialog from '@/components/VideoPreviewDialog';
 
 interface LecturesProps {
   apiLevel?: 'institute' | 'class' | 'subject';
@@ -29,6 +30,8 @@ const Lectures = ({ apiLevel = 'institute' }: LecturesProps) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedLectureData, setSelectedLectureData] = useState<any>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+  const [videoPreviewTitle, setVideoPreviewTitle] = useState<string>('');
 
   // Filter states
   const [showFilters, setShowFilters] = useState(false);
@@ -222,14 +225,29 @@ const Lectures = ({ apiLevel = 'institute' }: LecturesProps) => {
       key: 'recordingUrl',
       header: 'Recording',
       render: (value: string, row: any) => {
-        // Check multiple possible field names for recording URL
         const recUrl = value || row.recordingUrl || row.recording_url || row.recUrl || row.videoUrl || row.video_url;
+        
+        const isYouTubeOrDrive = (url: string) => {
+          return url.includes('youtube.com') || 
+                 url.includes('youtu.be') || 
+                 url.includes('drive.google.com');
+        };
+        
+        const handleRecordingClick = (url: string) => {
+          if (isYouTubeOrDrive(url)) {
+            setVideoPreviewUrl(url);
+            setVideoPreviewTitle(row.title || 'Lecture Recording');
+          } else {
+            window.open(url, '_blank');
+          }
+        };
+        
         return recUrl ? (
           <Button
             size="sm"
             variant="default"
             className="hover:opacity-90"
-            onClick={() => window.open(recUrl, '_blank')}
+            onClick={() => handleRecordingClick(recUrl)}
           >
             <Video className="h-3 w-3 mr-1" />
             View Rec
@@ -500,6 +518,14 @@ const Lectures = ({ apiLevel = 'institute' }: LecturesProps) => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Video Preview Dialog */}
+      <VideoPreviewDialog
+        open={!!videoPreviewUrl}
+        onOpenChange={(open) => !open && setVideoPreviewUrl(null)}
+        url={videoPreviewUrl || ''}
+        title={videoPreviewTitle}
+      />
 
     </div>
   );

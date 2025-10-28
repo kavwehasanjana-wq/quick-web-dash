@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { AccessControl, UserRole } from '@/utils/permissions';
@@ -12,6 +13,7 @@ import { FileText, Calendar, User, ExternalLink, RefreshCw, ArrowLeft, Lock, Edi
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 import AppLayout from '@/components/layout/AppLayout';
 import UploadCorrectionDialog from '@/components/forms/UploadCorrectionDialog';
+import MUITable from '@/components/ui/mui-table';
 
 const HomeworkSubmissionDetails = () => {
   const { homeworkId } = useParams<{ homeworkId: string }>();
@@ -25,6 +27,10 @@ const HomeworkSubmissionDetails = () => {
   const [isLoadingHomework, setIsLoadingHomework] = useState(false);
   const [correctionDialogOpen, setCorrectionDialogOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<HomeworkSubmission | null>(null);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [viewSubmission, setViewSubmission] = useState<HomeworkSubmission | null>(null);
 
   const loadHomework = async () => {
     if (!homeworkId) return;
@@ -98,6 +104,77 @@ const HomeworkSubmissionDetails = () => {
 
   // Check if user can upload corrections (InstituteAdmin or Teacher only)
   const canUploadCorrections = ['InstituteAdmin', 'Teacher'].includes(instituteRole);
+
+  const handleViewDetails = (submission: HomeworkSubmission) => {
+    setViewSubmission(submission);
+    setViewDialogOpen(true);
+  };
+
+  // MUI table columns for submissions
+  const submissionColumns: {
+    id: string;
+    label: string;
+    minWidth?: number;
+    align?: 'right' | 'left' | 'center';
+    format?: (value: any, row?: any) => React.ReactNode;
+  }[] = [
+    {
+      id: 'studentId',
+      label: 'Student ID',
+      minWidth: 120,
+      format: (val) => val || '-',
+    },
+    {
+      id: 'submissionDate',
+      label: 'Submission Date',
+      minWidth: 170,
+      format: (val) => formatDate(val),
+    },
+    {
+      id: 'fileUrl',
+      label: 'File URL',
+      minWidth: 150,
+      format: (val) => val ? (
+        <Button 
+          size="sm" 
+          className="bg-blue-600 hover:bg-blue-700 text-white"
+          onClick={() => window.open(val, '_blank')}
+        >
+          HW File
+        </Button>
+      ) : '-',
+    },
+    {
+      id: 'teacherCorrectionFileUrl',
+      label: 'Correction URL',
+      minWidth: 150,
+      format: (val) => val ? (
+        <Button 
+          size="sm" 
+          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+          onClick={() => window.open(val, '_blank')}
+        >
+          Correction File
+        </Button>
+      ) : '-',
+    },
+    {
+      id: 'remarks',
+      label: 'Remarks',
+      minWidth: 220,
+      format: (val) => val ? <span className="line-clamp-2">{val}</span> : '-',
+    },
+    {
+      id: 'isActive',
+      label: 'Status',
+      minWidth: 100,
+      format: (val) => (
+        <Badge variant={val ? 'default' : 'secondary'}>
+          {val ? 'Active' : 'Inactive'}
+        </Badge>
+      ),
+    },
+  ];
 
   // Check if user has permission to view homework submissions (institute-specific)
   if (!AccessControl.hasPermission(instituteRole as UserRole, 'view-homework-submissions')) {
@@ -201,24 +278,26 @@ const HomeworkSubmissionDetails = () => {
               <CardTitle>
                 Submissions ({submissions.length})
               </CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={loadSubmissions}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Loading...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Refresh
-                  </>
-                )}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadSubmissions}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Refresh
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -234,94 +313,96 @@ const HomeworkSubmissionDetails = () => {
                 <p className="text-muted-foreground">No students have submitted this homework yet.</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {submissions.map((submission) => (
-                  <Card key={submission.id} className="border">
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4" />
-                            <span className="font-medium">
-                              {submission.student?.firstName} {submission.student?.lastName}
-                            </span>
-                            <Badge variant={submission.isActive ? 'default' : 'secondary'}>
-                              {submission.isActive ? 'Active' : 'Inactive'}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Calendar className="h-4 w-4" />
-                            Submitted: {formatDate(submission.submissionDate)}
-                          </div>
-                        </div>
-                        {canUploadCorrections && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleCorrectionClick(submission)}
-                          >
-                            <Edit className="h-3 w-3 mr-1" />
-                            Correction
-                          </Button>
-                        )}
-                      </div>
-
-                      {submission.remarks && (
-                        <div>
-                          <h4 className="text-sm font-medium mb-1">Student Notes:</h4>
-                          <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
-                            {submission.remarks}
-                          </p>
-                        </div>
-                      )}
-
-                      {submission.fileUrl && (
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">Submitted File:</h4>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => window.open(submission.fileUrl, '_blank')}
-                          >
-                            <ExternalLink className="h-3 w-3 mr-1" />
-                            View File
-                          </Button>
-                        </div>
-                      )}
-
-                      {submission.teacherCorrectionFileUrl && (
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">Teacher Correction:</h4>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => window.open(submission.teacherCorrectionFileUrl, '_blank')}
-                          >
-                            <ExternalLink className="h-3 w-3 mr-1" />
-                            View Correction
-                          </Button>
-                        </div>
-                      )}
-
-                      <div className="text-xs text-muted-foreground pt-2 border-t">
-                        Created: {formatDate(submission.createdAt)}
-                        {submission.updatedAt !== submission.createdAt && (
-                          <> • Updated: {formatDate(submission.updatedAt)}</>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              <MUITable
+                title="Homework Submissions"
+                columns={submissionColumns}
+                data={submissions.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)}
+                page={page}
+                rowsPerPage={rowsPerPage}
+                totalCount={submissions.length}
+                onPageChange={(newPage) => setPage(newPage)}
+                onRowsPerPageChange={(newRows) => { setRowsPerPage(newRows); setPage(0); }}
+                rowsPerPageOptions={[10, 25, 50, 100]}
+                sectionType="homework"
+                onView={(row: HomeworkSubmission) => handleViewDetails(row)}
+                customActions={
+                  canUploadCorrections
+                    ? [{
+                        label: 'Correction',
+                        action: (row: HomeworkSubmission) => handleCorrectionClick(row),
+                        icon: <Edit className="h-3 w-3" />,
+                        variant: 'outline' as const,
+                        className: 'border-red-600 text-red-600 hover:bg-red-600 hover:text-white',
+                      }]
+                    : []
+                }
+              />
             )}
           </CardContent>
         </Card>
+
+        {/* View Details Dialog */}
+        {viewSubmission && (
+          <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Submission Details</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Submission ID</label>
+                    <p className="mt-1">{viewSubmission.id}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Student ID</label>
+                    <p className="mt-1">{viewSubmission.studentId}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Student Name</label>
+                    <p className="mt-1">{viewSubmission.student?.firstName} {viewSubmission.student?.lastName}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Status</label>
+                    <p className="mt-1">
+                      <Badge variant={viewSubmission.isActive ? 'default' : 'secondary'}>
+                        {viewSubmission.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Submission Date</label>
+                    <p className="mt-1">{formatDate(viewSubmission.submissionDate)}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Created At</label>
+                    <p className="mt-1">{formatDate(viewSubmission.createdAt)}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Updated At</label>
+                    <p className="mt-1">{formatDate(viewSubmission.updatedAt)}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Homework ID</label>
+                    <p className="mt-1">{viewSubmission.homeworkId}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Remarks</label>
+                  <p className="mt-1 p-3 bg-muted/50 rounded-md">{viewSubmission.remarks || 'No remarks'}</p>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
 
         {/* Correction Upload Dialog */}
         {selectedSubmission && (
           <UploadCorrectionDialog
             submissionId={selectedSubmission.id}
             studentName={`${selectedSubmission.student?.firstName} ${selectedSubmission.student?.lastName}`}
+            submission={selectedSubmission}
             isOpen={correctionDialogOpen}
             onClose={() => setCorrectionDialogOpen(false)}
             onSuccess={handleCorrectionSuccess}

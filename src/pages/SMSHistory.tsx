@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTableData } from '@/hooks/useTableData';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -86,7 +86,7 @@ export default function SMSHistory() {
     }
   } = useTableData<SMSMessage>({
     endpoint: selectedInstitute ? `/sms/message-history/${selectedInstitute.id}` : '',
-    autoLoad: !!selectedInstitute,
+    autoLoad: false,
     defaultParams: {
       recipientFilterType: recipientFilter || undefined,
       messageType: messageTypeFilter || undefined,
@@ -98,14 +98,7 @@ export default function SMSHistory() {
     }
   });
 
-  // Update filters in useTableData when they change
-  useEffect(() => {
-    updateFilters({
-      recipientFilterType: recipientFilter || undefined,
-      messageType: messageTypeFilter || undefined,
-      search: searchQuery || undefined
-    });
-  }, [recipientFilter, messageTypeFilter, searchQuery, updateFilters]);
+  // Filters will be applied when you click "Load Data"
   const clearFilters = () => {
     setRecipientFilter('');
     setMessageTypeFilter('');
@@ -256,9 +249,9 @@ export default function SMSHistory() {
             <Filter className="h-4 w-4" />
             <span className="hidden sm:inline">Filters</span>
           </Button>
-          <Button onClick={refresh} disabled={loading} variant="outline" className="flex items-center gap-2" size="sm">
+          <Button onClick={refresh} disabled={loading || !selectedInstitute} variant="outline" className="flex items-center gap-2" size="sm">
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">{loading ? 'Refreshing...' : 'Refresh'}</span>
+            <span className="hidden sm:inline">{loading ? 'Loading...' : 'Load Data'}</span>
           </Button>
         </div>
       </div>
@@ -275,12 +268,12 @@ export default function SMSHistory() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Search (ID / Sent By)</label>
-              <Input placeholder="Search by ID or Sent By..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full" />
+              <Input placeholder="Search by ID or Sent By..." value={searchQuery} onChange={e => { const v = e.target.value; setSearchQuery(v); updateFilters({ recipientFilterType: recipientFilter || undefined, messageType: messageTypeFilter || undefined, search: v || undefined }); }} className="w-full" />
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Recipient Filter</label>
-              <Select value={recipientFilter || "all"} onValueChange={value => setRecipientFilter(value === "all" ? '' : value)}>
+              <Select value={recipientFilter || "all"} onValueChange={value => { const val = value === "all" ? '' : value; setRecipientFilter(val); updateFilters({ recipientFilterType: val || undefined, messageType: messageTypeFilter || undefined, search: searchQuery || undefined }); }}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="All" />
                 </SelectTrigger>
@@ -297,7 +290,7 @@ export default function SMSHistory() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Message Type</label>
-              <Select value={messageTypeFilter || "all"} onValueChange={value => setMessageTypeFilter(value === "all" ? '' : value)}>
+              <Select value={messageTypeFilter || "all"} onValueChange={value => { const val = value === "all" ? '' : value; setMessageTypeFilter(val); updateFilters({ recipientFilterType: recipientFilter || undefined, messageType: val || undefined, search: searchQuery || undefined }); }}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="All Message Types" />
                 </SelectTrigger>

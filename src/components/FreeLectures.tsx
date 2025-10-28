@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
+import VideoPreviewDialog from '@/components/VideoPreviewDialog';
 
 interface Document {
   documentName: string;
@@ -87,6 +88,11 @@ const FreeLectures = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedLectures, setExpandedLectures] = useState<Record<string, boolean>>({});
+  const [videoPreview, setVideoPreview] = useState<{ open: boolean; url: string; title: string }>({ 
+    open: false, 
+    url: '', 
+    title: '' 
+  });
 
   const handleLoadLectures = () => {
     if (selectedSubject && (selectedClassGrade !== null && selectedClassGrade !== undefined)) {
@@ -147,8 +153,8 @@ const FreeLectures = () => {
     }
   };
 
-  const handleJoinLecture = (lectureLink: string) => {
-    window.open(lectureLink, '_blank');
+  const handleJoinLecture = (lectureLink: string, title: string) => {
+    setVideoPreview({ open: true, url: lectureLink, title });
   };
 
   const handleDownloadDocument = (documentUrl: string, documentName: string) => {
@@ -369,13 +375,13 @@ const FreeLectures = () => {
                               </div>
                               
                               <Button
-                                onClick={() => handleJoinLecture(lecture.lectureLink || lecture.meetingLink || '')}
+                                onClick={() => handleJoinLecture(lecture.lectureLink || lecture.meetingLink || '', lecture.title)}
                                 disabled={!lecture.isActive}
                                 className="w-full"
                                 size="sm"
                               >
-                                <ExternalLink className="h-4 w-4 mr-2" />
-                                Join Lecture
+                                <Play className="h-4 w-4 mr-2" />
+                                Watch Lecture
                               </Button>
 
                               <Button
@@ -513,12 +519,12 @@ const FreeLectures = () => {
 
                                 <div className="flex gap-3">
                                   <Button
-                                    onClick={() => handleJoinLecture(lecture.lectureLink || lecture.meetingLink || '')}
+                                    onClick={() => handleJoinLecture(lecture.lectureLink || lecture.meetingLink || '', lecture.title)}
                                     disabled={!lecture.isActive}
                                     className="flex-1"
                                   >
-                                    <ExternalLink className="h-4 w-4 mr-2" />
-                                    Join Lecture
+                                    <Play className="h-4 w-4 mr-2" />
+                                    Watch Lecture
                                   </Button>
                                   
                                   <Button
@@ -642,12 +648,12 @@ const FreeLectures = () => {
                                   </div>
                                 </div>
                                 <Button
-                                  onClick={() => handleJoinLecture(lecture.lectureLink || lecture.meetingLink || '')}
+                                  onClick={() => handleJoinLecture(lecture.lectureLink || lecture.meetingLink || '', lecture.title)}
                                   disabled={!lecture.isActive}
                                   className="shrink-0 ml-4"
                                 >
-                                  <ExternalLink className="h-4 w-4 mr-2" />
-                                  Join Lecture
+                                  <Play className="h-4 w-4 mr-2" />
+                                  Watch Lecture
                                 </Button>
                               </div>
 
@@ -721,6 +727,13 @@ const FreeLectures = () => {
           ))}
         </div>
       )}
+
+      <VideoPreviewDialog
+        open={videoPreview.open}
+        onOpenChange={(open) => setVideoPreview({ ...videoPreview, open })}
+        url={videoPreview.url}
+        title={videoPreview.title}
+      />
     </div>
   );
 };
