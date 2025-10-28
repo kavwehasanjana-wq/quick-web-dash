@@ -1009,12 +1009,8 @@ const Login = ({
 
         {/* API Demo Credentials */}
         {useApiLogin && <Card className="text-xs">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">API Demo Credentials</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-gray-600 dark:text-gray-400">
-              <div><strong>Example:</strong> 123@gmail.com / password123</div>
-            </CardContent>
+            
+            
           </Card>}
 
         {/* Demo Credentials - Only show for mock login */}
