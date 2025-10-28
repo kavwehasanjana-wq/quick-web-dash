@@ -160,7 +160,8 @@ const ExamResults = () => {
     return result.student.firstName.toLowerCase().includes(searchLower) || result.student.lastName.toLowerCase().includes(searchLower) || result.student.email.toLowerCase().includes(searchLower) || result.grade.toLowerCase().includes(searchLower) || result.remarks && result.remarks.toLowerCase().includes(searchLower);
   });
   return <AppLayout>
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="w-full min-h-full">
+        <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-3">
           <Button variant="ghost" size="sm" onClick={handleGoBack} className="-ml-2 w-fit">
@@ -500,6 +501,7 @@ const ExamResults = () => {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
     </AppLayout>;
 };
