@@ -162,21 +162,23 @@ const ExamResults = () => {
   return <AppLayout>
       <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
-          <div className="flex-1 min-w-0">
-            <Button variant="ghost" size="sm" onClick={handleGoBack} className="mb-2 -ml-2">
-              <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-2 flex-shrink-0" />
-              <span className="text-sm sm:text-base truncate">{getContextBreadcrumb()}</span>
-            </Button>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground break-words">
+        <div className="flex flex-col gap-3">
+          <Button variant="ghost" size="sm" onClick={handleGoBack} className="-ml-2 w-fit">
+            <ArrowLeft className="h-4 w-4 mr-2 flex-shrink-0" />
+            <span className="text-sm truncate">{getContextBreadcrumb()}</span>
+          </Button>
+          <div className="space-y-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground break-words leading-tight">
               Exam Results{examDetails.title ? `: ${examDetails.title}` : ''}
             </h1>
-            <p className="text-xs sm:text-sm md:text-base text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground">
               View and analyze exam results
             </p>
-            {lastRefresh && <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            {lastRefresh && (
+              <p className="text-xs text-muted-foreground">
                 Last refreshed: {lastRefresh.toLocaleTimeString()}
-              </p>}
+              </p>
+            )}
           </div>
         </div>
 
@@ -184,18 +186,27 @@ const ExamResults = () => {
         
 
         {/* Action Bar */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-          <h2 className="text-lg sm:text-xl font-semibold">
-            All Results ({filteredResults.length})
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">
+            All Results <span className="text-muted-foreground">({filteredResults.length})</span>
           </h2>
-          <Button variant="outline" onClick={() => loadExamResults(currentPage)} disabled={loading} size="sm" className="w-full sm:w-auto">
-            {loading ? <>
-                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-2 animate-spin" />
-                <span className="text-sm">Loading...</span>
-              </> : <>
-                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                <span className="text-sm">Refresh</span>
-              </>}
+          <Button 
+            variant="outline" 
+            onClick={() => loadExamResults(currentPage)} 
+            disabled={loading} 
+            size="sm"
+          >
+            {loading ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                <span className="hidden sm:inline">Loading...</span>
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Refresh</span>
+              </>
+            )}
           </Button>
         </div>
 
@@ -209,67 +220,74 @@ const ExamResults = () => {
             </CardContent>
           </Card> : <>
           {/* Summary Cards */}
-          {examResults.length > 0 && <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+          {examResults.length > 0 && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Results</CardTitle>
-                  <BookOpen className="h-4 w-4 text-blue-600" />
+                  <CardTitle className="text-xs sm:text-sm font-medium">Total Results</CardTitle>
+                  <BookOpen className="h-4 w-4 text-blue-600 flex-shrink-0" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-blue-600">
+                  <div className="text-xl sm:text-2xl font-bold text-blue-600">
                     {totalResults}
                   </div>
                 </CardContent>
               </Card>
 
-              
-
-              
-
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Performance</CardTitle>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowPerformanceDialog(true)}>
+                  <CardTitle className="text-xs sm:text-sm font-medium">Performance</CardTitle>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 flex-shrink-0" 
+                    onClick={() => setShowPerformanceDialog(true)}
+                  >
                     <TrendingUp className="h-4 w-4 text-purple-600" />
                   </Button>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-purple-600">
+                  <div className="text-xl sm:text-2xl font-bold text-purple-600">
                     {averageScore >= 85 ? 'Excellent' : averageScore >= 70 ? 'Good' : averageScore >= 50 ? 'Average' : 'Poor'}
                   </div>
                 </CardContent>
               </Card>
-            </div>}
+            </div>
+          )}
 
           {/* Grade Distribution */}
-          {examResults.length > 0 && Object.keys(gradeDistribution).length > 0 && <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5" />
+          {examResults.length > 0 && Object.keys(gradeDistribution).length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <Award className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                   Grade Distribution
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-wrap gap-4">
-                  {Object.entries(gradeDistribution).map(([grade, count]) => <div key={grade} className="flex items-center gap-2">
+                <div className="flex flex-wrap gap-3">
+                  {Object.entries(gradeDistribution).map(([grade, count]) => (
+                    <div key={grade} className="flex items-center gap-2">
                       <Badge className={getGradeColor(grade)}>
                         Grade {grade}
                       </Badge>
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
                         {count} result{count !== 1 ? 's' : ''}
                       </span>
-                    </div>)}
+                    </div>
+                  ))}
                 </div>
               </CardContent>
-            </Card>}
+            </Card>
+          )}
 
             {/* Results Table */}
             <Card>
-              <CardHeader className="p-4 sm:p-6">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4">
+              <CardHeader className="p-4">
+                <div className="flex flex-col gap-3">
                   <div>
-                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg md:text-xl">
-                      <Users className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                      <Users className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                       <span>Student Results</span>
                     </CardTitle>
                     <p className="text-xs sm:text-sm text-muted-foreground mt-1">
@@ -277,9 +295,14 @@ const ExamResults = () => {
                     </p>
                   </div>
                   {/* Search Bar */}
-                  <div className="relative w-full md:max-w-sm">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3 sm:h-4 sm:w-4" />
-                    <Input placeholder="Search students, grade, remarks..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-8 sm:pl-10 text-sm" />
+                  <div className="relative w-full">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input 
+                      placeholder="Search students, grade, remarks..." 
+                      value={searchTerm} 
+                      onChange={e => setSearchTerm(e.target.value)} 
+                      className="pl-9 text-sm" 
+                    />
                   </div>
                 </div>
               </CardHeader>
