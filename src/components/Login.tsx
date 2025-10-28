@@ -656,9 +656,7 @@ const Login = ({
               <Button type="button" variant={useApiLogin ? "default" : "outline"} size="sm" onClick={() => setUseApiLogin(true)} className="flex-1">
                 API Login
               </Button>
-              <Button type="button" variant={!useApiLogin ? "default" : "outline"} size="sm" onClick={() => setUseApiLogin(false)} className="flex-1">
-                Mock Login
-              </Button>
+              
             </div>
             <p className="text-xs text-gray-500 mt-2">
               {useApiLogin ? "Login via backend API" : "Login with demo credentials"}
