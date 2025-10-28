@@ -249,7 +249,7 @@ const ExamResults = () => {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="w-full"
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-white border-purple-600"
                     onClick={() => setShowPerformanceDialog(true)}
                   >
                     View Details
@@ -383,49 +383,49 @@ const ExamResults = () => {
 
         {/* Performance Details Dialog */}
         <Dialog open={showPerformanceDialog} onOpenChange={setShowPerformanceDialog}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
+          <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="sticky top-0 bg-background z-10 pb-4">
+              <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                 Performance Analytics
               </DialogTitle>
             </DialogHeader>
             
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6 pb-4">
               {/* Summary Stats */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Total Results</CardTitle>
+                  <CardHeader className="pb-2 p-3 sm:p-6">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Total Results</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-blue-600">{totalResults}</div>
+                  <CardContent className="p-3 sm:p-6 pt-0">
+                    <div className="text-2xl sm:text-3xl font-bold text-blue-600">{totalResults}</div>
                   </CardContent>
                 </Card>
                 <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Average Score</CardTitle>
+                  <CardHeader className="pb-2 p-3 sm:p-6">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Average Score</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-green-600">{averageScore}%</div>
+                  <CardContent className="p-3 sm:p-6 pt-0">
+                    <div className="text-2xl sm:text-3xl font-bold text-green-600">{averageScore}%</div>
                   </CardContent>
                 </Card>
               </div>
 
               {/* Performance Level */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Overall Performance</CardTitle>
+                <CardHeader className="p-3 sm:p-6">
+                  <CardTitle className="text-sm sm:text-base">Overall Performance</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <span className="text-4xl font-bold text-purple-600">
+                <CardContent className="p-3 sm:p-6 pt-0">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="text-2xl sm:text-4xl font-bold text-purple-600">
                       {averageScore >= 85 ? 'Excellent' : averageScore >= 70 ? 'Good' : averageScore >= 50 ? 'Average' : 'Poor'}
                     </span>
-                    <TrendingUp className="h-12 w-12 text-purple-600" />
+                    <TrendingUp className="h-8 w-8 sm:h-12 sm:w-12 text-purple-600 flex-shrink-0" />
                   </div>
                   <div className="mt-4 space-y-2">
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-xs sm:text-sm">
                       <span>Performance Score</span>
                       <span className="font-semibold">{averageScore}%</span>
                     </div>
@@ -440,31 +440,33 @@ const ExamResults = () => {
 
               {/* Grade Distribution */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Award className="h-4 w-4" />
+                <CardHeader className="p-3 sm:p-6">
+                  <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                    <Award className="h-4 w-4 flex-shrink-0" />
                     Grade Distribution
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-3 sm:p-6 pt-0">
                   <div className="space-y-3">
-                    {Object.entries(gradeDistribution).map(([grade, count]) => <div key={grade} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                    {Object.entries(gradeDistribution).map(([grade, count]) => <div key={grade} className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
                           <Badge className={getGradeColor(grade)}>
                             Grade {grade}
                           </Badge>
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
                             {count} student{count !== 1 ? 's' : ''}
                           </span>
                         </div>
-                        <div className="flex-1 mx-4 bg-secondary rounded-full h-2">
-                          <div className="bg-primary h-2 rounded-full transition-all" style={{
-                        width: `${count / totalResults * 100}%`
-                      }} />
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className="flex-1 bg-secondary rounded-full h-2 min-w-[40px]">
+                            <div className="bg-primary h-2 rounded-full transition-all" style={{
+                          width: `${count / totalResults * 100}%`
+                        }} />
+                          </div>
+                          <span className="text-xs sm:text-sm font-semibold whitespace-nowrap">
+                            {Math.round(count / totalResults * 100)}%
+                          </span>
                         </div>
-                        <span className="text-sm font-semibold">
-                          {Math.round(count / totalResults * 100)}%
-                        </span>
                       </div>)}
                   </div>
                 </CardContent>
@@ -472,23 +474,23 @@ const ExamResults = () => {
 
               {/* A Grades Highlight */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Award className="h-4 w-4 text-yellow-600" />
+                <CardHeader className="p-3 sm:p-6">
+                  <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                    <Award className="h-4 w-4 text-yellow-600 flex-shrink-0" />
                     Excellence Metrics
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
+                <CardContent className="p-3 sm:p-6 pt-0">
+                  <div className="flex items-center justify-between flex-wrap gap-4">
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Students with A Grades</p>
-                      <p className="text-3xl font-bold text-yellow-600">
+                      <p className="text-xs sm:text-sm text-muted-foreground mb-1">Students with A Grades</p>
+                      <p className="text-2xl sm:text-3xl font-bold text-yellow-600">
                         {(gradeDistribution.A || 0) + (gradeDistribution['A+'] || 0)}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-muted-foreground mb-1">Percentage</p>
-                      <p className="text-3xl font-bold text-yellow-600">
+                      <p className="text-xs sm:text-sm text-muted-foreground mb-1">Percentage</p>
+                      <p className="text-2xl sm:text-3xl font-bold text-yellow-600">
                         {Math.round(((gradeDistribution.A || 0) + (gradeDistribution['A+'] || 0)) / totalResults * 100)}%
                       </p>
                     </div>
@@ -497,7 +499,7 @@ const ExamResults = () => {
               </Card>
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end sticky bottom-0 bg-background pt-4 border-t">
               <Button variant="outline" onClick={() => setShowPerformanceDialog(false)}>
                 Close
               </Button>
