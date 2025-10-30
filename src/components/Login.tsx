@@ -626,41 +626,6 @@ const Login = ({
             <p className="text-xs md:text-sm text-muted-foreground">Please enter your details</p>
           </div>
 
-          {/* Base URL Configuration */}
-          <Card className="border-border">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Settings className="w-4 h-4" />
-                Backend Configuration
-                <Button type="button" variant="ghost" size="sm" onClick={() => setShowSettings(!showSettings)} className="ml-auto">
-                  {showSettings ? 'Hide' : 'Show'}
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            {showSettings && <CardContent>
-                <div className="space-y-2">
-                  <Label htmlFor="baseUrl">Backend URL</Label>
-                  <Input id="baseUrl" type="url" placeholder="Enter backend URL" value={baseUrl} onChange={e => handleBaseUrlChange(e.target.value)} />
-                  <p className="text-xs text-muted-foreground">
-                    Current: {baseUrl}
-                  </p>
-                  
-                  <Label htmlFor="attendanceUrl">Attendance Backend URL</Label>
-                  <Input id="attendanceUrl" type="url" placeholder="Enter attendance backend URL" value={attendanceUrl} onChange={e => handleAttendanceUrlChange(e.target.value)} />
-                  <p className="text-xs text-muted-foreground">
-                    Current: {attendanceUrl}
-                  </p>
-                  
-                  <p className="text-xs text-orange-600">
-                    For ngrok: Add --host-header=rewrite flag when starting tunnel
-                  </p>
-                  <Button type="button" variant="outline" size="sm" onClick={testConnection} disabled={isLoading} className="w-full">
-                    {isLoading ? 'Testing...' : 'Test Connection'}
-                  </Button>
-                </div>
-              </CardContent>}
-          </Card>
-
           {/* Login Mode Toggle */}
           <Card className="border-border">
             <CardHeader className="pb-3">
