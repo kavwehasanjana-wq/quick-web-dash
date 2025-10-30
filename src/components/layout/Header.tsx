@@ -3,7 +3,6 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Menu, LogOut, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import ThemeToggle from '@/components/ui/theme-toggle';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import surakshaLogo from '@/assets/suraksha-logo.png';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -58,30 +58,26 @@ const Header = ({ onMenuClick }: HeaderProps) => {
         </Button>
         
         <div className="flex items-center gap-2">
-          {selectedInstitute?.logo && (
-            <img 
-              src={selectedInstitute.logo} 
-              alt="Institute logo"
-              className="h-8 w-8 object-contain rounded"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-          )}
+          <img 
+            src={selectedInstitute?.logo || surakshaLogo} 
+            alt={selectedInstitute?.shortName ? "Institute logo" : "SurakshaLMS logo"}
+            className="h-8 w-8 object-contain rounded"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
+          />
           <h1 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white truncate">
             {selectedInstitute?.shortName || 'SurakshaLMS'}
           </h1>
         </div>
         
         <div className="flex items-center space-x-1 sm:space-x-2">
-          <ThemeToggle />
-          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="p-2 hover:bg-gray-100"
                 aria-label="User menu"
               >
                 <User className="h-5 w-5" />
@@ -89,22 +85,22 @@ const Header = ({ onMenuClick }: HeaderProps) => {
             </DropdownMenuTrigger>
             <DropdownMenuContent 
               align="end" 
-              className="w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+              className="w-48 bg-white border border-gray-200"
             >
               <DropdownMenuItem disabled className="cursor-default">
-                <span className="font-medium text-gray-900 dark:text-white truncate">
+                <span className="font-medium text-gray-900 truncate">
                   {user?.name}
                 </span>
               </DropdownMenuItem>
               <DropdownMenuItem disabled className="cursor-default">
-                <span className="text-sm text-gray-500 dark:text-gray-400">
+                <span className="text-sm text-gray-500">
                   {displayRole}
                 </span>
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-700" />
+              <DropdownMenuSeparator className="bg-gray-200" />
               <DropdownMenuItem 
                 onClick={handleLogout}
-                className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="cursor-pointer hover:bg-gray-100"
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 Logout

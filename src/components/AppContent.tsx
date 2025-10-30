@@ -46,7 +46,6 @@ import Gallery from '@/components/Gallery';
 import Settings from '@/components/Settings';
 import Appearance from '@/components/Appearance';
 import OrganizationHeader from '@/components/OrganizationHeader';
-import OrganizationLogin from '@/components/OrganizationLogin';
 import OrganizationSelector from '@/components/OrganizationSelector';
 import CreateOrganizationForm from '@/components/forms/CreateOrganizationForm';
 import OrganizationManagement from '@/components/OrganizationManagement';
@@ -133,7 +132,6 @@ const AppContent = ({ initialPage }: AppContentProps) => {
   useContextUrlSync(currentPage);
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [organizationLoginData, setOrganizationLoginData] = useState<any>(null);
   const [showCreateOrgForm, setShowCreateOrgForm] = useState(false);
   const [organizationCurrentPage, setOrganizationCurrentPage] = useState('organizations');
 
@@ -164,12 +162,6 @@ const AppContent = ({ initialPage }: AppContentProps) => {
     setIsSidebarOpen(false);
   };
 
-  const handleOrganizationLogin = (loginResponse: any) => {
-    console.log('Organization login successful:', loginResponse);
-    setOrganizationLoginData(loginResponse);
-    setOrganizationCurrentPage('organizations');
-  };
-
   const handleOrganizationSelect = (organization: any) => {
     console.log('Organization selected:', organization);
     setSelectedOrganization(organization);
@@ -187,7 +179,6 @@ const AppContent = ({ initialPage }: AppContentProps) => {
   };
 
   const handleBackToMain = () => {
-    setOrganizationLoginData(null);
     setOrganizationCurrentPage('organizations');
     
     // Switch back to using baseUrl for main API calls
@@ -214,8 +205,6 @@ const AppContent = ({ initialPage }: AppContentProps) => {
 
   // Organization-specific navigation component
   const OrganizationNavigation = () => {
-    if (!organizationLoginData) return null;
-
     const isOrganizationManager = userRole === 'OrganizationManager';
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     
@@ -404,7 +393,7 @@ const AppContent = ({ initialPage }: AppContentProps) => {
               {organizationCurrentPage === 'organizations' && (
                 <OrganizationManagement
                   userRole={userRole || 'Student'}
-                  userPermissions={organizationLoginData?.permissions}
+                  userPermissions={undefined}
                   currentInstituteId={currentInstituteId || undefined}
                 />
               )}
@@ -435,28 +424,13 @@ const AppContent = ({ initialPage }: AppContentProps) => {
         );
       }
       
-      // Show organization login for all specified user roles
-      if (!organizationLoginData && ['InstituteAdmin', 'Student', 'Teacher', 'OrganizationManager'].includes(userRole || '')) {
-        return (
-          <OrganizationLogin
-            onLogin={handleOrganizationLogin}
-            onBack={handleBackToMain}
-          />
-        );
-      }
-      
-      // Show organization navigation after login
-      if (organizationLoginData) {
-        return <OrganizationNavigation />;
-      }
-      
       if (!selectedOrganization) {
         return (
           <OrganizationSelector
             onOrganizationSelect={handleOrganizationSelect}
             onBack={handleBackToMain}
             onCreateOrganization={handleCreateOrganization}
-            userPermissions={organizationLoginData?.permissions}
+            userPermissions={undefined}
           />
         );
       }
@@ -468,7 +442,7 @@ const AppContent = ({ initialPage }: AppContentProps) => {
           onOrganizationSelect={handleOrganizationSelect}
           onBack={handleBackToMain}
           onCreateOrganization={handleCreateOrganization}
-          userPermissions={organizationLoginData?.permissions}
+          userPermissions={undefined}
         />
       );
     }
@@ -908,13 +882,8 @@ const AppContent = ({ initialPage }: AppContentProps) => {
     }} loginFunction={login} />;
   }
 
-  // If organizations page is active with login data, render organization navigation
-  if (currentPage === 'organizations' && organizationLoginData) {
-    return renderComponent();
-  }
-
-  // If organizations page is active without login data, render full screen
-  if (currentPage === 'organizations' && !selectedOrganization && !organizationLoginData) {
+  // If organizations page is active, render full screen
+  if (currentPage === 'organizations' && !selectedOrganization) {
     return renderComponent();
   }
 

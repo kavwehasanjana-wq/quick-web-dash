@@ -9,6 +9,8 @@ import { type UserRole } from '@/contexts/AuthContext';
 import { Eye, EyeOff, GraduationCap, Wifi, WifiOff, Settings, Mail, Key, UserCheck, RotateCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getBaseUrl, getBaseUrl2 } from '@/contexts/utils/auth.api';
+import surakshaLogo from '@/assets/suraksha-logo.png';
+import loginIllustration from '@/assets/login-illustration.png';
 
 // Mock user credentials for different roles
 const mockUsers = [{
@@ -597,100 +599,91 @@ const Login = ({
     setConfirmPassword('');
     setShowFirstLogin(true);
   };
-  return <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
-        {/* Logo and Header */}
-        <div className="text-center">
-          <div className="mx-auto w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mb-4">
-            <GraduationCap className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">SurakshaLMS</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">Institute Learning Management System</p>
+  return <div className="min-h-screen flex flex-col md:flex-row">
+      {/* Top Illustration - Mobile Only */}
+      <div className="block md:hidden w-full relative h-48 sm:h-56">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5" />
+        <img src={loginIllustration} alt="AI-powered education illustration" className="absolute inset-0 w-full h-full object-cover mix-blend-multiply" loading="lazy" onError={e => {
+        (e.currentTarget as HTMLImageElement).style.display = 'none';
+      }} />
+        <div className="absolute inset-0 flex items-center justify-center p-4">
+          
         </div>
+      </div>
 
-        {/* Base URL Configuration */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Settings className="w-4 h-4" />
-              Backend Configuration
-              <Button type="button" variant="ghost" size="sm" onClick={() => setShowSettings(!showSettings)} className="ml-auto">
-                {showSettings ? 'Hide' : 'Show'}
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          {showSettings && <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="baseUrl">Backend URL</Label>
-                <Input id="baseUrl" type="url" placeholder="Enter backend URL" value={baseUrl} onChange={e => handleBaseUrlChange(e.target.value)} />
-                <p className="text-xs text-gray-500">
-                  Current: {baseUrl}
-                </p>
-                
-                <Label htmlFor="attendanceUrl">Attendance Backend URL</Label>
-                <Input id="attendanceUrl" type="url" placeholder="Enter attendance backend URL" value={attendanceUrl} onChange={e => handleAttendanceUrlChange(e.target.value)} />
-                <p className="text-xs text-gray-500">
-                  Current: {attendanceUrl}
-                </p>
-                
-                <p className="text-xs text-orange-600">
-                  For ngrok: Add --host-header=rewrite flag when starting tunnel
-                </p>
-                <Button type="button" variant="outline" size="sm" onClick={testConnection} disabled={isLoading} className="w-full">
-                  {isLoading ? 'Testing...' : 'Test Connection'}
+      {/* Left Side - Form */}
+      <div className="w-full md:w-1/2 lg:w-2/5 flex items-center justify-center p-4 sm:p-6 md:p-8 bg-background -mt-8 md:mt-0 rounded-t-[3rem] md:rounded-none relative z-10">
+        <div className="w-full max-w-md space-y-4 md:space-y-6">
+          {/* Logo and Header */}
+          <div className="space-y-1 text-center">
+            <div className="flex items-center justify-start gap-4 mb-4 md:mb-6">
+              <div className="w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden bg-transparent">
+                <img src={surakshaLogo} alt="SurakshaLMS logo" className="w-full h-full object-contain" loading="lazy" />
+              </div>
+              <span className="text-3xl md:text-4xl font-bold text-foreground">SurakshaLMS</span>
+            </div>
+            <h1 className="text-xl md:text-2xl font-bold text-foreground">Welcome back</h1>
+            <p className="text-xs md:text-sm text-muted-foreground">Please enter your details</p>
+          </div>
+
+          {/* Base URL Configuration */}
+          <Card className="border-border">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                Backend Configuration
+                <Button type="button" variant="ghost" size="sm" onClick={() => setShowSettings(!showSettings)} className="ml-auto">
+                  {showSettings ? 'Hide' : 'Show'}
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            {showSettings && <CardContent>
+                <div className="space-y-2">
+                  <Label htmlFor="baseUrl">Backend URL</Label>
+                  <Input id="baseUrl" type="url" placeholder="Enter backend URL" value={baseUrl} onChange={e => handleBaseUrlChange(e.target.value)} />
+                  <p className="text-xs text-muted-foreground">
+                    Current: {baseUrl}
+                  </p>
+                  
+                  <Label htmlFor="attendanceUrl">Attendance Backend URL</Label>
+                  <Input id="attendanceUrl" type="url" placeholder="Enter attendance backend URL" value={attendanceUrl} onChange={e => handleAttendanceUrlChange(e.target.value)} />
+                  <p className="text-xs text-muted-foreground">
+                    Current: {attendanceUrl}
+                  </p>
+                  
+                  <p className="text-xs text-orange-600">
+                    For ngrok: Add --host-header=rewrite flag when starting tunnel
+                  </p>
+                  <Button type="button" variant="outline" size="sm" onClick={testConnection} disabled={isLoading} className="w-full">
+                    {isLoading ? 'Testing...' : 'Test Connection'}
+                  </Button>
+                </div>
+              </CardContent>}
+          </Card>
+
+          {/* Login Mode Toggle */}
+          <Card className="border-border">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                Login Mode
+                {useApiLogin ? <Wifi className="w-4 h-4 text-green-600" /> : <WifiOff className="w-4 h-4 text-muted-foreground" />}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2">
+                <Button type="button" variant={useApiLogin ? "default" : "outline"} size="sm" onClick={() => setUseApiLogin(true)} className="flex-1">
+                  API Login
                 </Button>
               </div>
-            </CardContent>}
-        </Card>
+              <p className="text-xs text-muted-foreground mt-2">
+                {useApiLogin ? "Login via backend API" : "Login with demo credentials"}
+              </p>
+            </CardContent>
+          </Card>
 
-        {/* Login Mode Toggle */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              Login Mode
-              {useApiLogin ? <Wifi className="w-4 h-4 text-green-600" /> : <WifiOff className="w-4 h-4 text-gray-500" />}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2">
-              <Button type="button" variant={useApiLogin ? "default" : "outline"} size="sm" onClick={() => setUseApiLogin(true)} className="flex-1">
-                API Login
-              </Button>
-              
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              {useApiLogin ? "Login via backend API" : "Login with demo credentials"}
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Main Login/First Login/Forgot Password Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {loginStep === 'login' && <Key className="w-5 h-5" />}
-              {loginStep === 'first-login-email' && <UserCheck className="w-5 h-5" />}
-              {loginStep === 'first-login-otp' && <Mail className="w-5 h-5" />}
-              {(loginStep === 'first-login-password' || loginStep === 'reset-password') && <Key className="w-5 h-5" />}
-              {loginStep === 'forgot-password' && <RotateCcw className="w-5 h-5" />}
-              
-              {loginStep === 'login' && 'Sign In'}
-              {loginStep === 'first-login-email' && 'First Login Setup'}
-              {loginStep === 'first-login-otp' && 'Verify Email'}
-              {loginStep === 'first-login-password' && 'Set Password'}
-              {loginStep === 'forgot-password' && 'Forgot Password'}
-              {loginStep === 'reset-password' && 'Reset Password'}
-            </CardTitle>
-            <CardDescription>
-              {loginStep === 'login' && (useApiLogin ? "Enter your API credentials" : "Choose your role and enter demo credentials")}
-              {loginStep === 'first-login-email' && "Enter your email to start the first login setup process"}
-              {loginStep === 'first-login-otp' && "Enter the 6-digit code sent to your email"}
-              {loginStep === 'first-login-password' && "Create a secure password for your account"}
-              {loginStep === 'forgot-password' && "Enter your email to receive a password reset code"}
-              {loginStep === 'reset-password' && "Enter the reset code and your new password"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+          {/* Main Login/First Login/Forgot Password Card */}
+          <Card className="border-border">
+            <CardContent className="pt-6">
             {/* Regular Login Form */}
             {loginStep === 'login' && <form onSubmit={handleLogin} className="space-y-4">
                 {/* Role Selection - Only show for mock login */}
@@ -713,38 +706,49 @@ const Login = ({
 
                 {/* Email Input */}
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="Enter your email" value={email} onChange={e => setEmail(e.target.value)} required />
+                  <Label htmlFor="email" className="text-sm font-medium text-foreground">Email address</Label>
+                  <Input id="email" type="email" placeholder="Enter your email" value={email} onChange={e => setEmail(e.target.value)} required className="h-11" />
                 </div>
 
                 {/* Password Input */}
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-sm font-medium text-foreground">Password</Label>
                   <div className="relative">
-                    <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="Enter your password" value={password} onChange={e => setPassword(e.target.value)} required />
+                    <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="Enter your password" value={password} onChange={e => setPassword(e.target.value)} required className="h-11" />
                     <Button type="button" variant="ghost" size="sm" className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent" onClick={() => setShowPassword(!showPassword)}>
-                      {showPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
+                      {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
                     </Button>
                   </div>
                 </div>
 
+                {/* Remember me and Forgot Password */}
+                {useApiLogin && <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <input type="checkbox" id="remember" className="rounded border-border" />
+                    <label htmlFor="remember" className="text-sm text-foreground cursor-pointer">
+                      Remember for 30 days
+                    </label>
+                  </div>
+                  <Button type="button" variant="link" onClick={startForgotPassword} className="text-sm text-primary hover:text-primary/80 p-0 h-auto">
+                    Forgot password
+                  </Button>
+                </div>}
+
                 {/* Error Message */}
-                {error && <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded-md">
+                {error && <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
                     {error}
                   </div>}
 
                 {/* Login Button */}
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? 'Signing in...' : 'Sign In'}
+                <Button type="submit" className="w-full h-11" disabled={isLoading}>
+                  {isLoading ? 'Signing in...' : 'Sign in'}
                 </Button>
 
-                {/* Login Options */}
-                {useApiLogin && <div className="space-y-2">
-                    <Button type="button" variant="ghost" onClick={startFirstLogin} className="w-full text-sm text-blue-600 hover:text-blue-800">
-                      First time login? Set up your account
-                    </Button>
-                    <Button type="button" variant="ghost" onClick={startForgotPassword} className="w-full text-sm text-blue-600 hover:text-blue-800">
-                      Forgot your password?
+                {/* First Time Login Link */}
+                {useApiLogin && <div className="text-center">
+                    <span className="text-sm text-muted-foreground">Don't have an account? </span>
+                    <Button type="button" variant="link" onClick={startFirstLogin} className="text-sm text-primary hover:text-primary/80 p-0 h-auto">
+                      Sign up
                     </Button>
                   </div>}
               </form>}
@@ -757,11 +761,11 @@ const Login = ({
                     <Input id="firstLoginEmail" type="email" placeholder="Enter your email address" value={email} onChange={e => setEmail(e.target.value)} required />
                   </div>
 
-                  <div className="text-sm text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                  <div className="text-sm text-muted-foreground bg-primary/10 p-3 rounded-lg">
                     We'll send a 6-digit verification code to your email address to help you set up your password.
                   </div>
 
-                  {error && <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded-md">
+                  {error && <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
                       {error}
                     </div>}
 
@@ -779,7 +783,7 @@ const Login = ({
             {loginStep === 'first-login-otp' && <form onSubmit={handleFirstLoginAPIFlow} className="space-y-4">
                 <div className="space-y-4">
                   <div className="text-center">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-muted-foreground">
                       We sent a 6-digit code to <strong>{email}</strong>
                     </p>
                   </div>
@@ -797,7 +801,7 @@ const Login = ({
                     </InputOTP>
                   </div>
 
-                  {error && <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded-md text-center">
+                  {error && <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md text-center">
                       {error}
                     </div>}
 
@@ -806,7 +810,7 @@ const Login = ({
                   </Button>
 
                   <div className="text-center">
-                    {otpTimer > 0 ? <p className="text-sm text-gray-500">
+                    {otpTimer > 0 ? <p className="text-sm text-muted-foreground">
                         Resend code in {otpTimer}s
                       </p> : <Button type="button" variant="ghost" onClick={resendFirstLoginOTP} disabled={isLoading}>
                         Resend Code
@@ -827,7 +831,7 @@ const Login = ({
                     <div className="relative">
                       <Input id="newFirstPassword" type={showNewPassword ? 'text' : 'password'} placeholder="Enter your new password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required />
                       <Button type="button" variant="ghost" size="sm" className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent" onClick={() => setShowNewPassword(!showNewPassword)}>
-                        {showNewPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
+                        {showNewPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
                       </Button>
                     </div>
                   </div>
@@ -837,14 +841,14 @@ const Login = ({
                     <div className="relative">
                       <Input id="confirmFirstPassword" type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm your new password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
                       <Button type="button" variant="ghost" size="sm" className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
-                        {showConfirmPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
                       </Button>
                     </div>
                   </div>
 
                   
 
-                  <div className="text-xs text-gray-500 space-y-1">
+                  <div className="text-xs text-muted-foreground space-y-1">
                     <p><strong>Password Requirements:</strong></p>
                     <ul className="list-disc list-inside space-y-1">
                       <li>Minimum 8 characters</li>
@@ -855,7 +859,7 @@ const Login = ({
                     </ul>
                   </div>
 
-                  {error && <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded-md">
+                  {error && <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
                       {error}
                     </div>}
 
@@ -877,11 +881,11 @@ const Login = ({
                     <Input id="resetEmail" type="email" placeholder="Enter your email address" value={email} onChange={e => setEmail(e.target.value)} required />
                   </div>
 
-                  <div className="text-sm text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                  <div className="text-sm text-muted-foreground bg-primary/10 p-3 rounded-lg">
                     We'll send a 6-digit reset code to your email address.
                   </div>
 
-                  {error && <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded-md">
+                  {error && <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
                       {error}
                     </div>}
 
@@ -925,7 +929,7 @@ const Login = ({
                     <div className="relative">
                       <Input id="newResetPassword" type={showNewPassword ? 'text' : 'password'} placeholder="Enter your new password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required />
                       <Button type="button" variant="ghost" size="sm" className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent" onClick={() => setShowNewPassword(!showNewPassword)}>
-                        {showNewPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
+                        {showNewPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
                       </Button>
                     </div>
                   </div>
@@ -935,12 +939,12 @@ const Login = ({
                     <div className="relative">
                       <Input id="confirmResetPassword" type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm your new password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
                       <Button type="button" variant="ghost" size="sm" className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
-                        {showConfirmPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
                       </Button>
                     </div>
                   </div>
 
-                  <div className="text-xs text-gray-500 space-y-1">
+                  <div className="text-xs text-muted-foreground space-y-1">
                     <p><strong>Password Requirements:</strong></p>
                     <ul className="list-disc list-inside space-y-1">
                       <li>Minimum 8 characters</li>
@@ -951,7 +955,7 @@ const Login = ({
                     </ul>
                   </div>
 
-                  {error && <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded-md">
+                  {error && <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
                       {error}
                     </div>}
 
@@ -1006,17 +1010,14 @@ const Login = ({
           </Card>}
 
         {/* API Demo Credentials */}
-        {useApiLogin && <Card className="text-xs">
-            
-            
-          </Card>}
+        {useApiLogin}
 
         {/* Demo Credentials - Only show for mock login */}
-        {!useApiLogin && <Card className="text-xs">
+        {!useApiLogin && <Card className="text-xs border-border">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Demo Credentials</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-gray-600 dark:text-gray-400">
+            <CardContent className="space-y-2 text-muted-foreground">
               <div><strong>Institute Admin:</strong> institute@cambridge.edu / institute123</div>
               <div><strong>Teacher:</strong> teacher@cambridge.edu / teacher123</div>
               <div><strong>Attendance Marker:</strong> marker@cambridge.edu / marker123</div>
@@ -1025,6 +1026,18 @@ const Login = ({
               <div><strong>Organization Manager:</strong> orgmanager@company.com / orgmanager123</div>
             </CardContent>
           </Card>}
+        </div>
+      </div>
+
+      {/* Right Side - Illustration */}
+      <div className="hidden md:flex md:w-1/2 lg:w-3/5 relative min-h-[300px] md:min-h-screen">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5" />
+        <img src={loginIllustration} alt="AI-powered education illustration" className="absolute inset-0 w-full h-full object-cover mix-blend-multiply" loading="lazy" onError={e => {
+        (e.currentTarget as HTMLImageElement).style.display = 'none';
+      }} />
+        <div className="absolute inset-0 flex items-center justify-center p-8">
+          
+        </div>
       </div>
     </div>;
 };

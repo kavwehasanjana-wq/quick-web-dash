@@ -36,6 +36,7 @@ import {
   MessageSquare,
   Wifi
 } from 'lucide-react';
+import surakshaLogoSidebar from '@/assets/suraksha-logo-sidebar.png';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -1326,7 +1327,12 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
   };
 
   const getSettingsItems = () => {
-    // If organization is selected, only show Profile and Appearance
+    // Don't show settings before institute selection (except for organization context)
+    if (!selectedInstitute && !selectedOrganization && !selectedChild) {
+      return [];
+    }
+
+    // If organization is selected, only show Profile
     if (selectedOrganization) {
       return [
         {
@@ -1334,13 +1340,6 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
           label: 'Profile',
           icon: User,
           permission: 'view-profile',
-          alwaysShow: false
-        },
-        {
-          id: 'appearance',
-          label: 'Appearance',
-          icon: Palette,
-          permission: 'view-appearance',
           alwaysShow: false
         }
       ];
@@ -1354,13 +1353,6 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
           label: 'Profile',
           icon: User,
           permission: 'view-profile',
-          alwaysShow: false
-        },
-        {
-          id: 'appearance',
-          label: 'Appearance',
-          icon: Palette,
-          permission: 'view-appearance',
           alwaysShow: false
         }
       ];
@@ -1379,7 +1371,7 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
       return baseItems;
     }
 
-    // For Student - always show Profile and Appearance + Payment if no institute
+    // For Student - always show Profile + Payment if no institute
     if (userRole === 'Student') {
       const baseItems = [
         {
@@ -1387,13 +1379,6 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
           label: 'Profile',
           icon: User,
           permission: 'view-profile',
-          alwaysShow: false
-        },
-        {
-          id: 'appearance',
-          label: 'Appearance',
-          icon: Palette,
-          permission: 'view-appearance',
           alwaysShow: false
         }
       ];
@@ -1415,7 +1400,7 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
           id: 'system-payment',
           label: 'System Payment',
           icon: CreditCard,
-          permission: 'view-profile', // Using existing permission
+          permission: 'view-profile',
           alwaysShow: false
         });
       }
@@ -1432,13 +1417,6 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
           icon: User,
           permission: 'view-profile',
           alwaysShow: false
-        },
-        {
-          id: 'appearance',
-          label: 'Appearance',
-          icon: Palette,
-          permission: 'view-appearance',
-          alwaysShow: false
         }
       ];
 
@@ -1459,7 +1437,7 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
           id: 'system-payment',
           label: 'System Payment',
           icon: CreditCard,
-          permission: 'view-profile', // Using existing permission
+          permission: 'view-profile',
           alwaysShow: false
         });
       }
@@ -1476,13 +1454,6 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
           icon: User,
           permission: 'view-profile',
           alwaysShow: false
-        },
-        {
-          id: 'appearance',
-          label: 'Appearance',
-          icon: Palette,
-          permission: 'view-appearance',
-          alwaysShow: false
         }
       ];
 
@@ -1492,23 +1463,16 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
           id: 'system-payment',
           label: 'System Payment',
           icon: CreditCard,
-          permission: 'view-profile', // Using existing permission
+          permission: 'view-profile',
           alwaysShow: false
         });
       } else {
-        // Add Institute Profile and Institute Details when institute is selected
+        // Add only Institute Profile when institute is selected (removed Institute Details)
         baseItems.push({
           id: 'institute-profile',
           label: 'Institute Profile',
           icon: IdCard,
           permission: 'view-profile',
-          alwaysShow: false
-        });
-        baseItems.push({
-          id: 'institute-details',
-          label: 'Institute Details',
-          icon: Building2,
-          permission: 'view-institute-details',
           alwaysShow: false
         });
       }
@@ -1525,25 +1489,11 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
         permission: 'view-profile',
         alwaysShow: false
       },
-      {
-        id: 'appearance',
-        label: 'Appearance',
-        icon: Palette,
-        permission: 'view-appearance',
-        alwaysShow: false
-      },
       ...(selectedInstitute ? [{
         id: 'institute-profile',
         label: 'Institute Profile',
         icon: Building2,
         permission: 'view-profile',
-        alwaysShow: false
-      }] : []),
-      ...(selectedInstitute ? [{
-        id: 'institute-details',
-        label: 'Institute Details',
-        icon: Building2,
-        permission: 'view-institute-details',
         alwaysShow: false
       }] : []),
       {
@@ -1880,13 +1830,17 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
                 <img 
                   src={selectedInstitute.logo} 
                   alt="Institute logo"
-                  className="h-8 w-8 object-contain rounded flex-shrink-0"
+                  className="h-12 w-12 object-contain rounded flex-shrink-0"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
                   }}
                 />
               ) : (
-                <School className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 flex-shrink-0" />
+                <img 
+                  src={surakshaLogoSidebar} 
+                  alt="SurakshaLMS logo"
+                  className="h-12 w-12 object-contain rounded flex-shrink-0"
+                />
               )}
               <span className="font-bold text-base sm:text-lg text-gray-900 dark:text-white truncate">
                 {selectedInstitute?.shortName || 'SurakshaLMS'}

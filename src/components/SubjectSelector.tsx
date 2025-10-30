@@ -168,10 +168,28 @@ const SubjectSelector = () => {
           }));
         }
 
-        // For Institute Admin, Teacher, and AttendanceMarker, use the pagination data from the API response
-        const totalSubjects = result.total || subjects.length;
-        const totalPagesFromApi = result.totalPages || Math.ceil(totalSubjects / limit);
-        setSubjectsData(subjects);
+        // Deduplicate and ensure stable ordering
+        const uniqueSubjects = Array.from(new Map(subjects.map((s) => [s.id, s])).values());
+        uniqueSubjects.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+        // Use server pagination if provided, otherwise slice client-side
+        const hasServerPagination = Boolean(result && (result.total || result.totalPages || result.page || result.limit));
+        let totalSubjects = uniqueSubjects.length;
+        let totalPagesFromApi = Math.max(1, Math.ceil(totalSubjects / limit));
+        let displaySubjects = uniqueSubjects;
+
+        if (hasServerPagination && result.data && Array.isArray(result.data)) {
+          totalSubjects = result.total || uniqueSubjects.length;
+          totalPagesFromApi = result.totalPages || Math.max(1, Math.ceil(totalSubjects / limit));
+          // displaySubjects already corresponds to current page from server
+          displaySubjects = uniqueSubjects;
+        } else {
+          const startIndex = (Math.max(1, page) - 1) * limit;
+          const endIndex = startIndex + limit;
+          displaySubjects = uniqueSubjects.slice(startIndex, endIndex);
+        }
+
+        setSubjectsData(displaySubjects);
         setTotalItems(totalSubjects);
         setTotalPages(totalPagesFromApi);
         setCurrentPage(result.page || page);
@@ -369,22 +387,48 @@ const SubjectSelector = () => {
               </div>)}
           </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && <div className="flex justify-center items-center gap-4 mt-6 pb-4">
-              <Button variant="outline" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage <= 1 || isLoading}>
+          {/* Pagination - Always show when data is loaded */}
+          {dataLoaded && totalPages > 0 && (
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-4 mt-6 pb-4 px-4">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)} 
+                disabled={currentPage <= 1 || isLoading}
+                className="w-full sm:w-auto"
+              >
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Previous
               </Button>
               
-              <span className="text-sm text-gray-600">
-                Page {currentPage} of {totalPages}
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                Page {currentPage} of {totalPages} ({totalItems} total)
               </span>
               
-              <Button variant="outline" onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage >= totalPages || isLoading}>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)} 
+                disabled={currentPage >= totalPages || isLoading}
+                className="w-full sm:w-auto"
+              >
                 Next
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
-            </div>}
+              
+              <select 
+                value={pageSize}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md text-sm bg-background text-foreground w-full sm:w-auto"
+                disabled={isLoading}
+              >
+                <option value={10}>10 per page</option>
+                <option value={20}>20 per page</option>
+                <option value={50}>50 per page</option>
+                <option value={100}>100 per page</option>
+              </select>
+            </div>
+          )}
         </div>}
     </div>;
 };

@@ -20,7 +20,7 @@ interface LastAttendance {
   imageUrl?: string;
 }
 
-const RFIDAttendance = () => {
+const RfidAttendance = () => {
   const { selectedInstitute, selectedClass, selectedSubject, currentInstituteId } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -392,4 +392,4 @@ const RFIDAttendance = () => {
   );
 };
 
-export default RFIDAttendance;
+export default RfidAttendance;

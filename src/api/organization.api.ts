@@ -76,26 +76,6 @@ export interface OrganizationQueryParams {
   role?: string;
 }
 
-export interface OrganizationLoginCredentials {
-  email: string;
-  password: string;
-}
-
-// Updated login response interface to match actual API response
-export interface OrganizationLoginResponse {
-  accessToken: string;
-  refreshToken: string;
-  user: {
-    id: string;
-    email: string;
-    name: string;
-    organizations: Array<{
-      organizationId: string;
-      role: string;
-    }>;
-  };
-}
-
 // Course/Cause interfaces
 export interface Course {
   causeId: string;
@@ -184,11 +164,6 @@ class OrganizationApiClient {
   // Organization endpoints are on the main API, not a separate service
   private baseUrl = '';
 
-  async loginToOrganization(credentials: OrganizationLoginCredentials): Promise<OrganizationLoginResponse> {
-    const response = await apiClient.post<OrganizationLoginResponse>('/auth/login', credentials);
-    return response;
-  }
-
   async getUserEnrolledOrganizations(params?: OrganizationQueryParams): Promise<OrganizationResponse> {
     const response = await apiClient.get<OrganizationResponse>('/organizations/user/enrolled', params);
     return response;
@@ -270,6 +245,11 @@ class OrganizationApiClient {
 
   async getOrganizationStudents(instituteId: string, organizationId: string, params?: OrganizationQueryParams): Promise<any> {
     const response = await apiClient.get(`/organizations/institute/${instituteId}/organization/${organizationId}/students`, params);
+    return response;
+  }
+
+  async getEnrollmentKey(organizationId: string): Promise<{ organizationId: string; organizationName: string; isPublic: boolean; enrollmentKey: string }> {
+    const response = await apiClient.get(`/organizations/${organizationId}/enrollment-key`);
     return response;
   }
 }

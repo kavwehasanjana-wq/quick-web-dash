@@ -11,9 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  Moon, 
-  Sun, 
-  Monitor, 
+  Sun,
   Settings as SettingsIcon, 
   Users, 
   LayoutGrid, 
@@ -29,7 +27,7 @@ import {
 } from 'lucide-react';
 
 interface ThemeOption {
-  value: 'light' | 'dark' | 'system';
+  value: 'light';
   label: string;
   icon: React.ReactNode;
   description: string;
@@ -54,9 +52,7 @@ const Settings = () => {
   const [viewMode, setViewMode] = useState<'card' | 'table'>(() => {
     return (localStorage.getItem('viewMode') as 'card' | 'table') || 'card';
   });
-  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark' | 'system'>(() => {
-    return (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'light';
-  });
+  const [currentTheme] = useState<'light'>('light');
   const [attendanceUrl, setAttendanceUrl] = useState(() => {
     return localStorage.getItem('attendanceUrl') || '';
   });
@@ -70,18 +66,6 @@ const Settings = () => {
       label: 'Light Mode',
       icon: <Sun className="h-5 w-5" />,
       description: 'Clean and bright interface'
-    },
-    {
-      value: 'dark',
-      label: 'Dark Mode',
-      icon: <Moon className="h-5 w-5" />,
-      description: 'Easy on the eyes in low light'
-    },
-    {
-      value: 'system',
-      label: 'System Default',
-      icon: <Monitor className="h-5 w-5" />,
-      description: 'Follows your device settings'
     }
   ];
 
@@ -136,21 +120,12 @@ const Settings = () => {
     }
   ];
 
-  const handleThemeChange = (theme: 'light' | 'dark' | 'system') => {
-    setCurrentTheme(theme);
-    
-    // Apply theme to document
+  const handleThemeChange = () => {
+    // Always use light mode
     const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-    
-    if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      root.classList.add(systemTheme);
-    } else {
-      root.classList.add(theme);
-    }
-    
-    localStorage.setItem('theme', theme);
+    root.classList.remove('dark');
+    root.classList.add('light');
+    localStorage.setItem('theme', 'light');
   };
 
   const handleViewModeChange = (mode: 'card' | 'table') => {
@@ -200,7 +175,7 @@ const Settings = () => {
 
   // Initialize theme on component mount
   useEffect(() => {
-    handleThemeChange(currentTheme);
+    handleThemeChange();
   }, []);
 
   const UserCard = ({ user }: { user: MockUser }) => (
@@ -280,42 +255,26 @@ const Settings = () => {
             <div>
               <Label className="text-base font-medium">Theme Mode</Label>
               <p className="text-sm text-muted-foreground mt-1">
-                Choose between light mode, dark mode, or system default
+                Application uses light mode for a clean and bright interface
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {themeOptions.map((option) => (
-                <Card 
-                  key={option.value}
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    currentTheme === option.value 
-                      ? 'ring-2 ring-primary border-primary' 
-                      : 'hover:border-primary/50'
-                  }`}
-                  onClick={() => handleThemeChange(option.value)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-3">
-                      <div className={`p-2 rounded-full ${
-                        currentTheme === option.value 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'bg-muted'
-                      }`}>
-                        {option.icon}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium">{option.label}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {option.description}
-                        </div>
-                      </div>
-                      {currentTheme === option.value && (
-                        <div className="h-2 w-2 rounded-full bg-primary" />
-                      )}
+            <div className="grid grid-cols-1 gap-4">
+              <Card className="ring-2 ring-primary border-primary">
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 rounded-full bg-primary text-primary-foreground">
+                      <Sun className="h-5 w-5" />
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    <div className="flex-1">
+                      <div className="font-medium">Light Mode</div>
+                      <div className="text-xs text-muted-foreground">
+                        Clean and bright interface
+                      </div>
+                    </div>
+                    <div className="h-2 w-2 rounded-full bg-primary" />
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
 

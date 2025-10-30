@@ -184,7 +184,7 @@ const ClassSelector = () => {
         params = { page, limit };
       } else if (effectiveRole === 'InstituteAdmin' || effectiveRole === 'AttendanceMarker') {
         endpoint = `/institute-classes/institute/${currentInstituteId}`;
-        params = {};
+        params = { page, limit };
       } else {
         throw new Error('Unsupported user role for class selection');
       }
@@ -321,20 +321,40 @@ const ClassSelector = () => {
       if (Array.isArray(result)) {
         classesArray = result;
         pagination.total = result.length;
-        pagination.totalPages = 1;
+        // Fallback: compute totalPages based on current pageSize when API doesn't provide it
+        pagination.totalPages = Math.ceil((pagination.total || 0) / (pageSize || 10)) || 1;
       } else if (result.data && Array.isArray(result.data)) {
         classesArray = result.data;
-        if (result.meta) {
-          pagination.total = result.meta.total || result.data.length;
-          pagination.totalPages = result.meta.totalPages || 1;
-        }
+        // Prefer API-provided totals, otherwise compute using current pageSize
+        const totalFromMeta = result.meta?.total ?? result.total ?? result.data.length;
+        const totalPagesFromMeta = result.meta?.totalPages ?? result.totalPages;
+        pagination.total = totalFromMeta;
+        pagination.totalPages = totalPagesFromMeta || Math.ceil((totalFromMeta || 0) / (pageSize || 10)) || 1;
       } else {
         console.warn('Unexpected response structure:', result);
         classesArray = [];
       }
     }
 
-    const transformedClasses = classesArray.map((classItem: ClassData): ClassCardData => ({
+    // Remove duplicates and ensure stable ordering
+    const uniqueClasses = Array.from(new Map(classesArray.map((c) => [c.id, c])).values());
+    const sortedClasses = uniqueClasses.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+    // If API didn't provide pagination meta, do client-side pagination to respect pageSize
+    const hasServerPagination = Boolean((result && (result.meta?.total || result.total || result.totalPages)));
+    let displayClasses = sortedClasses;
+
+    if (!hasServerPagination) {
+      const total = sortedClasses.length;
+      const totalPagesComputed = Math.max(1, Math.ceil(total / (pageSize || 10)));
+      const startIndex = (Math.max(1, page) - 1) * (pageSize || 10);
+      const endIndex = startIndex + (pageSize || 10);
+      displayClasses = sortedClasses.slice(startIndex, endIndex);
+      pagination.total = total;
+      pagination.totalPages = totalPagesComputed;
+    }
+
+    const transformedClasses = displayClasses.map((classItem: ClassData): ClassCardData => ({
       id: classItem.id,
       name: classItem.name,
       code: classItem.code,
@@ -908,29 +928,50 @@ const ClassSelector = () => {
             </div>
             
             {/* Mobile Pagination */}
-            {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-2 mt-6">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage <= 1 || isLoading}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-6 px-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+
+              <div className="text-sm text-gray-700 dark:text-gray-300">
+                Page {currentPage} of {totalPages} ({totalItems} total)
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Select 
+                  value={pageSize.toString()} 
+                  onValueChange={(value) => handlePageSizeChange(parseInt(value, 10))}
                 >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm text-gray-600">
-                  Page {currentPage} of {totalPages}
-                </span>
+                  <SelectTrigger className="w-[130px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10 per page</SelectItem>
+                    <SelectItem value="20">20 per page</SelectItem>
+                    <SelectItem value="50">50 per page</SelectItem>
+                    <SelectItem value="100">100 per page</SelectItem>
+                  </SelectContent>
+                </Select>
+
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage >= totalPages || isLoading}
+                  disabled={currentPage === totalPages}
+                  className="flex items-center gap-1"
                 >
+                  Next
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
-            )}
+            </div>
           </div>
 
           {/* Desktop View */}
@@ -1005,78 +1046,50 @@ const ClassSelector = () => {
               ))}
             </div>
 
-            {/* Desktop Pagination */}
-            {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-4 mt-6">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => handlePageChange(1)}
-                    disabled={currentPage <= 1 || isLoading}
-                  >
-                    First
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage <= 1 || isLoading}
-                  >
-                    <ChevronLeft className="h-4 w-4 mr-1" />
-                    Previous
-                  </Button>
-                </div>
+            {/* Desktop Pagination using MUI TablePagination - Always show */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-6 px-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
 
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    let pageNum;
-                    if (totalPages <= 5) {
-                      pageNum = i + 1;
-                    } else if (currentPage <= 3) {
-                      pageNum = i + 1;
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i;
-                    } else {
-                      pageNum = currentPage - 2 + i;
-                    }
-
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={currentPage === pageNum ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handlePageChange(pageNum)}
-                        disabled={isLoading}
-                        className={currentPage === pageNum ? "bg-blue-600 hover:bg-blue-700" : ""}
-                      >
-                        {pageNum}
-                      </Button>
-                    );
-                  })}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage >= totalPages || isLoading}
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handlePageChange(totalPages)}
-                    disabled={currentPage >= totalPages || isLoading}
-                  >
-                    Last
-                  </Button>
-                </div>
+              <div className="text-sm text-gray-700 dark:text-gray-300">
+                Page {currentPage} of {totalPages} ({totalItems} total)
               </div>
-            )}
 
-            {/* Pagination Info */}
-            <div className="text-center text-sm text-gray-600 dark:text-gray-400 mt-4">
-              Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalItems)} of {totalItems} classes
+              <div className="flex items-center gap-2">
+                <Select 
+                  value={pageSize.toString()} 
+                  onValueChange={(value) => handlePageSizeChange(parseInt(value, 10))}
+                >
+                  <SelectTrigger className="w-[130px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10 per page</SelectItem>
+                    <SelectItem value="20">20 per page</SelectItem>
+                    <SelectItem value="50">50 per page</SelectItem>
+                    <SelectItem value="100">100 per page</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="flex items-center gap-1"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </>

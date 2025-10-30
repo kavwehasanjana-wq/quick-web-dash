@@ -60,5 +60,10 @@ export const usersApi = {
   getBasicInfo: async (userId: string): Promise<BasicUser> => {
     const response = await apiClient.get(`/users/basic/${userId}`);
     return response;
+  },
+
+  getBasicInfoByRfid: async (rfid: string): Promise<BasicUser> => {
+    const response = await apiClient.get(`/users/basic/rfid/${rfid}`);
+    return response;
   }
 };

@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { instituteClassesApi, InstituteClassCreateData } from '@/api/instituteClasses.api.ts';
+import { instituteClassesApi, InstituteClassCreateData } from '@/api/instituteClasses.api';
 import { Loader2, Upload } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -77,60 +77,107 @@ const UpdateClassForm: React.FC<UpdateClassFormProps> = ({ classData, onSubmit, 
   });
 
   const handleSubmit = async (data: UpdateClassFormData) => {
+    console.log('Update Class button clicked - starting submission');
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem('access_token');
-      const formDataToSend = new FormData();
-      
-      formDataToSend.append('instituteId', data.instituteId);
-      formDataToSend.append('name', data.name);
-      formDataToSend.append('code', data.code);
-      formDataToSend.append('academicYear', data.academicYear);
-      formDataToSend.append('level', String(data.level));
-      formDataToSend.append('grade', String(data.grade));
-      formDataToSend.append('specialty', data.specialty);
-      formDataToSend.append('classType', data.classType);
-      formDataToSend.append('capacity', String(data.capacity));
-      if (data.classTeacherId) formDataToSend.append('classTeacherId', data.classTeacherId);
-      if (data.description) formDataToSend.append('description', data.description);
-      formDataToSend.append('isActive', String(data.isActive));
-      formDataToSend.append('startDate', new Date(data.startDate).toISOString());
-      formDataToSend.append('endDate', new Date(data.endDate).toISOString());
-      if (data.enrollmentCode) formDataToSend.append('enrollmentCode', data.enrollmentCode);
-      formDataToSend.append('enrollmentEnabled', String(data.enrollmentEnabled));
-      formDataToSend.append('requireTeacherVerification', String(data.requireTeacherVerification));
-      if (selectedImage) formDataToSend.append('image', selectedImage);
-      
-      const response = await fetch(`${getBaseUrl()}/institute-classes/${classData.id}/upload-image`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formDataToSend
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update class');
+      const token = localStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('No authentication token found');
       }
-      
-      const updatedClass = await response.json();
-      
+
+      console.log('Preparing form data for class:', classData.id);
+      // First, update class details (JSON)
+      const baseUrl = getBaseUrl();
+      const jsonPayload = {
+        instituteId: data.instituteId,
+        name: data.name,
+        code: data.code,
+        academicYear: data.academicYear,
+        level: data.level,
+        grade: data.grade,
+        specialty: data.specialty,
+        classType: data.classType,
+        capacity: data.capacity,
+        classTeacherId: data.classTeacherId || undefined,
+        description: data.description || undefined,
+        isActive: data.isActive,
+        startDate: new Date(data.startDate).toISOString(),
+        endDate: new Date(data.endDate).toISOString(),
+        enrollmentCode: data.enrollmentCode || undefined,
+        enrollmentEnabled: data.enrollmentEnabled,
+        requireTeacherVerification: data.requireTeacherVerification,
+      };
+
+      console.log('Sending PATCH request to update class details via instituteClassesApi.update...');
+      const updatePayload: InstituteClassCreateData = {
+        instituteId: data.instituteId,
+        name: data.name,
+        code: data.code,
+        academicYear: data.academicYear,
+        level: data.level,
+        grade: data.grade,
+        specialty: data.specialty,
+        classType: data.classType,
+        capacity: data.capacity,
+        classTeacherId: data.classTeacherId || undefined,
+        description: data.description || undefined,
+        isActive: data.isActive,
+         startDate: data.startDate,
+         endDate: data.endDate,
+        enrollmentCode: data.enrollmentCode || undefined,
+        enrollmentEnabled: data.enrollmentEnabled,
+        requireTeacherVerification: data.requireTeacherVerification,
+        imageUrl: data.imageUrl || undefined
+      };
+
+      const detailsRes = await instituteClassesApi.update(classData.id, updatePayload);
+      console.log('Update API response received');
+
+      let updatedClass = detailsRes?.class || detailsRes as any;
+
+      // Optional: upload image if selected
+      if (selectedImage) {
+        console.log('Uploading image:', selectedImage.name);
+        const formData = new FormData();
+        formData.append('image', selectedImage);
+
+        const imageRes = await fetch(`${baseUrl}/institute-classes/${classData.id}/upload-image`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+
+        console.log('Image upload status:', imageRes.status);
+        if (!imageRes.ok) {
+          const imgErr = await imageRes.json().catch(() => ({}));
+          console.error('Server error (image):', imgErr);
+          throw new Error(imgErr.message || `Image upload failed (${imageRes.status})`);
+        }
+
+        const imageResult = await imageRes.json();
+        // Try to use returned class if available, otherwise keep details result
+        updatedClass = imageResult?.class || imageResult || updatedClass;
+      }
+
+      console.log('Class updated successfully:', updatedClass);
       toast({
-        title: "Success",
-        description: "Class updated successfully",
+        title: 'Success',
+        description: 'Class updated successfully',
       });
-      
       onSubmit(updatedClass);
     } catch (error) {
       console.error('Error updating class:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update class';
       toast({
         title: "Error",
-        description: "Failed to update class",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
+      console.log('Update submission completed');
     }
   };
 
@@ -245,9 +292,9 @@ const UpdateClassForm: React.FC<UpdateClassFormProps> = ({ classData, onSubmit, 
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="Regular">Regular</SelectItem>
-                    <SelectItem value="Advanced">Advanced</SelectItem>
-                    <SelectItem value="Remedial">Remedial</SelectItem>
+                    <SelectItem value="REGULAR">Regular</SelectItem>
+                    <SelectItem value="ADVANCED">Advanced</SelectItem>
+                    <SelectItem value="REMEDIAL">Remedial</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -480,10 +527,23 @@ const UpdateClassForm: React.FC<UpdateClassFormProps> = ({ classData, onSubmit, 
         </div>
 
         <div className="flex justify-end gap-2 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onCancel} 
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button 
+            type="submit" 
+            disabled={isSubmitting}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={(e) => {
+              console.log('Update Class button clicked');
+              // Form will handle submission via onSubmit
+            }}
+          >
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

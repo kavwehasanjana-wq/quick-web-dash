@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Building2, RefreshCw, Plus, UserPlus, Eye } from 'lucide-react';
+import { Building2, RefreshCw, Plus, UserPlus, Eye, Key } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTableData } from '@/hooks/useTableData';
 import MUITable from '@/components/ui/mui-table';
@@ -12,6 +12,10 @@ import AddOrganizationUserDialog from '@/components/forms/AddOrganizationUserDia
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { apiClient } from '@/api/client';
 import { useToast } from '@/hooks/use-toast';
+import { organizationApi } from '@/api/organization.api';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast as sonnerToast } from 'sonner';
 
 interface Organization {
   organizationId: string;
@@ -62,6 +66,20 @@ const InstituteOrganizations = () => {
     open: false,
     orgId: '',
     orgName: '',
+  });
+
+  const [enrollmentKeyDialog, setEnrollmentKeyDialog] = useState<{
+    open: boolean;
+    orgId: string;
+    orgName: string;
+    enrollmentKey: string;
+    loading: boolean;
+  }>({
+    open: false,
+    orgId: '',
+    orgName: '',
+    enrollmentKey: '',
+    loading: false,
   });
 
   const [membersState, setMembersState] = useState<{
@@ -120,6 +138,29 @@ const InstituteOrganizations = () => {
         description: 'Failed to load organization members',
         variant: 'destructive',
       });
+    }
+  };
+
+  const loadEnrollmentKey = async (orgId: string, orgName: string) => {
+    setEnrollmentKeyDialog({ open: true, orgId, orgName, enrollmentKey: '', loading: true });
+
+    try {
+      const response = await organizationApi.getEnrollmentKey(orgId);
+      setEnrollmentKeyDialog({
+        open: true,
+        orgId,
+        orgName,
+        enrollmentKey: response.enrollmentKey || 'N/A',
+        loading: false,
+      });
+    } catch (error: any) {
+      console.error('Failed to load enrollment key:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load enrollment key',
+        variant: 'destructive',
+      });
+      setEnrollmentKeyDialog({ open: false, orgId: '', orgName: '', enrollmentKey: '', loading: false });
     }
   };
 
@@ -250,6 +291,23 @@ const InstituteOrganizations = () => {
       label: 'Causes',
       minWidth: 100,
       align: 'center' as const,
+    },
+    {
+      id: 'enrollmentKey',
+      label: 'Enrollment Key',
+      minWidth: 150,
+      align: 'center' as const,
+      format: (_value: any, row: any) => (
+        <Button
+          size="sm"
+          onClick={() => loadEnrollmentKey(row.organizationId, row.name)}
+          style={{ backgroundColor: '#06923E' }}
+          className="gap-1 hover:opacity-90"
+        >
+          <Key className="h-4 w-4" />
+          View Key
+        </Button>
+      )
     },
     {
       id: 'actions',
@@ -391,6 +449,53 @@ const InstituteOrganizations = () => {
               </CardContent>
             </Card>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={enrollmentKeyDialog.open} onOpenChange={(open) => setEnrollmentKeyDialog({ ...enrollmentKeyDialog, open })}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">Enrollment Code</DialogTitle>
+          </DialogHeader>
+
+          {enrollmentKeyDialog.loading ? (
+            <div className="flex items-center justify-center p-8">
+              <RefreshCw className="h-6 w-6 animate-spin" />
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="bg-muted/50 rounded-lg p-4 mb-2">
+                <p className="text-sm text-muted-foreground">Organization</p>
+                <p className="text-lg font-semibold">{enrollmentKeyDialog.orgName}</p>
+              </div>
+              
+              <div className="bg-muted/50 rounded-lg p-6 text-center">
+                <p className="text-sm text-muted-foreground mb-2">Class Enrollment Code</p>
+                <p className="text-4xl font-bold tracking-tight">{enrollmentKeyDialog.enrollmentKey}</p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Enrollment Enabled</span>
+                  <Badge className="bg-blue-500 hover:bg-blue-600 text-white">Yes</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Requires Verification</span>
+                  <Badge className="bg-blue-500 hover:bg-blue-600 text-white">Yes</Badge>
+                </div>
+              </div>
+
+              <Button 
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                onClick={() => {
+                  navigator.clipboard.writeText(enrollmentKeyDialog.enrollmentKey);
+                  sonnerToast.success('Enrollment code copied to clipboard!');
+                }}
+              >
+                Copy Code
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

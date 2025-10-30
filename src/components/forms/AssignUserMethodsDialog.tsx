@@ -334,6 +334,32 @@ const AssignUserMethodsDialog = ({ open, onClose, instituteId, onSuccess }: Assi
     }
   };
 
+  const fetchUserByRfid = async (rfid: string) => {
+    if (!rfid.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid RFID",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoadingPreview(true);
+    try {
+      const response = await apiClient.get(`/users/basic/rfid/${rfid}`);
+      setUserPreview(response);
+      setShowUserPreview(true);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || 'User not found',
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  };
+
   const resetForm = () => {
     setSelectedMethod(null);
     setIdFormData({ userId: '', instituteUserType: 'STUDENT', userIdByInstitute: '', instituteCardId: '', image: null });
@@ -676,7 +702,7 @@ const AssignUserMethodsDialog = ({ open, onClose, instituteId, onSuccess }: Assi
                       id="rfid"
                       value={rfidFormData.rfid}
                       onChange={(e) => setRfidFormData(prev => ({ ...prev, rfid: e.target.value }))}
-                      placeholder="RFID5984594359"
+                      placeholder="RFID0000"
                       className="pr-10"
                     />
                     <Button
@@ -684,7 +710,7 @@ const AssignUserMethodsDialog = ({ open, onClose, instituteId, onSuccess }: Assi
                       variant="ghost"
                       size="sm"
                       className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
-                      onClick={() => fetchUserById(rfidFormData.rfid)}
+                      onClick={() => fetchUserByRfid(rfidFormData.rfid)}
                       disabled={isLoadingPreview || !rfidFormData.rfid.trim()}
                     >
                       <Eye className="h-4 w-4" />

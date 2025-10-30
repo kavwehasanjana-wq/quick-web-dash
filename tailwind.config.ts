@@ -1,7 +1,6 @@
 import type { Config } from "tailwindcss";
 
 export default {
-	darkMode: ["class"],
 	content: [
 		"./pages/**/*.{ts,tsx}",
 		"./components/**/*.{ts,tsx}",
@@ -9,6 +8,9 @@ export default {
 		"./src/**/*.{ts,tsx}",
 	],
 	prefix: "",
+	// Enforce light mode unless explicit 'dark' class is present
+	// This prevents OS-level dark scheme from applying
+	darkMode: 'class',
 	theme: {
 		container: {
 			center: true,

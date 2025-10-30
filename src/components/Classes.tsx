@@ -80,14 +80,7 @@ const Classes = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGrade, setSelectedGrade] = useState<string>('');
 
-  // Auto-fetch when pagination changes
-  useEffect(() => {
-    if (selectedInstitute?.id && classes.length > 0) {
-      fetchClasses();
-    }
-  }, [page, rowsPerPage]);
-
-  // Removed auto-loading useEffect - data now only loads when button is clicked
+  // Removed all auto-loading useEffect - data only loads when button is clicked
 
   const userRole = useInstituteRole();
   const isInstituteAdmin = userRole === 'InstituteAdmin';
@@ -104,7 +97,7 @@ const Classes = () => {
     };
   };
 
-  const fetchClasses = async (forceRefresh = false) => {
+  const fetchClasses = async (forceRefresh = false, customLimit?: number) => {
     if (!selectedInstitute?.id) {
       toast({
         title: "Missing Information",
@@ -118,7 +111,7 @@ const Classes = () => {
     try {
       const params = {
         page: page + 1, // API expects 1-based pagination
-        limit: rowsPerPage,
+        limit: customLimit ?? rowsPerPage,
         instituteId: selectedInstitute.id,
       };
 
@@ -594,11 +587,14 @@ const Classes = () => {
         rowsPerPage={rowsPerPage}
         totalCount={filteredClasses.length} // Use filtered total count
         onPageChange={(newPage: number) => {
+          console.log('Changing page to:', newPage);
           setPage(newPage);
         }}
         onRowsPerPageChange={(newRowsPerPage: number) => {
+          console.log('Changing rows per page to:', newRowsPerPage);
           setRowsPerPage(newRowsPerPage);
           setPage(0); // Reset to first page
+          fetchClasses(false, newRowsPerPage); // Refetch with new limit
         }}
         sectionType="classes"
         allowAdd={canAdd}
