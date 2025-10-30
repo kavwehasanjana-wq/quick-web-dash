@@ -30,7 +30,7 @@ const updateClassSchema = z.object({
   capacity: z.number().min(1, 'Capacity must be at least 1'),
   classTeacherId: z.string().optional(),
   description: z.string().optional(),
-  imageUrl: z.string().url().optional().or(z.literal('')),
+  imageUrl: z.string().optional(),
   isActive: z.boolean(),
   startDate: z.string().min(1, 'Start date is required'),
   endDate: z.string().min(1, 'End date is required'),
@@ -539,10 +539,6 @@ const UpdateClassForm: React.FC<UpdateClassFormProps> = ({ classData, onSubmit, 
             type="submit" 
             disabled={isSubmitting}
             className="bg-blue-600 hover:bg-blue-700 text-white"
-            onClick={(e) => {
-              console.log('Update Class button clicked');
-              // Form will handle submission via onSubmit
-            }}
           >
             {isSubmitting ? (
               <>
