@@ -627,24 +627,7 @@ const Login = ({
           </div>
 
           {/* Login Mode Toggle */}
-          <Card className="border-border">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                Login Mode
-                {useApiLogin ? <Wifi className="w-4 h-4 text-green-600" /> : <WifiOff className="w-4 h-4 text-muted-foreground" />}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2">
-                <Button type="button" variant={useApiLogin ? "default" : "outline"} size="sm" onClick={() => setUseApiLogin(true)} className="flex-1">
-                  API Login
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                {useApiLogin ? "Login via backend API" : "Login with demo credentials"}
-              </p>
-            </CardContent>
-          </Card>
+          
 
           {/* Main Login/First Login/Forgot Password Card */}
           <Card className="border-border">
