@@ -350,6 +350,14 @@ const Classes = () => {
             <QrCode className="h-4 w-4 mr-1" />
             View Code
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleEditClass(row)}
+            className="h-8 w-8 p-0"
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
         </div>
       )
     }] : [])
@@ -427,6 +435,21 @@ const Classes = () => {
             </Dialog>
           )}
 
+          {/* Update Class Dialog */}
+          <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Update Class</DialogTitle>
+              </DialogHeader>
+              {selectedClass && (
+                <UpdateClassForm 
+                  classData={selectedClass}
+                  onSubmit={handleUpdateClass} 
+                  onCancel={handleCancelUpdate} 
+                />
+              )}
+            </DialogContent>
+          </Dialog>
 
           {/* View Enrollment Code Dialog */}
           <Dialog open={isViewCodeDialogOpen} onOpenChange={setIsViewCodeDialogOpen}>
