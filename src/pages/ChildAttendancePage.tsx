@@ -3,10 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, RefreshCw, UserCheck, UserX, Clock } from 'lucide-react';
+import { Calendar, RefreshCw, UserCheck, UserX, Clock, Filter } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { childAttendanceApi, type ChildAttendanceResponse } from '@/api/childAttendance.api';
+import { format, subDays, addDays } from 'date-fns';
 import Paper from '@mui/material/Paper';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -21,10 +22,12 @@ const ChildAttendancePage = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [attendanceData, setAttendanceData] = useState<ChildAttendanceResponse | null>(null);
-  const [startDate, setStartDate] = useState('2025-01-12');
-  const [endDate, setEndDate] = useState('2025-12-13');
+  const today = new Date();
+  const [startDate, setStartDate] = useState(format(subDays(today, 1), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(addDays(today, 1), 'yyyy-MM-dd'));
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [showFilters, setShowFilters] = useState(false);
 
   const loadAttendance = async () => {
     if (!selectedChild?.id) {
@@ -102,40 +105,49 @@ const ChildAttendancePage = () => {
     <div className="h-screen flex flex-col space-y-4 p-4 overflow-hidden">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Attendance Records
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Attendance Records
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Filter className="h-4 w-4" />
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Start Date</label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
+          {showFilters && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4 border-b">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Start Date</label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">End Date</label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
             </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">End Date</label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-            <div className="flex items-end">
-              <Button onClick={loadAttendance} disabled={loading} className="w-full">
-                {loading ? (
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Calendar className="h-4 w-4 mr-2" />
-                )}
-                Load Attendance
-              </Button>
-            </div>
-          </div>
+          )}
+          <Button onClick={loadAttendance} disabled={loading} className="w-full">
+            {loading ? (
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Calendar className="h-4 w-4 mr-2" />
+            )}
+            Load Attendance
+          </Button>
         </CardContent>
       </Card>
 

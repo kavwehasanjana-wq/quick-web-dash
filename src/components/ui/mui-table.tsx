@@ -101,10 +101,10 @@ export default function MUITable({
       <Paper sx={{
       width: '100%',
       overflow: 'hidden',
-      height: 'calc(100vh - 280px)'
+      height: 'calc(100vh - 96px)'
     }}>
         <TableContainer sx={{
-        height: 'calc(100% - 52px)'
+        height: 'calc(100% - 56px)'
       }}>
           <Table stickyHeader aria-label="sticky table">
             <TableHead>
@@ -128,8 +128,27 @@ export default function MUITable({
                     {columns.map(column => {
                   const value = row[column.id];
                   console.log(`Column ${column.id}:`, value, 'from row:', row);
+                  const renderer = (column as any).format || (column as any).render;
+                  let cellContent: React.ReactNode = renderer ? renderer(value, row) : (value || '-');
+                  if (!renderer) {
+                    const id = (column.id || '').toLowerCase();
+                    const isLikelyImage = typeof value === 'string' && (value.startsWith('http') || value.startsWith('/')) && /\.(png|jpe?g|gif|webp|svg)$/i.test(value);
+                    const isImageColumn = id.includes('image') || id.includes('img') || id.includes('logo');
+                    if ((isLikelyImage || isImageColumn) && typeof value === 'string') {
+                      cellContent = (
+                        <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted">
+                          <img
+                            src={value}
+                            alt={`${column.label} image`}
+                            className="w-full h-full object-cover"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/placeholder.svg'; }}
+                          />
+                        </div>
+                      );
+                    }
+                  }
                   return <TableCell key={column.id} align={column.align}>
-                        {column.format ? column.format(value, row) : value || '-'}
+                        {cellContent}
                       </TableCell>;
                 })}
                     {hasActions && <TableCell align="center">
@@ -167,9 +186,8 @@ export default function MUITable({
             })}
               {data.length === 0 && <TableRow>
                   <TableCell colSpan={allColumns.length} align="center">
-                    <div className="py-12 text-center text-gray-500">
-                      <p className="text-lg">No data found</p>
-                      <p className="text-sm">No records available for display</p>
+                    <div className="py-8 text-center">
+                      <p className="text-sm text-muted-foreground">No records found</p>
                     </div>
                   </TableCell>
                 </TableRow>}

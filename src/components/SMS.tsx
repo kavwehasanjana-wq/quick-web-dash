@@ -20,6 +20,8 @@ import TableHead from '@mui/material/TableHead';
 import TablePagination from '@mui/material/TablePagination';
 import TableRow from '@mui/material/TableRow';
 import { format } from 'date-fns';
+import { enhancedCachedClient } from '@/api/enhancedCachedClient';
+import { CACHE_TTL } from '@/config/cacheTTL';
 import { apiClient } from '@/api/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -130,10 +132,28 @@ const SMS = () => {
     setCustomScheduledAt(sriLankaTime);
   }, []);
 
-  // Auto-load credentials when component mounts
+  // Load credentials from cache only on mount (no automatic refresh)
   useEffect(() => {
     if (currentInstituteId) {
-      fetchCredentials();
+      // Silent cache load only - no loading indicator
+      const loadFromCache = async () => {
+        try {
+          const response = await enhancedCachedClient.get(
+            `/sms/credentials/status`,
+            { instituteId: currentInstituteId },
+            {
+              ttl: CACHE_TTL.SMS_CREDENTIALS,
+              forceRefresh: false, // Only load from cache
+              userId: currentInstituteId
+            }
+          );
+          setCredentials(response as SMSCredentials);
+        } catch (error) {
+          // Silently fail - user can click refresh if needed
+          console.log('📦 No cached SMS credentials available');
+        }
+      };
+      loadFromCache();
     }
   }, [currentInstituteId]);
 
@@ -142,8 +162,17 @@ const SMS = () => {
     
     setLoadingPayments(true);
     try {
-      const response: any = await apiClient.get(
-        `/sms/payment-submissions/institute/${currentInstituteId}?page=${paymentsPage + 1}&limit=${paymentsRowsPerPage}`
+      const response: any = await enhancedCachedClient.get(
+        `/sms/payment-submissions/institute/${currentInstituteId}`,
+        {
+          page: paymentsPage + 1,
+          limit: paymentsRowsPerPage
+        },
+        {
+          ttl: CACHE_TTL.SMS_HISTORY,
+          forceRefresh: false,
+          userId: currentInstituteId
+        }
       );
       
       // Handle new API response format
@@ -225,7 +254,15 @@ const SMS = () => {
     console.log('🔄 Fetching SMS credentials for institute:', currentInstituteId);
     setLoadingCredentials(true);
     try {
-      const response = await apiClient.get(`/sms/credentials/status?instituteId=${currentInstituteId}`);
+      const response = await enhancedCachedClient.get(
+        `/sms/credentials/status`,
+        { instituteId: currentInstituteId },
+        {
+          ttl: CACHE_TTL.SMS_CREDENTIALS,
+          forceRefresh: false,
+          userId: currentInstituteId
+        }
+      );
       console.log('✅ SMS credentials response:', response);
       setCredentials(response as SMSCredentials);
       console.log('✅ Credentials set successfully:', response);

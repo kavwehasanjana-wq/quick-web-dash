@@ -16,6 +16,8 @@ import { toast } from 'sonner';
 import { Users, Calendar, MapPin, GraduationCap, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getBaseUrl } from '@/contexts/utils/auth.api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { enhancedCachedClient } from '@/api/enhancedCachedClient';
+import { CACHE_TTL } from '@/config/cacheTTL';
 
 const enrollFormSchema = z.object({
   enrollmentCode: z.string().min(1, 'Enrollment code is required'),
@@ -57,24 +59,25 @@ const EnrollClass = () => {
     },
   });
 
-  const loadEnrolledClasses = async () => {
+  const loadEnrolledClasses = async (forceRefresh = false) => {
     if (!selectedInstitute || !user) return;
     
     try {
-      // This would be the API call to get user's enrolled classes
-      // For now, we'll simulate it or you can implement the actual API
-      const enrolledResponse = await fetch(`${getBaseUrl()}/institute-classes/${selectedInstitute.id}/student/${user.id}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-          'Content-Type': 'application/json',
+      // Use enhanced cached client for enrollment status
+      const enrolledData = await enhancedCachedClient.get(
+        `/institute-classes/${selectedInstitute.id}/student/${user.id}`,
+        {},
+        {
+          ttl: CACHE_TTL.ENROLLMENT_STATUS,
+          forceRefresh,
+          userId: user?.id,
+          instituteId: selectedInstitute.id,
+          role: effectiveRole
         }
-      });
+      );
       
-      if (enrolledResponse.ok) {
-        const enrolledData = await enrolledResponse.json();
-        const enrolledIds = enrolledData.data?.map((item: any) => item.classId) || [];
-        setEnrolledClasses(enrolledIds);
-      }
+      const enrolledIds = enrolledData.data?.map((item: any) => item.classId) || [];
+      setEnrolledClasses(enrolledIds);
     } catch (error) {
       console.error('Error loading enrolled classes:', error);
     }
@@ -106,7 +109,8 @@ const EnrollClass = () => {
       
       if (!data) {
         console.log('❌ No data received from API');
-        toast.error('No data received from server');
+        setClasses([]);
+        setHasData(true);
         return;
       }
       

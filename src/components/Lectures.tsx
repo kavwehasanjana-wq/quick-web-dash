@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import MUITable from '@/components/ui/mui-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -41,28 +41,8 @@ const Lectures = ({ apiLevel = 'institute' }: LecturesProps) => {
 
   const userRole = useInstituteRole();
   
-  // Enhanced pagination with useTableData hook - DISABLE AUTO-LOADING
-  const tableData = useTableData({
-    endpoint: getEndpoint(),
-    defaultParams: buildDefaultParams(),
-    dependencies: [], // Remove dependencies to prevent auto-reloading on context changes
-    pagination: {
-      defaultLimit: 50,
-      availableLimits: [25, 50, 100]
-    },
-    autoLoad: false // DISABLE AUTO-LOADING - only load on explicit button clicks
-  });
-
-  const { 
-    state: { data: lecturesData, loading: isLoading },
-    pagination,
-    actions
-  } = tableData;
-
-  // Track if we've attempted to load data at least once
-  const [hasAttemptedLoad, setHasAttemptedLoad] = React.useState(false);
-
-  function getEndpoint() {
+  // Memoize endpoint to prevent unnecessary re-renders
+  const endpoint = useMemo(() => {
     if (userRole === 'Student') {
       return '/institute-class-subject-lectures';
     } else if (userRole === 'InstituteAdmin' || userRole === 'Teacher') {
@@ -71,12 +51,12 @@ const Lectures = ({ apiLevel = 'institute' }: LecturesProps) => {
       }
     }
     return '/lectures';
-  }
+  }, [userRole, currentInstituteId, currentClassId, currentSubjectId]);
 
-  function buildDefaultParams() {
+  // Memoize default params to prevent unnecessary re-renders
+  const defaultParams = useMemo(() => {
     const params: Record<string, any> = {};
     
-    // Add context-aware filtering
     if (currentInstituteId) {
       params.instituteId = currentInstituteId;
     }
@@ -87,13 +67,33 @@ const Lectures = ({ apiLevel = 'institute' }: LecturesProps) => {
       params.subjectId = currentSubjectId;
     }
     
-    // For Teachers, add instructorId parameter
     if (userRole === 'Teacher' && user?.id) {
       params.instructorId = user.id;
     }
     
     return params;
-  }
+  }, [currentInstituteId, currentClassId, currentSubjectId, userRole, user?.id]);
+  
+  // Enhanced pagination with useTableData hook - AUTO-LOAD when subject selected
+  const tableData = useTableData({
+    endpoint,
+    defaultParams,
+    dependencies: [currentInstituteId, currentClassId, currentSubjectId], // Auto-reload on context changes
+    pagination: {
+      defaultLimit: 50,
+      availableLimits: [25, 50, 100]
+    },
+    autoLoad: true // Enable auto-loading from cache
+  });
+
+  const { 
+    state: { data: lecturesData, loading: isLoading },
+    pagination,
+    actions
+  } = tableData;
+
+  // Track if we've attempted to load data at least once
+  const [hasAttemptedLoad, setHasAttemptedLoad] = React.useState(false);
 
   const handleLoadData = async (forceRefresh = false) => {
     if (userRole === 'Student') {
@@ -119,11 +119,10 @@ const Lectures = ({ apiLevel = 'institute' }: LecturesProps) => {
     setHasAttemptedLoad(true);
     
     // Update filters and load data
-    const newFilters = buildDefaultParams();
-    actions.updateFilters(newFilters);
+    actions.updateFilters(defaultParams);
     
     // Always trigger data loading
-    actions.loadData(true);
+    actions.loadData(forceRefresh);
   };
 
   const handleRefreshData = async () => {

@@ -15,13 +15,16 @@ export interface CacheTTLConfig {
   USER_PROFILE: number;
   USER_PERMISSIONS: number;
   USER_ROLES: number;
+  USER_LOOKUP: number;
 
   // Institute Data
   INSTITUTES: number;
   INSTITUTE_DETAILS: number;
+  INSTITUTE_PROFILE: number;
   INSTITUTE_USERS: number;
   INSTITUTE_CLASSES: number;
   INSTITUTE_ORGANIZATIONS: number;
+  ORGANIZATION_MEMBERS: number;
 
   // Academic Data
   CLASSES: number;
@@ -76,6 +79,10 @@ export interface CacheTTLConfig {
 
   // API Configuration
   API_CONFIG: number;
+  
+  // SMS & Communications
+  SMS_CREDENTIALS: number;
+  SMS_HISTORY: number;
 }
 
 /**
@@ -94,15 +101,18 @@ export const CACHE_TTL: CacheTTLConfig = {
   USER_PROFILE: 60,
   USER_PERMISSIONS: 60,
   USER_ROLES: 60,
+  USER_LOOKUP: 30, // User lookups by phone/email/RFID - moderate caching
 
   // ==========================================
   // INSTITUTE DATA: 60 minutes
   // ==========================================
   INSTITUTES: 60,
   INSTITUTE_DETAILS: 60,
+  INSTITUTE_PROFILE: 60, // Institute profile data
   INSTITUTE_USERS: 60,
   INSTITUTE_CLASSES: 60,
   INSTITUTE_ORGANIZATIONS: 60,
+  ORGANIZATION_MEMBERS: 60, // Organization members list
 
   // ==========================================
   // ACADEMIC DATA: 60 minutes
@@ -179,6 +189,12 @@ export const CACHE_TTL: CacheTTLConfig = {
   // API CONFIGURATION: 120 minutes (2 hours)
   // ==========================================
   API_CONFIG: 120,
+  
+  // ==========================================
+  // SMS & COMMUNICATIONS: 30 minutes
+  // ==========================================
+  SMS_CREDENTIALS: 30, // SMS credentials status
+  SMS_HISTORY: 30, // SMS sending history
 };
 
 /**

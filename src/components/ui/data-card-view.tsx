@@ -133,7 +133,7 @@ export const DataCardView = ({
       
       {data.length === 0 && (
         <Card className="p-8 text-center">
-          <p className="text-gray-500 dark:text-gray-400">No data found</p>
+          <p className="text-sm text-muted-foreground">No records found</p>
         </Card>
       )}
     </div>

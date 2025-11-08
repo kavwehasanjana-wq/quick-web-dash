@@ -38,7 +38,7 @@ const OrganizationStudents = ({ organizationId, userRole }: OrganizationStudents
       defaultLimit: 50,
       availableLimits: [25, 50, 100]
     },
-    autoLoad: false
+    autoLoad: true, // Enable auto-loading from cache
   });
 
   const getRoleBadgeVariant = (role: string) => {

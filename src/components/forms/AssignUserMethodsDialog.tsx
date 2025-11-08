@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/api/client';
-import { UserPlus, Phone, CreditCard, User, Eye, Mail, Upload } from 'lucide-react';
+import { UserPlus, Phone, CreditCard, User, Eye, Mail, Upload, Camera, X } from 'lucide-react';
 
 interface AssignUserMethodsDialogProps {
   open: boolean;
@@ -33,6 +33,12 @@ const AssignUserMethodsDialog = ({ open, onClose, instituteId, onSuccess }: Assi
   const [userPreview, setUserPreview] = useState<UserPreviewData | null>(null);
   const [showUserPreview, setShowUserPreview] = useState(false);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  
+  // Camera state
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  const videoRef = React.useRef<HTMLVideoElement>(null);
 
   // Form states for different methods
   const [idFormData, setIdFormData] = useState({
@@ -397,8 +403,85 @@ const AssignUserMethodsDialog = ({ open, onClose, instituteId, onSuccess }: Assi
 
   const handleClose = () => {
     resetForm();
+    stopCamera();
     onClose();
   };
+
+  const openCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'user' } 
+      });
+      setCameraStream(stream);
+      setShowCamera(true);
+      
+      // Wait for dialog to render, then set the stream
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }, 100);
+    } catch (error) {
+      toast({
+        title: "Camera Error",
+        description: "Failed to access camera. Please check permissions.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current) {
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      const ctx = canvas.getContext('2d');
+      
+      if (ctx) {
+        ctx.drawImage(videoRef.current, 0, 0);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+            const photoUrl = URL.createObjectURL(blob);
+            
+            // Update the appropriate form data based on selected method
+            if (selectedMethod === 'id') {
+              setIdFormData(prev => ({ ...prev, image: file }));
+            } else if (selectedMethod === 'phone') {
+              setPhoneFormData(prev => ({ ...prev, image: file }));
+            } else if (selectedMethod === 'rfid') {
+              setRfidFormData(prev => ({ ...prev, image: file }));
+            } else if (selectedMethod === 'email') {
+              setEmailFormData(prev => ({ ...prev, image: file }));
+            }
+            
+            setCapturedPhoto(photoUrl);
+            stopCamera();
+            setShowCamera(false);
+            
+            toast({
+              title: "Photo Captured",
+              description: "Profile photo has been captured successfully.",
+            });
+          }
+        }, 'image/jpeg', 0.9);
+      }
+    }
+  };
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    setShowCamera(false);
+  };
+
+  React.useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -558,21 +641,30 @@ const AssignUserMethodsDialog = ({ open, onClose, instituteId, onSuccess }: Assi
 
                 <div>
                   <Label htmlFor="idImage">Profile Image</Label>
-                  <div className="mt-1">
+                  <div className="mt-1 flex gap-2">
                     <Input
                       id="idImage"
                       type="file"
                       accept="image/*"
                       onChange={(e) => setIdFormData(prev => ({ ...prev, image: e.target.files?.[0] || null }))}
-                      className="cursor-pointer"
+                      className="cursor-pointer flex-1"
                     />
-                    {idFormData.image && (
-                      <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                        <Upload className="h-3 w-3" />
-                        {idFormData.image.name}
-                      </p>
-                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={openCamera}
+                      title="Take photo with camera"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </Button>
                   </div>
+                  {idFormData.image && (
+                    <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                      <Upload className="h-3 w-3" />
+                      {idFormData.image.name}
+                    </p>
+                  )}
                 </div>
 
                 <Button
@@ -661,21 +753,30 @@ const AssignUserMethodsDialog = ({ open, onClose, instituteId, onSuccess }: Assi
 
                 <div>
                   <Label htmlFor="phoneImage">Profile Image</Label>
-                  <div className="mt-1">
+                  <div className="mt-1 flex gap-2">
                     <Input
                       id="phoneImage"
                       type="file"
                       accept="image/*"
                       onChange={(e) => setPhoneFormData(prev => ({ ...prev, image: e.target.files?.[0] || null }))}
-                      className="cursor-pointer"
+                      className="cursor-pointer flex-1"
                     />
-                    {phoneFormData.image && (
-                      <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                        <Upload className="h-3 w-3" />
-                        {phoneFormData.image.name}
-                      </p>
-                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={openCamera}
+                      title="Take photo with camera"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </Button>
                   </div>
+                  {phoneFormData.image && (
+                    <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                      <Upload className="h-3 w-3" />
+                      {phoneFormData.image.name}
+                    </p>
+                  )}
                 </div>
 
                 <Button
@@ -760,21 +861,30 @@ const AssignUserMethodsDialog = ({ open, onClose, instituteId, onSuccess }: Assi
 
                 <div>
                   <Label htmlFor="rfidImage">Profile Image</Label>
-                  <div className="mt-1">
+                  <div className="mt-1 flex gap-2">
                     <Input
                       id="rfidImage"
                       type="file"
                       accept="image/*"
                       onChange={(e) => setRfidFormData(prev => ({ ...prev, image: e.target.files?.[0] || null }))}
-                      className="cursor-pointer"
+                      className="cursor-pointer flex-1"
                     />
-                    {rfidFormData.image && (
-                      <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                        <Upload className="h-3 w-3" />
-                        {rfidFormData.image.name}
-                      </p>
-                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={openCamera}
+                      title="Take photo with camera"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </Button>
                   </div>
+                  {rfidFormData.image && (
+                    <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                      <Upload className="h-3 w-3" />
+                      {rfidFormData.image.name}
+                    </p>
+                  )}
                 </div>
 
                 <Button
@@ -860,21 +970,30 @@ const AssignUserMethodsDialog = ({ open, onClose, instituteId, onSuccess }: Assi
 
                 <div>
                   <Label htmlFor="emailImage">Profile Image</Label>
-                  <div className="mt-1">
+                  <div className="mt-1 flex gap-2">
                     <Input
                       id="emailImage"
                       type="file"
                       accept="image/*"
                       onChange={(e) => setEmailFormData(prev => ({ ...prev, image: e.target.files?.[0] || null }))}
-                      className="cursor-pointer"
+                      className="cursor-pointer flex-1"
                     />
-                    {emailFormData.image && (
-                      <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                        <Upload className="h-3 w-3" />
-                        {emailFormData.image.name}
-                      </p>
-                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={openCamera}
+                      title="Take photo with camera"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </Button>
                   </div>
+                  {emailFormData.image && (
+                    <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                      <Upload className="h-3 w-3" />
+                      {emailFormData.image.name}
+                    </p>
+                  )}
                 </div>
 
                 <Button
@@ -912,6 +1031,50 @@ const AssignUserMethodsDialog = ({ open, onClose, instituteId, onSuccess }: Assi
                 <p className="text-sm text-muted-foreground">ID: {userPreview.id}</p>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Camera Dialog */}
+        <Dialog open={showCamera} onOpenChange={stopCamera}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between">
+                <span>Capture Photo</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={stopCamera}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={stopCamera}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={capturePhoto}
+                  className="flex-1"
+                >
+                  <Camera className="h-4 w-4 mr-2" />
+                  Capture Photo
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </DialogContent>

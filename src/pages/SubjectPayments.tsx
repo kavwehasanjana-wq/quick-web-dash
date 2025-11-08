@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PageContainer from '@/components/layout/PageContainer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -50,8 +50,21 @@ const SubjectPayments = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(50);
 
+  // Track current context to prevent unnecessary reloads
+  const contextKey = `${selectedInstitute?.id}-${selectedClass?.id}-${selectedSubject?.id}`;
+  const [lastLoadedContext, setLastLoadedContext] = useState<string>('');
+
+  // Auto-load subject payments when subject is selected
+  useEffect(() => {
+    if (selectedInstitute && selectedClass && selectedSubject && contextKey !== lastLoadedContext) {
+      setLastLoadedContext(contextKey);
+      setPage(0); // Reset to first page
+      loadSubjectPayments(0, rowsPerPage, false); // Auto-load from cache
+    }
+  }, [contextKey]);
+
   // Load subject payments based on user role
-  const loadSubjectPayments = async (pageNum: number = page, limitNum: number = rowsPerPage) => {
+  const loadSubjectPayments = async (pageNum: number = page, limitNum: number = rowsPerPage, forceRefresh: boolean = false) => {
     if (!selectedInstitute || !selectedClass || !selectedSubject) {
       toast({
         title: "Missing Selection",
@@ -65,10 +78,10 @@ const SubjectPayments = () => {
       let response: SubjectPaymentsResponse;
       if (instituteRole === 'Student') {
         // For students, use my-payments endpoint
-        response = await subjectPaymentsApi.getMySubjectPayments(selectedInstitute.id, selectedClass.id, selectedSubject.id, pageNum + 1, limitNum);
+        response = await subjectPaymentsApi.getMySubjectPayments(selectedInstitute.id, selectedClass.id, selectedSubject.id, pageNum + 1, limitNum, forceRefresh);
       } else if (instituteRole === 'InstituteAdmin' || instituteRole === 'Teacher') {
         // For admins and teachers, use regular endpoint
-        response = await subjectPaymentsApi.getSubjectPayments(selectedInstitute.id, selectedClass.id, selectedSubject.id, pageNum + 1, limitNum);
+        response = await subjectPaymentsApi.getSubjectPayments(selectedInstitute.id, selectedClass.id, selectedSubject.id, pageNum + 1, limitNum, forceRefresh);
       } else {
         toast({
           title: "Access Denied",
@@ -268,9 +281,9 @@ const SubjectPayments = () => {
               </div>
             </div>
             <div className="flex gap-2 shrink-0">
-              <Button variant="outline" onClick={() => loadSubjectPayments()} disabled={loading || !selectedInstitute || !selectedClass || !selectedSubject} size="sm">
+              <Button variant="outline" onClick={() => loadSubjectPayments(page, rowsPerPage, true)} disabled={loading || !selectedInstitute || !selectedClass || !selectedSubject} size="sm">
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                {loading ? 'Loading...' : 'Load Data'}
+                {loading ? 'Refreshing...' : 'Refresh'}
               </Button>
               {instituteRole === 'Student'}
               

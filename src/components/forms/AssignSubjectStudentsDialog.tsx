@@ -16,9 +16,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Users, UserPlus, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getBaseUrl } from '@/contexts/utils/auth.api';
 import { enrollmentApi } from '@/api/enrollment.api';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
+import { enhancedCachedClient } from '@/api/enhancedCachedClient';
+import { getBaseUrl } from '@/contexts/utils/auth.api';
+import { CACHE_TTL } from '@/config/cacheTTL';
 
 interface Student {
   id: string;
@@ -64,31 +66,26 @@ const AssignSubjectStudentsDialog: React.FC<AssignSubjectStudentsDialogProps> = 
   const [searchTerm, setSearchTerm] = useState('');
   const [dataLoaded, setDataLoaded] = useState(false);
 
-  const getApiHeaders = () => {
-    const token = localStorage.getItem('access_token');
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    };
-  };
-
-  const fetchAvailableStudents = async () => {
+  const fetchAvailableStudents = async (forceRefresh = false) => {
     if (!selectedInstitute?.id || !selectedClass?.id) return;
 
     setLoading(true);
     try {
-      const response = await fetch(
-        `${getBaseUrl()}/institute-users/institute/${selectedInstitute.id}/users/STUDENT/class/${selectedClass.id}`,
-        { headers: getApiHeaders() }
+      const data: StudentsResponse = await enhancedCachedClient.get(
+        `/institute-users/institute/${selectedInstitute.id}/users/STUDENT/class/${selectedClass.id}`,
+        {},
+        {
+          ttl: CACHE_TTL.STUDENTS,
+          forceRefresh,
+          userId: user?.id,
+          role: instituteRole,
+          instituteId: selectedInstitute.id,
+          classId: selectedClass.id
+        }
       );
       
-      if (response.ok) {
-        const data: StudentsResponse = await response.json();
-        setStudents(data.data);
-        setDataLoaded(true);
-      } else {
-        throw new Error('Failed to fetch students');
-      }
+      setStudents(data.data);
+      setDataLoaded(true);
     } catch (error) {
       console.error('Error fetching students:', error);
       toast({

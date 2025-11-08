@@ -51,7 +51,6 @@ const TeacherLectures = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
   const [selectedLecture, setSelectedLecture] = useState<TeacherLecture | null>(null);
-  const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
   const [videoPreviewTitle, setVideoPreviewTitle] = useState<string>('');
   
@@ -82,7 +81,7 @@ const TeacherLectures = () => {
     },
     dependencies: [], // Remove dependencies to prevent auto-reloading on context changes
     pagination: { defaultLimit: 50, availableLimits: [25, 50, 100] },
-    autoLoad: false // Keep disabled - only load on explicit button clicks
+    autoLoad: true // Enable auto-loading from cache
   });
 
   const { state: { data: lectures, loading }, pagination, actions } = tableData;
@@ -201,7 +200,6 @@ const TeacherLectures = () => {
   };
 
   const handleLoadData = () => {
-    setHasAttemptedLoad(true);
     actions.loadData();
   };
 
@@ -257,37 +255,6 @@ const TeacherLectures = () => {
           <p className="text-muted-foreground">
             Please select an institute, class, and subject to view lectures.
           </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!hasAttemptedLoad) {
-    return (
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="text-center py-12">
-          <h2 className="text-2xl font-bold mb-4">
-            {getTitle()}
-          </h2>
-          <p className="text-muted-foreground mb-6">
-            Click the button below to load lectures data
-          </p>
-          <Button 
-            onClick={handleLoadData} 
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Loading Data...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Load Data
-              </>
-            )}
-          </Button>
         </div>
       </div>
     );

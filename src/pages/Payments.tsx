@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
-import { getBaseUrl } from '@/contexts/utils/auth.api';
+import { enhancedCachedClient } from '@/api/enhancedCachedClient';
+import { CACHE_TTL } from '@/config/cacheTTL';
+import { useInstituteRole } from '@/hooks/useInstituteRole';
 
 interface PaymentRecord {
   id: string;
@@ -54,6 +56,7 @@ interface PaymentApiResponse {
 
 const Payments = () => {
   const { user } = useAuth();
+  const userRole = useInstituteRole();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
@@ -64,7 +67,7 @@ const Payments = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // Load all payment history from API
-  const loadPaymentHistory = async (showToast = true) => {
+  const loadPaymentHistory = async (showToast = true, forceRefresh = false) => {
     if (!user?.id) {
       toast({
         title: "Error",
@@ -76,25 +79,22 @@ const Payments = () => {
     
     setIsLoading(true);
     try {
-      const baseUrl = getBaseUrl();
       const params = new URLSearchParams({
         page: '1',
         limit: '100'
       });
       
-      const response = await fetch(`${baseUrl}/payment/my-payments?${params}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+      const data: PaymentApiResponse = await enhancedCachedClient.get(
+        `/payment/my-payments?${params}`,
+        {},
+        {
+          ttl: CACHE_TTL.PAYMENTS,
+          forceRefresh,
+          userId: user?.id,
+          role: userRole
         }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: PaymentApiResponse = await response.json();
+      );
+      
       console.log('Payment API Response:', data);
       
       setAllPayments(data.payments);
@@ -119,6 +119,13 @@ const Payments = () => {
       setIsLoading(false);
     }
   };
+
+  // Auto-load payment history on mount (uses cache if available)
+  useEffect(() => {
+    if (user?.id) {
+      loadPaymentHistory(false, false); // Load from cache, no toast
+    }
+  }, [user?.id]);
 
   // Filter payments by status on frontend
   const filterPaymentsByStatus = (currentPayments: PaymentRecord[], status: 'PENDING' | 'VERIFIED' | 'REJECTED') => {
@@ -276,7 +283,7 @@ const Payments = () => {
           </Button>
           
           <Button
-            onClick={() => loadPaymentHistory()}
+            onClick={() => loadPaymentHistory(true, true)} // Force refresh from backend with toast
             disabled={isLoading}
             variant="outline"
             size="sm"
