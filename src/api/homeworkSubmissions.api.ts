@@ -51,31 +51,29 @@ export interface HomeworkSubmissionQueryParams {
 }
 
 class HomeworkSubmissionsApi {
-  async submitHomework(homeworkId: string, file: File): Promise<{
+  async submitHomework(
+    homeworkId: string, 
+    fileUrl: string,
+    submissionData?: {
+      submissionDate?: string;
+      remarks?: string;
+    }
+  ): Promise<{
     success: boolean;
     message: string;
-    data: {
-      submissionId: string;
-      fileId: string;
-      publicUrl: string;
-      fileName: string;
-      fileSize: number;
-      mimeType: string;
-      submittedAt: string;
-    };
+    data?: any;
   }> {
-    console.log('Submitting homework:', { 
-      homeworkId, 
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type
-    });
-    
-    const formData = new FormData();
-    formData.append('file', file);
+    console.log('Submitting homework:', { homeworkId, fileUrl, submissionData });
     
     try {
-      const response = await apiClient.post(`/institute-class-subject-homework-submissions/1/submit`, formData);
+      const response = await apiClient.post(
+        `/institute-class-subject-homework-submissions/${homeworkId}/submit`,
+        {
+          fileUrl,
+          submissionDate: submissionData?.submissionDate || new Date().toISOString(),
+          remarks: submissionData?.remarks
+        }
+      );
       console.log('Homework submission successful:', response);
       return response;
     } catch (error: any) {

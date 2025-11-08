@@ -190,7 +190,7 @@ export interface SubmitPaymentRequest {
   paymentDate: string;
   paymentRemarks?: string;
   lateFeeApplied?: number;
-  receipt: File; // Will be sent as `paymentProof` to backend
+  receiptUrl: string; // Now URL instead of file
 }
 
 class InstitutePaymentsApi {
@@ -270,60 +270,15 @@ class InstitutePaymentsApi {
 
   // Submit a payment (for Student)
   async submitPayment(instituteId: string, paymentId: string, data: SubmitPaymentRequest): Promise<any> {
-    const formData = new FormData();
-    formData.append('paymentAmount', data.paymentAmount.toString());
-    formData.append('paymentMethod', data.paymentMethod);
-    formData.append('paymentDate', data.paymentDate);
-    if (data.transactionReference) formData.append('transactionReference', data.transactionReference);
-    if (data.paymentRemarks) formData.append('paymentRemarks', data.paymentRemarks);
-    if (typeof data.lateFeeApplied === 'number') formData.append('lateFeeApplied', data.lateFeeApplied.toString());
-
-    // Backend expects file key as `paymentProof` per latest spec
-    formData.append('paymentProof', data.receipt);
-
-    // Get auth token
-    const authToken = localStorage.getItem('access_token');
-    if (!authToken) {
-      throw new Error('No authentication token found');
-    }
-
-    // Always use configured API base URL (not window origin)
-    const baseUrl = getBaseUrl();
-    const url = `${baseUrl}/institute-payment-submissions/institute/${instituteId}/payment/${paymentId}/submit`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${authToken}`
-        // Do NOT set Content-Type for FormData
-      },
-      body: formData
+    return apiClient.post(`/institute-payment-submissions/institute/${instituteId}/payment/${paymentId}/submit`, {
+      paymentAmount: data.paymentAmount,
+      paymentMethod: data.paymentMethod,
+      transactionReference: data.transactionReference,
+      paymentDate: data.paymentDate,
+      paymentRemarks: data.paymentRemarks,
+      lateFeeApplied: data.lateFeeApplied,
+      receiptUrl: data.receiptUrl
     });
-
-    if (!response.ok) {
-      let errorMessage = `HTTP Error: ${response.status}`;
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorMessage;
-      } catch {
-        try {
-          const errorText = await response.text();
-          if (errorText && !errorText.includes('<!DOCTYPE html>')) {
-            errorMessage = errorText;
-          }
-        } catch {}
-      }
-      throw new Error(errorMessage);
-    }
-
-    // Ensure JSON response
-    const contentType = response.headers.get('Content-Type') || '';
-    if (!contentType.includes('application/json')) {
-      const text = await response.text();
-      throw new Error(text || 'Unexpected non-JSON response from server.');
-    }
-
-    return response.json();
   }
 
   // Legacy verify method (kept for backward compatibility)

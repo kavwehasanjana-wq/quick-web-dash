@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Camera, Upload, User, X, Check } from 'lucide-react';
 import ReactCrop, { Crop, PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import { getBaseUrl, getApiHeaders } from '@/contexts/utils/auth.api';
+import { fileUploader, UploadProgress } from '@/utils/uploadHelper';
 
 interface ProfileImageUploadProps {
   currentImageUrl?: string | null;
@@ -45,6 +45,11 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
   });
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress>({
+    stage: 'idle',
+    message: '',
+    progress: 0
+  });
   const imgRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -145,50 +150,53 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
       setUploading(true);
       console.log('Starting image upload process...');
 
+      // Get cropped image as blob
       const croppedImageBlob = await getCroppedImg(imgRef.current, completedCrop);
       console.log('Cropped image blob created:', croppedImageBlob.size, 'bytes');
       
-      const formData = new FormData();
-      formData.append('file', croppedImageBlob, selectedFile.name);
-
-      const baseUrl = getBaseUrl();
-      const apiHeaders = getApiHeaders();
-      
-      // Remove Content-Type header to let browser set it automatically for FormData
-      const { 'Content-Type': _, ...headersWithoutContentType } = apiHeaders;
-      
-      console.log('Making upload request to:', `${baseUrl}/users/${user.id}/profile-image`);
-      console.log('Request headers:', headersWithoutContentType);
-
-      const response = await fetch(`${baseUrl}/users/${user.id}/profile-image`, {
-        method: 'POST',
-        headers: headersWithoutContentType,
-        body: formData
+      // Convert blob to file
+      const croppedFile = new File([croppedImageBlob], selectedFile.name, {
+        type: 'image/png',
+        lastModified: Date.now()
       });
 
-      console.log('Upload response status:', response.status);
-      console.log('Upload response headers:', Object.fromEntries(response.headers.entries()));
+      // Upload using new signed URL system
+      const publicUrl = await fileUploader.uploadFile(
+        croppedFile,
+        'profile-images',
+        (progress) => {
+          setUploadProgress(progress);
+          console.log(`Upload progress: ${progress.stage} - ${progress.progress}%`);
+        }
+      );
+
+      console.log('Upload successful, received URL:', publicUrl);
+      
+      // Update profile image URL in backend
+      const baseUrl = 'https://lms-923357517997.europe-west1.run.app';
+      const token = localStorage.getItem('access_token');
+      
+      const response = await fetch(`${baseUrl}/users/${user.id}/profile`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          profileImageUrl: publicUrl
+        })
+      });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Upload failed with response:', errorText);
-        throw new Error(`Upload failed with status: ${response.status}. ${errorText}`);
+        throw new Error('Failed to update profile image');
       }
 
-      const result = await response.json();
-      console.log('Upload successful, received:', result);
-      
-      if (result.success && result.data?.publicUrl) {
-        onImageUpdate(result.data.publicUrl);
-        toast({
-          title: "Success",
-          description: "Profile image updated successfully!"
-        });
-        handleCloseDialog();
-      } else {
-        console.error('Unexpected response format:', result);
-        throw new Error(result.message || 'Upload failed - unexpected response format');
-      }
+      onImageUpdate(publicUrl);
+      toast({
+        title: "Success",
+        description: "Profile image updated successfully!"
+      });
+      handleCloseDialog();
     } catch (error) {
       console.error('Error uploading image:', error);
       toast({
@@ -198,6 +206,11 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
       });
     } finally {
       setUploading(false);
+      setUploadProgress({
+        stage: 'idle',
+        message: '',
+        progress: 0
+      });
     }
   };
 
@@ -316,7 +329,7 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
                 {uploading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Uploading...
+                    {uploadProgress.message || 'Uploading...'}
                   </>
                 ) : (
                   <>

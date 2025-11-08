@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Upload, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { institutePaymentsApi, SubmitPaymentRequest, InstitutePayment } from '@/api/institutePayments.api';
+import { fileUploader, UploadProgress } from '@/utils/uploadHelper';
 
 interface SubmitPaymentDialogProps {
   open: boolean;
@@ -21,7 +22,12 @@ interface SubmitPaymentDialogProps {
 const SubmitPaymentDialog = ({ open, onOpenChange, payment, instituteId, onSuccess }: SubmitPaymentDialogProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<Omit<SubmitPaymentRequest, 'receipt'>>({
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress>({
+    stage: 'idle',
+    message: '',
+    progress: 0
+  });
+  const [formData, setFormData] = useState<Omit<SubmitPaymentRequest, 'receiptUrl'>>({
     paymentAmount: 0,
     paymentMethod: 'BANK_TRANSFER',
     transactionReference: '',
@@ -52,9 +58,17 @@ const SubmitPaymentDialog = ({ open, onOpenChange, payment, instituteId, onSucce
 
     setLoading(true);
     try {
+      // Step 1: Upload receipt file
+      const receiptUrl = await fileUploader.uploadFile(
+        receiptFile,
+        'payment-receipts',
+        (progress) => setUploadProgress(progress)
+      );
+
+      // Step 2: Submit payment with receipt URL
       const submitData: SubmitPaymentRequest = {
         ...formData,
-        receipt: receiptFile
+        receiptUrl
       };
 
       await institutePaymentsApi.submitPayment(instituteId, payment.id, submitData);
@@ -259,7 +273,7 @@ const SubmitPaymentDialog = ({ open, onOpenChange, payment, instituteId, onSucce
               Cancel
             </Button>
             <Button type="submit" disabled={loading || !receiptFile}>
-              {loading ? 'Submitting...' : 'Submit Payment'}
+              {loading ? (uploadProgress.message || 'Submitting...') : 'Submit Payment'}
             </Button>
           </div>
         </form>

@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { subjectPaymentsApi, SubjectPayment } from '@/api/subjectPayments.api';
 import { Upload, Calendar, CreditCard, FileText, DollarSign } from 'lucide-react';
+import { fileUploader, UploadProgress } from '@/utils/uploadHelper';
 
 interface SubmitSubjectPaymentDialogProps {
   open: boolean;
@@ -23,6 +24,11 @@ const SubmitSubjectPaymentDialog: React.FC<SubmitSubjectPaymentDialogProps> = ({
 }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress>({
+    stage: 'idle',
+    message: '',
+    progress: 0
+  });
   const [formData, setFormData] = useState({
     paymentDate: new Date().toISOString().slice(0, 16),
     transactionId: '',
@@ -89,29 +95,32 @@ const SubmitSubjectPaymentDialog: React.FC<SubmitSubjectPaymentDialogProps> = ({
 
     setLoading(true);
     try {
-      const submitFormData = new FormData();
-      
-      // Convert datetime-local to ISO string
-      const isoDate = new Date(formData.paymentDate).toISOString();
-      submitFormData.append('paymentDate', isoDate);
-      submitFormData.append('transactionId', formData.transactionId);
-      
-      // Convert amount to number
-      const amountNumber = parseFloat(formData.submittedAmount);
-      submitFormData.append('submittedAmount', amountNumber.toString());
-      
-      submitFormData.append('notes', formData.notes);
-      submitFormData.append('receipt', receiptFile);
+      // Step 1: Upload receipt file
+      const receiptUrl = await fileUploader.uploadFile(
+        receiptFile,
+        'payment-receipts',
+        (progress) => setUploadProgress(progress)
+      );
 
-      console.log('Submitting form data:', {
+      // Step 2: Submit payment with receipt URL
+      const isoDate = new Date(formData.paymentDate).toISOString();
+      const amountNumber = parseFloat(formData.submittedAmount);
+
+      console.log('Submitting payment data:', {
         paymentDate: isoDate,
         transactionId: formData.transactionId,
         submittedAmount: amountNumber,
         notes: formData.notes,
-        receiptFile: receiptFile.name
+        receiptUrl
       });
 
-      const response = await subjectPaymentsApi.submitPayment(payment.id, submitFormData);
+      const response = await subjectPaymentsApi.submitPayment(payment.id, {
+        paymentDate: isoDate,
+        transactionId: formData.transactionId,
+        submittedAmount: amountNumber,
+        notes: formData.notes,
+        receiptUrl
+      });
 
       toast({
         title: "Success",
@@ -273,7 +282,7 @@ const SubmitSubjectPaymentDialog: React.FC<SubmitSubjectPaymentDialogProps> = ({
               className="flex items-center space-x-2"
             >
               <CreditCard className="h-4 w-4" />
-              <span>{loading ? 'Submitting...' : 'Submit Payment'}</span>
+              <span>{loading ? (uploadProgress.message || 'Submitting...') : 'Submit Payment'}</span>
             </Button>
           </div>
         </form>

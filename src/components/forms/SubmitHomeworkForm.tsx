@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { homeworkSubmissionsApi, type HomeworkSubmissionCreateData } from '@/api/homeworkSubmissions.api';
 import { Upload, FileText, File, X, CalendarIcon } from 'lucide-react';
+import { fileUploader, UploadProgress } from '@/utils/uploadHelper';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
@@ -38,6 +39,11 @@ const SubmitHomeworkForm = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress>({
+    stage: 'idle',
+    message: '',
+    progress: 0
+  });
 
   // Early return if homework is not provided
   if (!homework) {
@@ -108,7 +114,22 @@ const SubmitHomeworkForm = ({
     });
     setIsSubmitting(true);
     try {
-      const result = await homeworkSubmissionsApi.submitHomework(homework.id, selectedFile);
+      // Step 1: Upload file
+      const fileUrl = await fileUploader.uploadFile(
+        selectedFile,
+        'homework-files',
+        (progress) => setUploadProgress(progress)
+      );
+
+      // Step 2: Submit homework with file URL
+      const result = await homeworkSubmissionsApi.submitHomework(
+        homework.id,
+        fileUrl,
+        {
+          submissionDate: data.submissionDate,
+          remarks: data.remarks
+        }
+      );
       console.log('Homework submission result:', result);
       toast({
         title: "Success",
@@ -209,7 +230,7 @@ const SubmitHomeworkForm = ({
           <Button type="submit" disabled={isSubmitting || !selectedFile} className="flex-1">
             {isSubmitting ? <>
                 <Upload className="h-4 w-4 mr-2 animate-spin" />
-                Submitting...
+                {uploadProgress.message || 'Submitting...'}
               </> : <>
                 <Upload className="h-4 w-4 mr-2" />
                 Submit Homework

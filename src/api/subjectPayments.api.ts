@@ -174,7 +174,13 @@ class SubjectPaymentsApi {
   }
 
   // Submit payment (for students)
-  async submitPayment(paymentId: string, formData: FormData): Promise<{
+  async submitPayment(paymentId: string, data: {
+    paymentDate: string;
+    transactionId: string;
+    submittedAmount: number;
+    notes?: string;
+    receiptUrl: string;
+  }): Promise<{
     success: boolean;
     message: string;
     data: {
@@ -183,7 +189,7 @@ class SubjectPaymentsApi {
       receiptFile: string;
     };
   }> {
-    return apiClient.post(`/institute-class-subject-payment-submissions/payment/${paymentId}/submit`, formData);
+    return apiClient.post(`/institute-class-subject-payment-submissions/payment/${paymentId}/submit`, data);
   }
 }
 
