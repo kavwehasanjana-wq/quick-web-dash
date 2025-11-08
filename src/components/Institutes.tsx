@@ -39,6 +39,9 @@ import {
 } from "@/components/ui/select"
 import { Badge } from '@/components/ui/badge';
 import CreateInstituteForm from '@/components/forms/CreateInstituteForm';
+import { enhancedCachedClient } from '@/api/enhancedCachedClient';
+import { CACHE_TTL } from '@/config/cacheTTL';
+import { useInstituteRole } from '@/hooks/useInstituteRole';
 
 const Institutes = () => {
   const [institutes, setInstitutes] = useState<any[]>([]);
@@ -64,32 +67,37 @@ const Institutes = () => {
     return localStorage.getItem('baseUrl') || '';
   };
 
-  const fetchInstitutes = async (page: number = 1, search: string = '', isActive: string = 'true') => {
+  const fetchInstitutes = async (page: number = 1, search: string = '', isActive: string = 'true', forceRefresh = false) => {
     try {
       console.log('Loading institutes data...');
       setLoading(true);
       setError(null);
       
-      const baseUrl = getBaseUrl();
-      const queryParams = new URLSearchParams({
+      const userRole = useInstituteRole();
+      const params: Record<string, any> = {
         page: page.toString(),
         limit: itemsPerPage.toString(),
         search: search,
-      });
+      };
       
       // Only add isActive filter if it's not 'all'
       if (isActive !== 'all') {
-        queryParams.append('isActive', isActive);
+        params.isActive = isActive;
       }
       
-      const response = await fetch(`${baseUrl}/institutes?${queryParams}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      // Use enhanced cached client
+      const data = await enhancedCachedClient.get(
+        '/institutes',
+        params,
+        {
+          ttl: CACHE_TTL.INSTITUTES,
+          forceRefresh,
+          userId: user?.id,
+          role: userRole
+        }
+      );
 
-      if (response.status === 404) {
+      if (!data || (Array.isArray(data) && data.length === 0)) {
         setInstitutes([]);
         setTotalPages(1);
         toast({
@@ -100,11 +108,6 @@ const Institutes = () => {
         return;
       }
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
       console.log('Institutes data:', data);
       
       if (data.data && Array.isArray(data.data)) {
@@ -130,23 +133,25 @@ const Institutes = () => {
     }
   };
 
-  const fetchInstituteById = async (id: string) => {
+  const fetchInstituteById = async (id: string, forceRefresh = false) => {
     try {
       console.log('Fetching institute by ID:', id);
-      const baseUrl = getBaseUrl();
-      const response = await fetch(`${baseUrl}/institutes/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const userRole = useInstituteRole();
+      
+      // Use enhanced cached client
+      const data = await enhancedCachedClient.get(
+        `/institutes/${id}`,
+        {},
+        {
+          ttl: CACHE_TTL.INSTITUTE_DETAILS,
+          forceRefresh,
+          userId: user?.id,
+          role: userRole,
+          instituteId: id
+        }
+      );
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Institute data by ID:', data);
+      return data;
       return data;
     } catch (error) {
       console.error('Error fetching institute by ID:', error);

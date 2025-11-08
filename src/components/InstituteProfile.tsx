@@ -4,7 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { apiClient } from '@/api/client';
+import { enhancedCachedClient } from '@/api/enhancedCachedClient';
+import { CACHE_TTL } from '@/config/cacheTTL';
 import { 
   User, 
   Mail, 
@@ -59,8 +60,14 @@ const InstituteProfile = () => {
 
     setLoading(true);
     try {
-      const response = await apiClient.get<InstituteProfileData>(
-        `/institute-users/institute/${currentInstituteId}/me`
+      const response = await enhancedCachedClient.get<InstituteProfileData>(
+        `/institute-users/institute/${currentInstituteId}/me`,
+        {},
+        {
+          ttl: CACHE_TTL.INSTITUTE_PROFILE,
+          forceRefresh: false,
+          userId: currentInstituteId
+        }
       );
       setProfileData(response);
     } catch (error: any) {

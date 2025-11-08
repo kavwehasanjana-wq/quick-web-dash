@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,9 @@ import { cachedApiClient } from '@/api/cachedClient';
 import { useApiRequest } from '@/hooks/useApiRequest';
 import { useTableData } from '@/hooks/useTableData';
 import { getBaseUrl } from '@/contexts/utils/auth.api';
+import ImagePreviewModal from '@/components/ImagePreviewModal';
+import { enhancedCachedClient } from '@/api/enhancedCachedClient';
+import { CACHE_TTL } from '@/config/cacheTTL';
 
 interface InstituteStudent {
   id: string;
@@ -101,9 +104,35 @@ const Students = () => {
   const [showSubjectAssignDialog, setShowSubjectAssignDialog] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   
+  // Use ref to track if we're currently fetching to prevent duplicate calls
+  const isFetchingRef = useRef(false);
+  
+  // Track current context to prevent unnecessary reloads
+  // Build contextKey based on selection level to match cache context
+  const contextKey = useMemo(() => {
+    if (selectedSubject?.id && selectedClass?.id && selectedInstitute?.id) {
+      // Subject level: institute + class + subject
+      return `subject-${selectedInstitute.id}-${selectedClass.id}-${selectedSubject.id}`;
+    } else if (selectedClass?.id && selectedInstitute?.id) {
+      // Class level: institute + class only
+      return `class-${selectedInstitute.id}-${selectedClass.id}`;
+    } else if (selectedInstitute?.id) {
+      // Institute level: institute only
+      return `institute-${selectedInstitute.id}`;
+    }
+    return 'global'; // Global students (non-institute users)
+  }, [selectedInstitute?.id, selectedClass?.id, selectedSubject?.id]);
+  
+  const [lastLoadedContext, setLastLoadedContext] = useState<string>('');
+  
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [imagePreview, setImagePreview] = useState<{ isOpen: boolean; url: string; title: string }>({
+    isOpen: false,
+    url: '',
+    title: ''
+  });
 
   // Enhanced pagination with useTableData hook - DISABLE AUTO-LOADING
   const {
@@ -119,13 +148,13 @@ const Students = () => {
       defaultLimit: 50,
       availableLimits: [25, 50, 100]
     },
-    autoLoad: false // DISABLE AUTO-LOADING - only load on explicit button clicks
+    autoLoad: false // Disable auto-loading - only load on explicit refresh
   });
 
-  // Check if user should use new institute-based API
-  const shouldUseInstituteApi = () => {
+  // Check if user should use new institute-based API (memoized to prevent re-renders)
+  const shouldUseInstituteApi = useMemo(() => {
     return ['InstituteAdmin', 'Teacher'].includes(userRole) && !!selectedInstitute;
-  };
+  }, [userRole, selectedInstitute]);
 
   const getApiHeaders = () => {
     const token = localStorage.getItem('access_token');
@@ -174,30 +203,47 @@ const Students = () => {
   };
 
   // New fetch function for institute-based students (class only)
-  const fetchInstituteClassStudents = async () => {
+  const fetchInstituteClassStudents = async (forceRefresh = false) => {
     if (!selectedInstitute?.id || !selectedClass?.id) return;
 
-    setLoading(true);
+    console.log('[Students] Fetching CLASS students:', {
+      forceRefresh,
+      instituteId: selectedInstitute.id,
+      classId: selectedClass.id,
+      contextKey
+    });
+
+    // Only show loading spinner when force refreshing (user clicked button)
+    if (forceRefresh) {
+      setLoading(true);
+    }
+    
     try {
-      const response = await fetch(
-        `${getBaseUrl()}/institute-users/institute/${selectedInstitute.id}/users/STUDENT/class/${selectedClass.id}`,
-        { headers: getApiHeaders() }
+      const data: InstituteStudentsResponse = await enhancedCachedClient.get(
+        `/institute-users/institute/${selectedInstitute.id}/users/STUDENT/class/${selectedClass.id}`,
+        {},
+        {
+          ttl: CACHE_TTL.STUDENTS,
+          forceRefresh,
+          userId: user?.id,
+          role: userRole,
+          instituteId: selectedInstitute.id,
+          classId: selectedClass.id
+        }
       );
       
-      if (response.ok) {
-        const data: InstituteStudentsResponse = await response.json();
-        setInstituteStudents(data.data);
-        const totalStudents = data.meta.total;
-        const currentPage = data.meta.page;
-        const totalPages = data.meta.totalPages;
-        setDataLoaded(true);
-        
+      setInstituteStudents(data.data);
+      const totalStudents = data.meta.total;
+      const currentPage = data.meta.page;
+      const totalPages = data.meta.totalPages;
+      setDataLoaded(true);
+      
+      // Only show toast when force refreshing
+      if (forceRefresh) {
         toast({
           title: "Class Students Loaded",
           description: `Successfully loaded ${data.data.length} students.`
         });
-      } else {
-        throw new Error('Failed to fetch class students');
       }
     } catch (error) {
       console.error('Error fetching class students:', error);
@@ -207,35 +253,56 @@ const Students = () => {
         variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      if (forceRefresh) {
+        setLoading(false);
+      }
     }
   };
 
   // New fetch function for institute-based students (class + subject)
-  const fetchInstituteSubjectStudents = async () => {
+  const fetchInstituteSubjectStudents = async (forceRefresh = false) => {
     if (!selectedInstitute?.id || !selectedClass?.id || !selectedSubject?.id) return;
 
-    setLoading(true);
+    console.log('[Students] Fetching SUBJECT students:', {
+      forceRefresh,
+      instituteId: selectedInstitute.id,
+      classId: selectedClass.id,
+      subjectId: selectedSubject.id,
+      contextKey
+    });
+
+    // Only show loading spinner when force refreshing (user clicked button)
+    if (forceRefresh) {
+      setLoading(true);
+    }
+    
     try {
-      const response = await fetch(
-        `${getBaseUrl()}/institute-users/institute/${selectedInstitute.id}/users/STUDENT/class/${selectedClass.id}/subject/${selectedSubject.id}`,
-        { headers: getApiHeaders() }
+      const data: InstituteStudentsResponse = await enhancedCachedClient.get(
+        `/institute-users/institute/${selectedInstitute.id}/users/STUDENT/class/${selectedClass.id}/subject/${selectedSubject.id}`,
+        {},
+        {
+          ttl: CACHE_TTL.STUDENTS,
+          forceRefresh,
+          userId: user?.id,
+          role: userRole,
+          instituteId: selectedInstitute.id,
+          classId: selectedClass.id,
+          subjectId: selectedSubject.id
+        }
       );
       
-      if (response.ok) {
-        const data: InstituteStudentsResponse = await response.json();
-        setInstituteStudents(data.data);
-        const totalStudents = data.meta.total;
-        const currentPage = data.meta.page;
-        const totalPages = data.meta.totalPages;
-        setDataLoaded(true);
-        
+      setInstituteStudents(data.data);
+      const totalStudents = data.meta.total;
+      const currentPage = data.meta.page;
+      const totalPages = data.meta.totalPages;
+      setDataLoaded(true);
+      
+      // Only show toast when force refreshing
+      if (forceRefresh) {
         toast({
           title: "Subject Students Loaded",
           description: `Successfully loaded ${data.data.length} students.`
         });
-      } else {
-        throw new Error('Failed to fetch subject students');
       }
     } catch (error) {
       console.error('Error fetching subject students:', error);
@@ -245,21 +312,63 @@ const Students = () => {
         variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      if (forceRefresh) {
+        setLoading(false);
+      }
     }
   };
 
-  // Determine which fetch function to use
+  // Auto-load data when context changes (uses cache if available)
+  useEffect(() => {
+    console.log('[Students] useEffect triggered:', {
+      shouldUseInstituteApi,
+      contextKey,
+      lastLoadedContext,
+      needsLoad: contextKey !== lastLoadedContext,
+      isFetching: isFetchingRef.current,
+      selectedInstitute: selectedInstitute?.id,
+      selectedClass: selectedClass?.id,
+      selectedSubject: selectedSubject?.id
+    });
+
+    // Prevent duplicate calls if already fetching or context hasn't changed
+    if (isFetchingRef.current || !shouldUseInstituteApi || contextKey === lastLoadedContext) {
+      return;
+    }
+
+    setLastLoadedContext(contextKey);
+    isFetchingRef.current = true;
+    
+    const loadData = async () => {
+      try {
+        if (selectedSubject && selectedClass && selectedInstitute) {
+          // Load subject students automatically from cache (no loading indicator)
+          console.log('[Students] Auto-loading SUBJECT students from cache...');
+          await fetchInstituteSubjectStudents(false);
+        } else if (selectedClass && selectedInstitute) {
+          // Load class students automatically from cache (no loading indicator)
+          console.log('[Students] Auto-loading CLASS students from cache...');
+          await fetchInstituteClassStudents(false);
+        }
+      } finally {
+        isFetchingRef.current = false;
+      }
+    };
+    
+    loadData();
+  }, [contextKey, shouldUseInstituteApi]);
+
+  // Determine which fetch function to use (for refresh button - forces backend call)
   const getLoadFunction = () => {
-    if (!shouldUseInstituteApi()) {
+    if (!shouldUseInstituteApi) {
       // Use the table data loading function for global students
       return () => actions.loadData(true); // Force refresh
     }
     
     if (selectedSubject) {
-      return fetchInstituteSubjectStudents;
+      return () => fetchInstituteSubjectStudents(true); // Force refresh
     } else if (selectedClass) {
-      return fetchInstituteClassStudents;
+      return () => fetchInstituteClassStudents(true); // Force refresh
     }
     
     // Fallback to table data loading
@@ -267,7 +376,7 @@ const Students = () => {
   };
 
   const getLoadButtonText = () => {
-    if (!shouldUseInstituteApi()) {
+    if (!shouldUseInstituteApi) {
       return tableLoading || loading ? 'Loading Students...' : 'Load Students';
     }
     
@@ -281,7 +390,7 @@ const Students = () => {
   };
 
   const getCurrentSelection = () => {
-    if (!shouldUseInstituteApi()) return '';
+    if (!shouldUseInstituteApi) return '';
     
     const parts = [];
     if (selectedInstitute) parts.push(`Institute: ${selectedInstitute.name}`);
@@ -304,12 +413,25 @@ const Students = () => {
         
         return (
           <div className="flex items-center space-x-3">
-            <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
-              <AvatarImage src={imageUrl || ''} alt={name} />
-              <AvatarFallback className="text-xs">
-                {name.split(' ').map(n => n.charAt(0)).join('')}
-              </AvatarFallback>
-            </Avatar>
+            <div 
+              className="cursor-pointer flex-shrink-0"
+              onClick={() => {
+                if (imageUrl) {
+                  setImagePreview({ 
+                    isOpen: true, 
+                    url: imageUrl, 
+                    title: name 
+                  });
+                }
+              }}
+            >
+              <Avatar className="h-8 w-8 sm:h-10 sm:w-10 hover:opacity-80 transition-opacity">
+                <AvatarImage src={imageUrl || ''} alt={name} />
+                <AvatarFallback className="text-xs">
+                  {name.split(' ').map(n => n.charAt(0)).join('')}
+                </AvatarFallback>
+              </Avatar>
+            </div>
             <div className="min-w-0 flex-1">
               <p className="font-medium truncate">{name}</p>
               <p className="text-sm text-muted-foreground truncate">ID: {userIdByInstitute}</p>
@@ -436,7 +558,7 @@ const Students = () => {
 
   // Get the current dataset to filter and display
   const getCurrentStudentData = () => {
-    if (!shouldUseInstituteApi()) {
+    if (!shouldUseInstituteApi) {
       // Use table data for global students
       return paginatedStudents;
     }
@@ -483,7 +605,8 @@ const Students = () => {
   }
 
   // Special handling for InstituteAdmin and Teacher users requiring selections
-  if (shouldUseInstituteApi() && (!selectedClass || !dataLoaded)) {
+  // Only show "please select" if no class is selected AND we don't have any data yet
+  if (shouldUseInstituteApi && !selectedClass) {
     return (
       <div className="container mx-auto p-6 space-y-6">
         {/* Current Selection Display */}
@@ -572,7 +695,7 @@ const Students = () => {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Students</h1>
           {/* Breadcrumb Display */}
-          {shouldUseInstituteApi() && (selectedInstitute || selectedClass) && (
+          {shouldUseInstituteApi && (selectedInstitute || selectedClass) && (
             <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground mt-1">
               {selectedInstitute && (
                 <>
@@ -590,7 +713,7 @@ const Students = () => {
             </div>
           )}
           <p className="text-sm sm:text-base text-muted-foreground mt-1">
-            {shouldUseInstituteApi() && getCurrentSelection() 
+            {shouldUseInstituteApi && getCurrentSelection() 
               ? 'Manage students for your selection' 
               : 'Manage student records and information'}
           </p>
@@ -601,7 +724,7 @@ const Students = () => {
             {pagination.totalCount} Students
           </Badge>
           {/* Assign User Buttons - Only for InstituteAdmin and Teacher */}
-          {shouldUseInstituteApi() && selectedClass && (userRole === 'InstituteAdmin' || userRole === 'Teacher') && (
+          {shouldUseInstituteApi && selectedClass && (userRole === 'InstituteAdmin' || userRole === 'Teacher') && (
             <>
               {selectedSubject ? (
                 <Button
@@ -677,7 +800,7 @@ const Students = () => {
                   className="pl-10"
                 />
               </div>
-              {!shouldUseInstituteApi() && (
+              {!shouldUseInstituteApi && (
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="Filter by status" />
@@ -749,7 +872,7 @@ const Students = () => {
       )}
 
       {/* Pagination - Only show for paginated data */}
-      {shouldUseInstituteApi() && pagination.totalCount > pagination.limit && (
+      {shouldUseInstituteApi && pagination.totalCount > pagination.limit && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Showing {(pagination.page * pagination.limit) + 1} to {Math.min((pagination.page + 1) * pagination.limit, pagination.totalCount)} of {pagination.totalCount} students
@@ -760,7 +883,7 @@ const Students = () => {
       {/* Create Student Form Dialog - Only for non-institute users */}
 
       {/* Assign Students Dialog - Only for InstituteAdmin and Teacher (Class level) */}
-      {shouldUseInstituteApi() && selectedClass && !selectedSubject && (
+      {shouldUseInstituteApi && selectedClass && !selectedSubject && (
         <AssignStudentsDialog
           open={showAssignDialog}
           onOpenChange={setShowAssignDialog}
@@ -772,7 +895,7 @@ const Students = () => {
       )}
 
       {/* Assign Subject Students Dialog - Only for InstituteAdmin and Teacher (Subject level) */}
-      {shouldUseInstituteApi() && selectedClass && selectedSubject && (
+      {shouldUseInstituteApi && selectedClass && selectedSubject && (
         <AssignSubjectStudentsDialog
           open={showSubjectAssignDialog}
           onOpenChange={setShowSubjectAssignDialog}
@@ -782,6 +905,13 @@ const Students = () => {
           }}
         />
       )}
+
+      <ImagePreviewModal
+        isOpen={imagePreview.isOpen}
+        onClose={() => setImagePreview({ isOpen: false, url: '', title: '' })}
+        imageUrl={imagePreview.url}
+        title={imagePreview.title}
+      />
     </div>
   );
 };

@@ -7,6 +7,9 @@ import { Mail, Phone, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { getBaseUrl } from '@/contexts/utils/auth.api';
+import { enhancedCachedClient } from '@/api/enhancedCachedClient';
+import { CACHE_TTL } from '@/config/cacheTTL';
+import { useInstituteRole } from '@/hooks/useInstituteRole';
 
 interface TeacherData {
   firstName: string;
@@ -24,33 +27,29 @@ interface TeacherProfileProps {
 
 const TeacherProfile = ({ instituteId, classId, subjectId }: TeacherProfileProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const userRole = useInstituteRole();
   const [teacher, setTeacher] = useState<TeacherData | null>(null);
   const [loading, setLoading] = useState(false);
 
-  
-  
-  const getApiHeaders = () => {
-    const token = localStorage.getItem('access_token');
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    };
-  };
-
-  const fetchTeacher = async () => {
+  const fetchTeacher = async (forceRefresh = false) => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `${getBaseUrl()}/institute-class-subjects/institute/${instituteId}/class/${classId}/subject/${subjectId}/teacher`,
-        { headers: getApiHeaders() }
+      const data = await enhancedCachedClient.get(
+        `/institute-class-subjects/institute/${instituteId}/class/${classId}/subject/${subjectId}/teacher`,
+        {},
+        {
+          ttl: CACHE_TTL.TEACHERS,
+          forceRefresh,
+          userId: user?.id,
+          role: userRole,
+          instituteId,
+          classId,
+          subjectId
+        }
       );
       
-      if (response.ok) {
-        const data = await response.json();
-        setTeacher(data);
-      } else {
-        throw new Error('Failed to fetch teacher data');
-      }
+      setTeacher(data);
     } catch (error) {
       console.error('Error fetching teacher:', error);
       toast({
@@ -65,7 +64,7 @@ const TeacherProfile = ({ instituteId, classId, subjectId }: TeacherProfileProps
 
   useEffect(() => {
     if (instituteId && classId && subjectId) {
-      fetchTeacher();
+      fetchTeacher(false);
     }
   }, [instituteId, classId, subjectId]);
 

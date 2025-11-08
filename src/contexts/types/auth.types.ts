@@ -49,6 +49,7 @@ export interface Institute {
   userIdByInstitute?: string; // User's ID within this institute
   shortName?: string; // Institute's short name
   logo?: string; // Institute's logo URL
+  instituteUserImageUrl?: string; // User's profile image within this institute
 }
 
 export interface Class {

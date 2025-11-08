@@ -82,24 +82,26 @@ const UpdateInstituteLectureForm = ({ lecture, onClose, onSuccess }: UpdateInsti
     setIsLoading(true);
 
     try {
-      const lectureData = {
+      const lectureData: any = {
         instituteId: selectedInstitute.id,
         instructorId: lecture.instructorId,
         title: formData.title,
         description: formData.description,
         lectureType: formData.lectureType as 'online' | 'physical',
-        venue: formData.venue || null,
         subject: formData.subject,
-        startTime: formData.startTime || null,
-        endTime: formData.endTime || null,
         status: formData.status as 'scheduled' | 'completed' | 'cancelled' | 'in_progress',
-        meetingLink: formData.meetingLink || null,
-        meetingId: formData.meetingId || null,
-        meetingPassword: formData.meetingPassword || null,
-        recordingUrl: formData.recordingUrl || null,
         maxParticipants: formData.maxParticipants,
         isActive: formData.isActive
       };
+      
+      // Only include optional fields if they have values
+      if (formData.venue) lectureData.venue = formData.venue;
+      if (formData.startTime) lectureData.startTime = formData.startTime;
+      if (formData.endTime) lectureData.endTime = formData.endTime;
+      if (formData.meetingLink) lectureData.meetingLink = formData.meetingLink;
+      if (formData.meetingId) lectureData.meetingId = formData.meetingId;
+      if (formData.meetingPassword) lectureData.meetingPassword = formData.meetingPassword;
+      if (formData.recordingUrl) lectureData.recordingUrl = formData.recordingUrl;
       
       console.log('Updating institute lecture with data:', lectureData);
       
@@ -112,6 +114,11 @@ const UpdateInstituteLectureForm = ({ lecture, onClose, onSuccess }: UpdateInsti
 
       if (onSuccess) {
         await onSuccess();
+      }
+      
+      // Auto-close dialog after successful update
+      if (onClose) {
+        onClose();
       }
     } catch (error) {
       console.error('Error updating institute lecture:', error);

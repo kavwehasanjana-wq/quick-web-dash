@@ -27,6 +27,10 @@ const HomeworkSubmissions = () => {
   const [totalSubmissions, setTotalSubmissions] = useState(0);
   const itemsPerPage = 10;
 
+  // Track current context to prevent unnecessary reloads
+  const contextKey = `${currentInstituteId}-${currentClassId}-${currentSubjectId}`;
+  const [lastLoadedContext, setLastLoadedContext] = useState<string>('');
+
   const loadSubmissions = async (page = 1) => {
     if (!currentInstituteId || !currentClassId || !currentSubjectId) {
       console.error('Missing context for loading submissions:', { 
@@ -117,10 +121,11 @@ const HomeworkSubmissions = () => {
   };
 
   useEffect(() => {
-    if (currentInstituteId && currentClassId && currentSubjectId) {
+    if (currentInstituteId && currentClassId && currentSubjectId && contextKey !== lastLoadedContext) {
+      setLastLoadedContext(contextKey);
       loadSubmissions(1);
     }
-  }, [currentInstituteId, currentClassId, currentSubjectId]);
+  }, [contextKey]);
 
   const formatDate = (dateString: string | Date | any) => {
     try {

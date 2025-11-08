@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import ClassImageUpload from '@/components/ClassImageUpload';
 
 interface CreateClassFormProps {
   onSubmit: (data: any) => void;
@@ -364,23 +365,14 @@ const CreateClassForm = ({ onSubmit, onCancel }: CreateClassFormProps) => {
               />
             </div>
             <div className="space-y-2">
-              <div>
-                <Label htmlFor="image" className="text-xs">Class Image</Label>
-                <div className="space-y-1">
-                  <Input
-                    id="image"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setSelectedImage(e.target.files?.[0] || null)}
-                    className="h-8 text-sm"
-                  />
-                  {selectedImage && (
-                    <span className="text-xs text-muted-foreground">
-                      Selected: {selectedImage.name}
-                    </span>
-                  )}
-                </div>
-              </div>
+              <Label className="text-xs">Class Image</Label>
+              <ClassImageUpload
+                currentImageUrl={formData.imageUrl}
+                onImageUpdate={(newImageUrl, file) => {
+                  handleInputChange('imageUrl', newImageUrl);
+                  if (file) setSelectedImage(file);
+                }}
+              />
               <div className="flex items-center space-x-2">
                 <Switch
                   id="isActive"

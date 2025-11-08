@@ -268,6 +268,7 @@ const CreateExamResults = () => {
                   });
                   setGradeConfigOpen(false);
                 }}
+                onClose={() => setGradeConfigOpen(false)}
               />
             </DialogContent>
           </Dialog>

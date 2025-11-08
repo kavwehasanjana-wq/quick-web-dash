@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { BookOpen, Users, Check, ArrowLeft, RefreshCw } from 'lucide-react';
-import { apiClient } from '@/api/client';
+import { enhancedCachedClient } from '@/api/enhancedCachedClient';
+import { CACHE_TTL } from '@/config/cacheTTL';
 import DataTable from '@/components/ui/data-table';
 import { toast } from 'sonner';
 
@@ -32,11 +33,15 @@ const AttendanceMarkerSubjectSelector = () => {
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
   const [dataLoaded, setDataLoaded] = useState(false); // Add state to track if data has been loaded
 
-  // REMOVED AUTO-LOADING: useEffect that automatically called fetchSubjects() on mount
-  // and whenever selectedInstitute/selectedClass changed. Now subjects only load 
-  // when user explicitly clicks a button to prevent unnecessary API calls.
+  // Auto-load subjects when institute and class are selected (uses cache if available)
+  useEffect(() => {
+    if (selectedInstitute && selectedClass && !dataLoaded) {
+      console.log('Auto-loading subjects from cache');
+      fetchSubjects();
+    }
+  }, [selectedInstitute?.id, selectedClass?.id]);
 
-  const fetchSubjects = async () => {
+  const fetchSubjects = async (forceRefresh = false) => {
     if (!selectedInstitute || !selectedClass) {
       console.log('Missing required selections:', { selectedInstitute, selectedClass });
       toast.error('Please select institute and class first');
@@ -69,7 +74,17 @@ const AttendanceMarkerSubjectSelector = () => {
       const endpoint = `/institutes/${selectedInstitute.id}/classes/${selectedClass.id}/subjects`;
       console.log('API endpoint:', endpoint);
       
-      const response = await apiClient.get(endpoint);
+      const response = await enhancedCachedClient.get(
+        endpoint,
+        {},
+        {
+          ttl: CACHE_TTL.SUBJECTS,
+          forceRefresh: forceRefresh,
+          userId: selectedInstitute.id,
+          instituteId: selectedInstitute.id,
+          classId: selectedClass.id
+        }
+      );
       console.log('Full API Response:', response);
       
       // Handle different response structures
@@ -183,40 +198,6 @@ const AttendanceMarkerSubjectSelector = () => {
     );
   }
 
-  // Show loading button if data hasn't been loaded yet
-  if (!dataLoaded && !loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <BookOpen className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Load Subjects
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Click the button below to load subjects for {selectedClass.name}
-          </p>
-          <Button 
-            onClick={fetchSubjects}
-            disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Loading Subjects...
-              </>
-            ) : (
-              <>
-                <BookOpen className="h-4 w-4 mr-2" />
-                Load Subjects
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   // Show loading state
   if (loading) {
     return (
@@ -245,7 +226,7 @@ const AttendanceMarkerSubjectSelector = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => fetchSubjects()}
+            onClick={() => fetchSubjects(true)}
             disabled={loading}
           >
             {loading ? (

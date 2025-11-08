@@ -143,6 +143,12 @@ function dispatch(action: Action) {
 type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
+  // Only show attendance alerts, block all other toasts
+  if (!props.isAttendanceAlert) {
+    console.log('🚫 Non-attendance toast blocked:', props.title)
+    return { id: '', dismiss: () => {}, update: () => {} }
+  }
+
   const id = genId()
 
   const update = (props: ToasterToast) =>

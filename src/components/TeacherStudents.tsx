@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,11 +7,13 @@ import { RefreshCw, Users, Mail, Phone, Search, Filter, UserPlus } from 'lucide-
 import { useAuth } from '@/contexts/AuthContext';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { useToast } from '@/hooks/use-toast';
-import { getBaseUrl } from '@/contexts/utils/auth.api';
 import { DataCardView } from '@/components/ui/data-card-view';
 import DataTable from '@/components/ui/data-table';
 import { Input } from '@/components/ui/input';
 import AssignStudentsDialog from '@/components/forms/AssignStudentsDialog';
+import ImagePreviewModal from '@/components/ImagePreviewModal';
+import { enhancedCachedClient } from '@/api/enhancedCachedClient';
+import { CACHE_TTL } from '@/config/cacheTTL';
 
 interface ClassSubjectStudent {
   id: string;
@@ -51,6 +53,11 @@ const TeacherStudents = () => {
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
+  const [imagePreview, setImagePreview] = useState<{ isOpen: boolean; url: string; title: string }>({
+    isOpen: false,
+    url: '',
+    title: ''
+  });
 
   // Role check - only InstituteAdmin and Teacher can access this component
   if (!effectiveRole || !['InstituteAdmin', 'Teacher'].includes(effectiveRole)) {
@@ -63,38 +70,33 @@ const TeacherStudents = () => {
     );
   }
 
-  const getApiHeaders = () => {
-    const token = localStorage.getItem('access_token');
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    };
-  };
-
-  const fetchClassStudents = async () => {
+  const fetchClassStudents = async (forceRefresh = false) => {
     if (!selectedInstitute?.id || !selectedClass?.id) {
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch(
-        `${getBaseUrl()}/institute-users/institute/${selectedInstitute.id}/users/STUDENT/class/${selectedClass.id}`,
-        { headers: getApiHeaders() }
+      const data: ClassSubjectStudentsResponse = await enhancedCachedClient.get(
+        `/institute-users/institute/${selectedInstitute.id}/users/STUDENT/class/${selectedClass.id}`,
+        {},
+        {
+          ttl: CACHE_TTL.STUDENTS,
+          forceRefresh,
+          userId: user?.id,
+          role: effectiveRole,
+          instituteId: selectedInstitute.id,
+          classId: selectedClass.id
+        }
       );
       
-      if (response.ok) {
-        const data: ClassSubjectStudentsResponse = await response.json();
-        setStudents(data.data);
-        setDataLoaded(true);
-        
-        toast({
-          title: "Class Students Loaded",
-          description: `Successfully loaded ${data.data.length} students.`
-        });
-      } else {
-        throw new Error('Failed to fetch class students');
-      }
+      setStudents(data.data);
+      setDataLoaded(true);
+      
+      toast({
+        title: "Class Students Loaded",
+        description: `Successfully loaded ${data.data.length} students.`
+      });
     } catch (error) {
       console.error('Error fetching class students:', error);
       toast({
@@ -107,30 +109,34 @@ const TeacherStudents = () => {
     }
   };
 
-  const fetchSubjectStudents = async () => {
+  const fetchSubjectStudents = async (forceRefresh = false) => {
     if (!selectedInstitute?.id || !selectedClass?.id || !selectedSubject?.id) {
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch(
-        `${getBaseUrl()}/institute-users/institute/${selectedInstitute.id}/users/STUDENT/class/${selectedClass.id}/subject/${selectedSubject.id}`,
-        { headers: getApiHeaders() }
+      const data: ClassSubjectStudentsResponse = await enhancedCachedClient.get(
+        `/institute-users/institute/${selectedInstitute.id}/users/STUDENT/class/${selectedClass.id}/subject/${selectedSubject.id}`,
+        {},
+        {
+          ttl: CACHE_TTL.STUDENTS,
+          forceRefresh,
+          userId: user?.id,
+          role: effectiveRole,
+          instituteId: selectedInstitute.id,
+          classId: selectedClass.id,
+          subjectId: selectedSubject.id
+        }
       );
       
-      if (response.ok) {
-        const data: ClassSubjectStudentsResponse = await response.json();
-        setStudents(data.data);
-        setDataLoaded(true);
-        
-        toast({
-          title: "Subject Students Loaded",
-          description: `Successfully loaded ${data.data.length} students.`
-        });
-      } else {
-        throw new Error('Failed to fetch subject students');
-      }
+      setStudents(data.data);
+      setDataLoaded(true);
+      
+      toast({
+        title: "Subject Students Loaded",
+        description: `Successfully loaded ${data.data.length} students.`
+      });
     } catch (error) {
       console.error('Error fetching subject students:', error);
       toast({
@@ -143,18 +149,44 @@ const TeacherStudents = () => {
     }
   };
 
+  // Auto-load data when context changes (uses cache if available)
+  useEffect(() => {
+    if (selectedInstitute && selectedClass) {
+      if (selectedSubject) {
+        // Load subject students automatically from cache
+        fetchSubjectStudents(false);
+      } else {
+        // Load class students automatically from cache
+        fetchClassStudents(false);
+      }
+    }
+  }, [selectedInstitute?.id, selectedClass?.id, selectedSubject?.id]);
+
   const studentColumns = [
     {
       key: 'student',
       header: 'Student',
       render: (value: any, row: ClassSubjectStudent) => (
         <div className="flex items-center space-x-3">
-          <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
-            <AvatarImage src={row.imageUrl || ''} alt={row.name} />
-            <AvatarFallback className="text-xs">
-              {row.name.split(' ').map(n => n.charAt(0)).join('')}
-            </AvatarFallback>
-          </Avatar>
+          <div 
+            className="cursor-pointer flex-shrink-0"
+            onClick={() => {
+              if (row.imageUrl) {
+                setImagePreview({ 
+                  isOpen: true, 
+                  url: row.imageUrl, 
+                  title: row.name 
+                });
+              }
+            }}
+          >
+            <Avatar className="h-8 w-8 sm:h-10 sm:w-10 hover:opacity-80 transition-opacity">
+              <AvatarImage src={row.imageUrl || ''} alt={row.name} />
+              <AvatarFallback className="text-xs">
+                {row.name.split(' ').map(n => n.charAt(0)).join('')}
+              </AvatarFallback>
+            </Avatar>
+          </div>
           <div className="min-w-0 flex-1">
             <p className="font-medium truncate">{row.name}</p>
             <p className="text-sm text-muted-foreground truncate">ID: {row.userIdByInstitute || row.id}</p>
@@ -261,7 +293,9 @@ const TeacherStudents = () => {
   };
 
   const getLoadFunction = () => {
-    return selectedSubject ? fetchSubjectStudents : fetchClassStudents;
+    return selectedSubject 
+      ? () => fetchSubjectStudents(true)  // Force refresh from backend
+      : () => fetchClassStudents(true);   // Force refresh from backend
   };
 
   const getLoadButtonText = () => {
@@ -456,6 +490,13 @@ const TeacherStudents = () => {
         onAssignmentComplete={() => {
           getLoadFunction()(); // Refresh the list
         }}
+      />
+
+      <ImagePreviewModal
+        isOpen={imagePreview.isOpen}
+        onClose={() => setImagePreview({ isOpen: false, url: '', title: '' })}
+        imageUrl={imagePreview.url}
+        title={imagePreview.title}
       />
     </div>
   );

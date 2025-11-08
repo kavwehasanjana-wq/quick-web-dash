@@ -17,6 +17,7 @@ import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { getBaseUrl } from '@/contexts/utils/auth.api';
+import ClassImageUpload from '@/components/ClassImageUpload';
 
 const updateClassSchema = z.object({
   instituteId: z.string().min(1, 'Institute ID is required'),
@@ -337,23 +338,13 @@ const UpdateClassForm: React.FC<UpdateClassFormProps> = ({ classData, onSubmit, 
 
           <div>
             <FormLabel>Class Image</FormLabel>
-            <div className="space-y-2">
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setSelectedImage(e.target.files?.[0] || null)}
-              />
-              {selectedImage && (
-                <span className="text-xs text-muted-foreground">
-                  Selected: {selectedImage.name}
-                </span>
-              )}
-              {!selectedImage && classData.imageUrl && (
-                <span className="text-xs text-muted-foreground">
-                  Current: {classData.imageUrl}
-                </span>
-              )}
-            </div>
+            <ClassImageUpload
+              currentImageUrl={form.watch('imageUrl')}
+              onImageUpdate={(newImageUrl, file) => {
+                form.setValue('imageUrl', newImageUrl);
+                if (file) setSelectedImage(file);
+              }}
+            />
           </div>
 
           <FormField

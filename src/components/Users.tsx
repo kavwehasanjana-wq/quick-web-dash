@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import CreateUserForm from '@/components/forms/CreateUserForm';
 import { cachedApiClient } from '@/api/cachedClient';
 import { useApiRequest } from '@/hooks/useApiRequest';
+import ImagePreviewModal from '@/components/ImagePreviewModal';
 
 interface User {
   id: string;
@@ -67,6 +68,11 @@ const Users = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [userTypeFilter, setUserTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [imagePreview, setImagePreview] = useState<{ isOpen: boolean; url: string; title: string }>({
+    isOpen: false,
+    url: '',
+    title: ''
+  });
 
   // Use API request hook for creating users with duplicate prevention
   const createUserRequest = useApiRequest(
@@ -150,12 +156,25 @@ const Users = () => {
       header: 'User',
       render: (value: any, row: User) => (
         <div className="flex items-center space-x-3">
-          <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
-            <AvatarImage src={row.imageUrl || ''} alt={`${row.firstName} ${row.lastName}`} />
-            <AvatarFallback className="text-xs">
-              {row.firstName.charAt(0)}{row.lastName.charAt(0)}
-            </AvatarFallback>
-          </Avatar>
+          <div 
+            className="cursor-pointer flex-shrink-0"
+            onClick={() => {
+              if (row.imageUrl) {
+                setImagePreview({ 
+                  isOpen: true, 
+                  url: row.imageUrl, 
+                  title: `${row.firstName} ${row.lastName}` 
+                });
+              }
+            }}
+          >
+            <Avatar className="h-8 w-8 sm:h-10 sm:w-10 hover:opacity-80 transition-opacity">
+              <AvatarImage src={row.imageUrl || ''} alt={`${row.firstName} ${row.lastName}`} />
+              <AvatarFallback className="text-xs">
+                {row.firstName.charAt(0)}{row.lastName.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+          </div>
           <div className="min-w-0 flex-1">
             <p className="font-medium truncate">{row.firstName} {row.lastName}</p>
             <p className="text-sm text-gray-500 truncate">{row.email}</p>
@@ -393,6 +412,13 @@ const Users = () => {
           loading={createUserRequest.loading}
         />
       )}
+
+      <ImagePreviewModal
+        isOpen={imagePreview.isOpen}
+        onClose={() => setImagePreview({ isOpen: false, url: '', title: '' })}
+        imageUrl={imagePreview.url}
+        title={imagePreview.title}
+      />
     </div>
   );
 };

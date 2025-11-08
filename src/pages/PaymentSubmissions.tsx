@@ -384,12 +384,11 @@ const PaymentSubmissions = () => {
                 <p className="text-muted-foreground text-xs sm:text-sm">{error}</p>
               </div> : <Paper sx={{
             width: '100%',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            height: 'calc(100vh - 300px)'
           }}>
                 <TableContainer sx={{
-              height: { xs: 'calc(100vh - 420px)', sm: 'calc(100vh - 400px)' },
-              minHeight: 300,
-              overflowX: 'auto'
+              height: 'calc(100% - 56px)'
             }}>
                   <Table stickyHeader aria-label="payment submissions table" sx={{
                     minWidth: { xs: 800, sm: 900 }
