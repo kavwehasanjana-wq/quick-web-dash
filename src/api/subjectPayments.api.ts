@@ -1,6 +1,4 @@
 import { apiClient } from './client';
-import { enhancedCachedClient } from './enhancedCachedClient';
-import { CACHE_TTL } from '@/config/cacheTTL';
 
 export interface SubjectPayment {
   id: string;
@@ -96,20 +94,9 @@ class SubjectPaymentsApi {
     classId: string, 
     subjectId: string,
     page: number = 1,
-    limit: number = 50,
-    forceRefresh: boolean = false
+    limit: number = 50
   ): Promise<SubjectPaymentsResponse> {
-    return enhancedCachedClient.get(
-      `/institute-class-subject-payments/institute/${instituteId}/class/${classId}/subject/${subjectId}`,
-      { page, limit },
-      {
-        ttl: CACHE_TTL.SUBJECT_PAYMENTS,
-        forceRefresh,
-        instituteId,
-        classId,
-        subjectId
-      }
-    );
+    return apiClient.get(`/institute-class-subject-payments/institute/${instituteId}/class/${classId}/subject/${subjectId}?page=${page}&limit=${limit}`);
   }
 
   // Get student's subject payments
@@ -118,20 +105,9 @@ class SubjectPaymentsApi {
     classId: string, 
     subjectId: string,
     page: number = 1,
-    limit: number = 50,
-    forceRefresh: boolean = false
+    limit: number = 50
   ): Promise<SubjectPaymentsResponse> {
-    return enhancedCachedClient.get(
-      `/institute-class-subject-payments/institute/${instituteId}/class/${classId}/subject/${subjectId}/my-payments`,
-      { page, limit },
-      {
-        ttl: CACHE_TTL.SUBJECT_PAYMENTS,
-        forceRefresh,
-        instituteId,
-        classId,
-        subjectId
-      }
-    );
+    return apiClient.get(`/institute-class-subject-payments/institute/${instituteId}/class/${classId}/subject/${subjectId}/my-payments?page=${page}&limit=${limit}`);
   }
 
   // Get student's subject payment submissions

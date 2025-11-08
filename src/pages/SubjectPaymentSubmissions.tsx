@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { FileText, CheckCircle, AlertCircle, Calendar, DollarSign, Clock, XCircle, Download, Eye } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { getBaseUrl } from '@/contexts/utils/auth.api';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 import Paper from '@mui/material/Paper';
 import Table from '@mui/material/Table';
@@ -16,8 +17,6 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TablePagination from '@mui/material/TablePagination';
 import TableRow from '@mui/material/TableRow';
-import { enhancedCachedClient } from '@/api/enhancedCachedClient';
-import { CACHE_TTL } from '@/config/cacheTTL';
 interface PaymentSubmission {
   id: string;
   paymentId: string;
@@ -238,24 +237,23 @@ const SubjectPaymentSubmissions = () => {
         </div>
       </AppLayout>;
   }
-  const loadSubmissions = async (currentPage: number = 1, limit: number = 50, forceRefresh = false) => {
+  const loadSubmissions = async (currentPage: number = 1, limit: number = 50) => {
     if (!selectedInstitute || !selectedClass || !selectedSubject) return;
     setLoading(true);
     try {
-      const result = await enhancedCachedClient.get(
-        `/institute-class-subject-payment-submissions/institute/${selectedInstitute.id}/class/${selectedClass.id}/subject/${selectedSubject.id}/my-submissions?page=${currentPage}&limit=${limit}`,
-        {},
-        {
-          ttl: CACHE_TTL.PAYMENT_SUBMISSIONS,
-          forceRefresh,
-          userId: user?.id,
-          role: instituteRole,
-          instituteId: selectedInstitute.id,
-          classId: selectedClass.id,
-          subjectId: selectedSubject.id
+      const baseUrl = getBaseUrl();
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`${baseUrl}/institute-class-subject-payment-submissions/institute/${selectedInstitute.id}/class/${selectedClass.id}/subject/${selectedSubject.id}/my-submissions?page=${currentPage}&limit=${limit}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      );
-      
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch submissions: ${response.status}`);
+      }
+      const result = await response.json();
       setSubmissionsData(result);
       toast({
         title: "Success",
@@ -272,14 +270,6 @@ const SubjectPaymentSubmissions = () => {
       setLoading(false);
     }
   };
-
-  // Auto-load submissions when context changes (uses cache if available)
-  useEffect(() => {
-    if (selectedInstitute && selectedClass && selectedSubject) {
-      loadSubmissions(1, rowsPerPage, false); // Load from cache
-    }
-  }, [selectedInstitute?.id, selectedClass?.id, selectedSubject?.id]);
-
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
     loadSubmissions(newPage + 1, rowsPerPage);
@@ -420,8 +410,8 @@ const SubjectPaymentSubmissions = () => {
               <p><strong>Subject:</strong> {selectedSubject.name}</p>
             </div>
           </div>
-          <Button onClick={() => loadSubmissions(1, rowsPerPage, true)} disabled={loading}>
-            {loading ? 'Refreshing...' : 'Refresh'}
+          <Button onClick={() => loadSubmissions(1, rowsPerPage)} disabled={loading}>
+            {loading ? 'Loading...' : 'Load Submissions'}
           </Button>
         </div>
 

@@ -49,19 +49,6 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
   const { user, selectedInstitute, selectedClass, selectedSubject, selectedChild, selectedOrganization, selectedTransport, logout, setSelectedInstitute, setSelectedClass, setSelectedSubject, setSelectedChild, setSelectedOrganization, setSelectedTransport } = useAuth();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   
-  // Broadcast collapse state to the app (for responsive grids)
-  React.useEffect(() => {
-    const root = document.documentElement;
-    if (isCollapsed) {
-      root.classList.add('sidebar-collapsed');
-      root.classList.remove('sidebar-expanded');
-    } else {
-      root.classList.add('sidebar-expanded');
-      root.classList.remove('sidebar-collapsed');
-    }
-    window.dispatchEvent(new CustomEvent('sidebar:state', { detail: { collapsed: isCollapsed } }));
-  }, [isCollapsed]);
-  
   // Institute-specific role
   const userRole = useInstituteRole();
 
@@ -489,13 +476,6 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
             label: 'Select Subject',
             icon: BookOpen,
             permission: 'view-subjects',
-            alwaysShow: false
-          },
-          {
-            id: 'institute-lectures',
-            label: 'Institute Lectures',
-            icon: Video,
-            permission: 'view-lectures',
             alwaysShow: false
           }
         ];
@@ -1752,13 +1732,6 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
     if (itemId === 'enroll-subject') {
       navigateToRoute('/enroll-subject');
       onPageChange('enroll-subject');
-      onClose();
-      return;
-    }
-    
-    // Handle Organizations click when no institute is selected - external link
-    if (itemId === 'organizations' && !selectedInstitute) {
-      window.open('https://org.suraksha.lk/', '_blank');
       onClose();
       return;
     }

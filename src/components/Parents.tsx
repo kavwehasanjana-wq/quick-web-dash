@@ -13,7 +13,6 @@ import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { type UserRole } from '@/contexts/types/auth.types';
 import { useToast } from '@/hooks/use-toast';
 import { useTableData } from '@/hooks/useTableData';
-import ImagePreviewModal from '@/components/ImagePreviewModal';
 
 const Parents = () => {
   const {
@@ -26,11 +25,6 @@ const Parents = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [imagePreview, setImagePreview] = useState<{ isOpen: boolean; url: string; title: string }>({
-    isOpen: false,
-    url: '',
-    title: ''
-  });
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -47,7 +41,7 @@ const Parents = () => {
   // Use the useTableData hook for better data management and pagination
   const tableData = useTableData({
     endpoint: selectedInstitute ? `/institute-users/institute/${selectedInstitute.id}/users/PARENT` : '',
-    autoLoad: true, // Enable auto-loading from cache
+    autoLoad: false,
     pagination: {
       defaultLimit: 50,
       availableLimits: [25, 50, 100]
@@ -60,27 +54,19 @@ const Parents = () => {
     label: 'Avatar',
     minWidth: 80,
     align: 'center' as const,
-    format: (value: string, row: any) => (
-      <div 
-        className="cursor-pointer flex justify-center"
-        onClick={() => {
-          if (value) {
-            setImagePreview({ 
-              isOpen: true, 
-              url: value, 
-              title: row.name 
-            });
-          }
-        }}
-      >
-        <Avatar className="h-10 w-10 md:h-12 md:w-12 lg:h-14 lg:w-14 hover:opacity-80 transition-opacity border-2 border-border">
-          <AvatarImage src={value} alt={row.name} className="object-cover" />
-          <AvatarFallback className="bg-muted">
-            <User className="h-5 w-5 md:h-6 md:w-6" />
+    format: (value: string, row: any) => <Avatar className="h-8 w-8 md:h-10 md:w-10">
+          <AvatarImage src={value} alt={row.name} />
+          <AvatarFallback>
+            <User className="h-4 w-4" />
           </AvatarFallback>
         </Avatar>
-      </div>
-    )
+  }, {
+    id: 'userIdByInstitute',
+    label: 'Institute ID',
+    minWidth: 100,
+    format: (value: string) => <div className="font-medium text-sm">
+          {value || 'Not assigned'}
+        </div>
   }, {
     id: 'name',
     label: 'Name',
@@ -129,6 +115,14 @@ const Parents = () => {
               {row.workPlace}
             </div>}
         </div>
+  }, {
+    id: 'verifiedBy',
+    label: 'Status',
+    minWidth: 100,
+    align: 'center' as const,
+    format: (value: string) => <Badge variant={value ? "default" : "secondary"} className="text-xs">
+          {value ? 'Verified' : 'Unverified'}
+      </Badge>
   }];
 
   // Filter data based on search term and filters
@@ -274,13 +268,6 @@ const Parents = () => {
       <div className="flex-1 min-h-0">
         <MUITable title="Institute Parents" columns={columns} data={filteredData} page={tableData.pagination.page} rowsPerPage={tableData.pagination.limit} totalCount={tableData.pagination.totalCount} onPageChange={tableData.actions.setPage} onRowsPerPageChange={tableData.actions.setLimit} rowsPerPageOptions={tableData.availableLimits} allowAdd={false} allowEdit={false} allowDelete={false} />
       </div>
-
-      <ImagePreviewModal
-        isOpen={imagePreview.isOpen}
-        onClose={() => setImagePreview({ isOpen: false, url: '', title: '' })}
-        imageUrl={imagePreview.url}
-        title={imagePreview.title}
-      />
     </div>;
 };
 export default Parents;

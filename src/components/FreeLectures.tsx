@@ -11,9 +11,6 @@ import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
 import VideoPreviewDialog from '@/components/VideoPreviewDialog';
-import { enhancedCachedClient } from '@/api/enhancedCachedClient';
-import { CACHE_TTL } from '@/config/cacheTTL';
-import { useInstituteRole } from '@/hooks/useInstituteRole';
 
 interface Document {
   documentName: string;
@@ -97,50 +94,49 @@ const FreeLectures = () => {
     title: '' 
   });
 
-  // Track current context to prevent unnecessary reloads
-  const contextKey = `${selectedSubject?.id}-${selectedClassGrade}`;
-  const [lastLoadedContext, setLastLoadedContext] = useState<string>('');
-
-  // Auto-load free lectures when subject is selected
-  useEffect(() => {
-    if (selectedSubject && (selectedClassGrade !== null && selectedClassGrade !== undefined) && contextKey !== lastLoadedContext) {
-      setLastLoadedContext(contextKey);
-      fetchFreeLectures(false); // Auto-load from cache
-    }
-  }, [contextKey]);
-
   const handleLoadLectures = () => {
     if (selectedSubject && (selectedClassGrade !== null && selectedClassGrade !== undefined)) {
       fetchFreeLectures();
     }
   };
 
-  const fetchFreeLectures = async (forceRefresh = false) => {
+  const fetchFreeLectures = async () => {
     if (!selectedSubject || selectedClassGrade === null || selectedClassGrade === undefined) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const effectiveRole = useInstituteRole();
+      const baseUrl = getAttendanceUrl() || 'http://localhost:3003';
       
-      // Use enhanced cached client
-      const params = {
+      // Use the structured lectures API endpoint
+      const params = new URLSearchParams({
         page: '1',
         limit: '50'
-      };
+      });
 
-      const data: FreeLecturesResponse = await enhancedCachedClient.get(
-        `/api/structured-lectures/subject/${selectedSubject.id}/grade/${selectedClassGrade || selectedClass?.grade || 10}`,
-        params,
+      const response = await fetch(
+        `${baseUrl}/api/structured-lectures/subject/${selectedSubject.id}/grade/${selectedClassGrade || selectedClass?.grade || 10}?${params}`,
         {
-          ttl: CACHE_TTL.FREE_LECTURES,
-          forceRefresh,
-          userId: user?.id,
-          role: effectiveRole,
-          subjectId: selectedSubject.id
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+            'Content-Type': 'application/json',
+          },
         }
       );
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          // Handle 404 specifically - no lectures found for this subject
+          setLectures([]);
+          setSubjectInfo(null);
+          setError(null);
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data: FreeLecturesResponse = await response.json();
       
       if (data.success && data.data) {
         // The API already returns data in the correct format, no transformation needed
@@ -149,17 +145,8 @@ const FreeLectures = () => {
       } else {
         setError(data.message || 'Failed to load free lectures');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching free lectures:', err);
-      
-      // Handle 404 specifically - no lectures found for this subject
-      if (err.message?.includes('404')) {
-        setLectures([]);
-        setSubjectInfo(null);
-        setError(null);
-        return;
-      }
-      
       setError('Error loading free lectures. Please try again.');
     } finally {
       setLoading(false);

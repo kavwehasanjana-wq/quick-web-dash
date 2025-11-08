@@ -65,6 +65,7 @@ const TeacherHomework = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
   const [selectedHomework, setSelectedHomework] = useState<TeacherHomework | null>(null);
+  const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   
   // Filter states
@@ -93,7 +94,7 @@ const TeacherHomework = () => {
     },
     dependencies: [], // Remove dependencies to prevent auto-reloading on context changes
     pagination: { defaultLimit: 50, availableLimits: [25, 50, 100] },
-    autoLoad: true, // Enable auto-loading from cache
+    autoLoad: false // Keep disabled
   });
 
   const { state: { data: homework, loading }, pagination, actions } = tableData;
@@ -182,6 +183,7 @@ const TeacherHomework = () => {
   };
 
   const handleLoadData = () => {
+    setHasAttemptedLoad(true);
     actions.loadData();
   };
 
@@ -221,6 +223,38 @@ const TeacherHomework = () => {
           <p className="text-muted-foreground">
             Please select an institute, class, and subject to view homework.
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasAttemptedLoad) {
+    return (
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            Homework ({getCurrentSelection()})
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Click the button below to load homework data
+          </p>
+          <Button 
+            onClick={handleLoadData} 
+            disabled={loading}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            {loading ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Loading Data...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Load Data
+              </>
+            )}
+          </Button>
         </div>
       </div>
     );

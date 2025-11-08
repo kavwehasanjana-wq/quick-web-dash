@@ -14,7 +14,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { getBaseUrl } from '@/contexts/utils/auth.api';
 import { toast } from 'sonner';
-import SubjectImageUpload from '@/components/SubjectImageUpload';
 
 const subjectSchema = z.object({
   name: z.string().min(2, 'Subject name must be at least 2 characters'),
@@ -41,7 +40,6 @@ const CreateSubjectForm = ({ onSubmit, onCancel, initialData }: CreateSubjectFor
   const isEditing = !!initialData;
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string>(initialData?.imgUrl || '');
   const { selectedInstitute, currentInstituteId, user } = useAuth();
   
   // Check if user has permission (only SuperAdmin and InstituteAdmin)
@@ -84,14 +82,11 @@ const CreateSubjectForm = ({ onSubmit, onCancel, initialData }: CreateSubjectFor
     return headers;
   };
 
-  const handleImageUpload = (imageUrl: string, file: File) => {
-    setImagePreviewUrl(imageUrl);
-    setSelectedImage(file);
-  };
-
-  const handleImageRemove = () => {
-    setImagePreviewUrl('');
-    setSelectedImage(null);
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+    }
   };
 
   const handleSubmit = async (data: SubjectFormData) => {
@@ -353,11 +348,17 @@ const CreateSubjectForm = ({ onSubmit, onCancel, initialData }: CreateSubjectFor
             
             <div className="space-y-2">
               <FormLabel>Subject Image (Optional)</FormLabel>
-              <SubjectImageUpload
-                value={imagePreviewUrl}
-                onChange={handleImageUpload}
-                onRemove={handleImageRemove}
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
               />
+              {selectedImage && (
+                <p className="text-sm text-muted-foreground">
+                  Selected: {selectedImage.name}
+                </p>
+              )}
             </div>
             
             <FormField

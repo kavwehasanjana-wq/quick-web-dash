@@ -83,8 +83,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         userRole: institute.instituteUserType, // Keep for backward compatibility
         userIdByInstitute: institute.userIdByInstitute,
         shortName: institute.instituteShortName || institute.name || 'Unknown Institute',
-        instituteUserImageUrl: institute.instituteUserImageUrl || institute.userImageUrl || institute.imageUrl || '',
-        logo: institute.logoUrl || institute.instituteLogo || ''
+        logo: institute.instituteLogo || ''
       }));
 
       console.log('Mapped institutes:', institutes);
@@ -157,11 +156,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log('🧹 Clearing ALL cache on logout...');
     await apiCache.clearAllCache();
     
-    // Clear secureCache (IndexedDB) used by enhancedCachedClient
-    const { secureCache } = await import('@/utils/secureCache');
-    await secureCache.clearAllCache();
-    console.log('✅ SecureCache (IndexedDB) cleared');
-    
     // Clear attendance duplicate records
     const { attendanceDuplicateChecker } = await import('@/utils/attendanceDuplicateCheck');
     attendanceDuplicateChecker.clearAll();
@@ -196,49 +190,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log('✅ User logged out successfully and cache cleared');
   };
 
-  const setSelectedInstitute = (institute: Institute | any | null) => {
+  const setSelectedInstitute = (institute: Institute | null) => {
     const previousInstituteId = currentInstituteId;
-
-    // Normalize various possible payload shapes into our Institute type
-    const normalized = institute
-      ? {
-          id: institute.id || institute.instituteId || '',
-          name: institute.name || institute.instituteName || 'Unknown Institute',
-          code: institute.code || institute.instituteCode || institute.id || '',
-          description:
-            institute.description ||
-            `${institute.address || institute.instituteAddress || ''}, ${
-              institute.city || institute.instituteCity || ''
-            }`.trim(),
-          isActive:
-            typeof institute.isActive === 'boolean'
-              ? institute.isActive
-              : typeof institute.instituteIsActive === 'boolean'
-              ? institute.instituteIsActive
-              : true,
-          type: institute.type || institute.instituteType,
-          instituteUserType: institute.instituteUserType,
-          userRole: institute.userRole || institute.instituteUserType,
-          userIdByInstitute: institute.userIdByInstitute,
-          shortName:
-            institute.shortName || institute.instituteShortName || institute.name || 'Unknown',
-          // CRITICAL: prefer logoUrl over imageUrl (imageUrl is NOT profile image)
-          instituteUserImageUrl: institute.instituteUserImageUrl || institute.userImageUrl || institute.imageUrl || '',
-          logo: institute.logo || institute.logoUrl || institute.instituteLogo || ''
-        }
-      : null;
-
-    setSelectedInstituteState(normalized);
-    setCurrentInstituteId(normalized?.id || null);
-    setSelectedInstituteType(normalized?.type || null);
-
+    
+    setSelectedInstituteState(institute);
+    setCurrentInstituteId(institute?.id || null);
+    setSelectedInstituteType(institute?.type || null);
+    
     // Clear institute-specific cache when switching institutes
-    if (previousInstituteId && previousInstituteId !== normalized?.id) {
+    if (previousInstituteId && previousInstituteId !== institute?.id) {
       console.log(`🔄 Switching institute, clearing old cache for institute: ${previousInstituteId}`);
       // Note: This helps ensure fresh data when switching between institutes
       // The cache will be rebuilt with new institute context
     }
-
+    
     // Clear dependent selections
     setSelectedClassState(null);
     setSelectedSubjectState(null);

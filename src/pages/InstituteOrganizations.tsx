@@ -1,23 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Building2, RefreshCw, Plus, UserPlus, Eye, Key } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { useTableData } from '@/hooks/useTableData';
 import MUITable from '@/components/ui/mui-table';
 import CreateOrganizationForm from '@/components/forms/CreateOrganizationForm';
 import AddOrganizationUserDialog from '@/components/forms/AddOrganizationUserDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { apiClient } from '@/api/client';
 import { useToast } from '@/hooks/use-toast';
 import { organizationApi } from '@/api/organization.api';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast as sonnerToast } from 'sonner';
-import { enhancedCachedClient } from '@/api/enhancedCachedClient';
-import { CACHE_TTL } from '@/config/cacheTTL';
 
 interface Organization {
   organizationId: string;
@@ -51,8 +49,7 @@ interface OrganizationMember {
 }
 
 const InstituteOrganizations = () => {
-  const { user, selectedInstitute } = useAuth();
-  const userRole = useInstituteRole();
+  const { selectedInstitute } = useAuth();
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [addUserDialog, setAddUserDialog] = useState<{ open: boolean; orgId: string; orgName: string }>({
@@ -103,29 +100,22 @@ const InstituteOrganizations = () => {
 
   const { state, actions, pagination, availableLimits } = useTableData<Organization>({
     endpoint: `/organizations/institute/${selectedInstitute?.id}`,
-    autoLoad: true, // Enable auto-load
+    autoLoad: false,
     pagination: {
       defaultLimit: 10,
       availableLimits: [10, 25, 50]
     }
   });
 
-  const loadMembers = async (orgId: string, page: number = 0, limit: number = 10, forceRefresh = false) => {
+  const loadMembers = async (orgId: string, page: number = 0, limit: number = 10) => {
     if (!selectedInstitute) return;
 
     setMembersState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      const response = await enhancedCachedClient.get<{ data: OrganizationMember[]; meta: any }>(
+      const response = await apiClient.get<{ data: OrganizationMember[]; meta: any }>(
         `/organizations/institute/${selectedInstitute.id}/organization/${orgId}/students`,
-        { page: page + 1, limit },
-        {
-          ttl: CACHE_TTL.ORGANIZATION_MEMBERS,
-          forceRefresh,
-          userId: user?.id,
-          role: userRole,
-          instituteId: selectedInstitute.id
-        }
+        { page: page + 1, limit }
       );
 
       setMembersState({
@@ -398,8 +388,8 @@ const InstituteOrganizations = () => {
             size="sm"
           >
             <RefreshCw className={`h-4 w-4 ${state.loading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">{state.loading ? 'Refreshing...' : 'Refresh'}</span>
-            <span className="sm:hidden">{state.loading ? 'Refreshing' : 'Refresh'}</span>
+            <span className="hidden sm:inline">{state.loading ? 'Loading...' : 'Load Organizations'}</span>
+            <span className="sm:hidden">{state.loading ? 'Loading' : 'Load'}</span>
           </Button>
         </div>
       </div>

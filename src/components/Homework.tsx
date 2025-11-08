@@ -58,17 +58,7 @@ const Homework = ({ apiLevel = 'institute' }: HomeworkProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // Track current context to prevent unnecessary reloads
-  const contextKey = `${currentInstituteId}-${currentClassId}-${currentSubjectId}`;
-  const [lastLoadedContext, setLastLoadedContext] = useState<string>('');
-
-  // Auto-load homework when subject is selected
-  useEffect(() => {
-    if (currentInstituteId && currentClassId && currentSubjectId && contextKey !== lastLoadedContext) {
-      setLastLoadedContext(contextKey);
-      handleLoadData(false); // Auto-load from cache
-    }
-  }, [contextKey]);
+  // Removed auto-loading useEffects - data now only loads when button is clicked
 
   const buildQueryParams = () => {
     const userRole = instituteRole;

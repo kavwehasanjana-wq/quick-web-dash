@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MUITable from '@/components/ui/mui-table';
 import { Badge } from '@/components/ui/badge';
@@ -49,26 +49,6 @@ const Exams = ({
   const [typeFilter, setTypeFilter] = useState('all');
   const userRole = useInstituteRole();
 
-  // Memoize default params to prevent unnecessary re-renders
-  const defaultParams = useMemo(() => {
-    const params: Record<string, any> = {};
-
-    if (currentInstituteId) {
-      params.instituteId = currentInstituteId;
-    }
-    if (currentClassId) {
-      params.classId = currentClassId;
-    }
-    if (currentSubjectId) {
-      params.subjectId = currentSubjectId;
-    }
-
-    if (userRole === 'Teacher' && user?.id) {
-      params.teacherId = user.id;
-    }
-    return params;
-  }, [currentInstituteId, currentClassId, currentSubjectId, userRole, user?.id]);
-
   // Enhanced pagination with useTableData hook
   const {
     state: {
@@ -85,18 +65,38 @@ const Exams = ({
     filters
   } = useTableData({
     endpoint: '/institute-class-subject-exams',
-    defaultParams,
-    dependencies: [currentInstituteId, currentClassId, currentSubjectId], // Auto-reload on context changes
+    defaultParams: buildDefaultParams(),
+    dependencies: [],
+    // Remove dependencies to prevent auto-reloading on context changes
     pagination: {
       defaultLimit: 50,
       availableLimits: [25, 50, 100]
     },
-    autoLoad: true // Enable auto-loading from cache
+    autoLoad: false // DISABLE AUTO-LOADING - only load on explicit button clicks
   });
 
   // Track if we've attempted to load data at least once
   const [hasAttemptedLoad, setHasAttemptedLoad] = React.useState(false);
+  function buildDefaultParams() {
+    const params: Record<string, any> = {};
 
+    // Add context-aware filtering
+    if (currentInstituteId) {
+      params.instituteId = currentInstituteId;
+    }
+    if (currentClassId) {
+      params.classId = currentClassId;
+    }
+    if (currentSubjectId) {
+      params.subjectId = currentSubjectId;
+    }
+
+    // For Teachers, add teacherId parameter
+    if (userRole === 'Teacher' && user?.id) {
+      params.teacherId = user.id;
+    }
+    return params;
+  }
   const handleLoadData = async (forceRefresh = false) => {
     // For students: require all context selections
     if (userRole === 'Student') {
@@ -122,9 +122,12 @@ const Exams = ({
       }
     }
     setHasAttemptedLoad(true);
-    
+
     // Update filters and load data
-    updateFilters(defaultParams);    // Trigger data loading using the actions from useTableData
+    const newFilters = buildDefaultParams();
+    updateFilters(newFilters);
+
+    // Trigger data loading using the actions from useTableData
     refresh();
   };
   const handleRefreshData = async () => {

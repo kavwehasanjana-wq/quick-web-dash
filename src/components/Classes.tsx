@@ -17,8 +17,7 @@ import UpdateClassForm from '@/components/forms/UpdateClassForm';
 import { AccessControl } from '@/utils/permissions';
 import { UserRole } from '@/contexts/types/auth.types';
 import { useTableData } from '@/hooks/useTableData';
-import { enhancedCachedClient } from '@/api/enhancedCachedClient';
-import { CACHE_TTL } from '@/config/cacheTTL';
+import { cachedApiClient } from '@/api/cachedClient';
 
 interface ClassData {
   id: string;
@@ -71,6 +70,7 @@ const Classes = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ClassData | null>(null);
+  const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
   const [isViewCodeDialogOpen, setIsViewCodeDialogOpen] = useState(false);
   const [enrollmentCodeData, setEnrollmentCodeData] = useState<any>(null);
   const [loadingCode, setLoadingCode] = useState(false);
@@ -80,12 +80,7 @@ const Classes = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGrade, setSelectedGrade] = useState<string>('');
 
-  // Auto-load classes when institute is selected
-  useEffect(() => {
-    if (selectedInstitute?.id) {
-      fetchClasses(false); // Auto-load from cache
-    }
-  }, [selectedInstitute?.id]);
+  // Removed all auto-loading useEffect - data only loads when button is clicked
 
   const userRole = useInstituteRole();
   const isInstituteAdmin = userRole === 'InstituteAdmin';
@@ -120,11 +115,11 @@ const Classes = () => {
         instituteId: selectedInstitute.id,
       };
 
-      const data = await enhancedCachedClient.get(
+      const data = await cachedApiClient.get(
         '/institute-classes',
         params,
         {
-          ttl: CACHE_TTL.INSTITUTE_CLASSES,
+          ttl: 15, // Cache for 15 minutes
           forceRefresh,
           userId: user?.id,
           role: userRole || 'User',
@@ -150,22 +145,12 @@ const Classes = () => {
         totalCount = 0;
       }
       
-      // Normalize imageUrl from various possible fields and ensure absolute URL
-      const base = getBaseUrl?.() || '';
-      const normalized = (classesArray as any[]).map((c: any) => {
-        const raw = c.imageUrl || c.image || c.logo || c.coverImageUrl;
-        const imageUrl = raw
-          ? (String(raw).startsWith('http') ? String(raw) : `${base}${String(raw).startsWith('/') ? '' : '/'}${String(raw)}`)
-          : '';
-        return { ...c, imageUrl };
-      });
-
-      setClasses(normalized);
+      setClasses(classesArray);
       setTotalCount(totalCount);
       
       toast({
         title: "Classes Loaded",
-        description: `Successfully loaded ${normalized.length} classes.`
+        description: `Successfully loaded ${classesArray.length} classes.`
       });
     } catch (error) {
       console.error('Error fetching classes:', error);
@@ -189,7 +174,7 @@ const Classes = () => {
         description: responseData.message
       });
     }
-    fetchClasses(true); // Refresh data with cache bypass
+    fetchClasses(); // Refresh data
   };
 
   const handleCancelCreate = () => {
@@ -205,7 +190,7 @@ const Classes = () => {
     console.log('Class updated successfully:', responseData);
     setIsUpdateDialogOpen(false);
     setSelectedClass(null);
-    fetchClasses(true); // Refresh data with cache bypass
+    fetchClasses(); // Refresh data
   };
 
   const handleCancelUpdate = () => {
@@ -224,6 +209,7 @@ const Classes = () => {
   };
 
   const handleLoadData = () => {
+    setHasAttemptedLoad(true);
     fetchClasses(false); // Normal load with cache
   };
   
@@ -240,11 +226,11 @@ const Classes = () => {
   const handleViewCode = async (classId: string) => {
     setLoadingCode(true);
     try {
-      const data = await enhancedCachedClient.get(
+      const data = await cachedApiClient.get(
         `/institute-classes/${classId}/enrollment-code`,
         {},
         {
-          ttl: CACHE_TTL.ENROLLMENT_STATUS,
+          ttl: 10, // Cache for 10 minutes (enrollment codes don't change often)
           forceRefresh: false,
           userId: user?.id,
           role: userRole || 'User',
@@ -379,13 +365,42 @@ const Classes = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Classes</h1>
-          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">
+      {!hasAttemptedLoad ? (
+        <div className="text-center py-12">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Classes</h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
             Manage institute classes and their details
           </p>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Click the button below to load classes data
+          </p>
+          <Button 
+            onClick={handleLoadData} 
+            disabled={loading || !selectedInstitute?.id}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            {loading ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Loading Data...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Load Data
+              </>
+            )}
+          </Button>
         </div>
+      ) : (
+        <>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Classes</h1>
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">
+                Manage institute classes and their details
+              </p>
+            </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button 
             onClick={() => setShowFilters(!showFilters)} 
@@ -586,6 +601,8 @@ const Classes = () => {
         allowEdit={!isInstituteAdmin && canEdit}
         allowDelete={!isInstituteAdmin && canDelete}
       />
+        </>
+      )}
     </div>
   );
 };

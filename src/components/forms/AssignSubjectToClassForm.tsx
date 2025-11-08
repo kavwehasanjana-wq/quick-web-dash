@@ -12,8 +12,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { useToast } from '@/hooks/use-toast';
 import { getBaseUrl } from '@/contexts/utils/auth.api';
-import { enhancedCachedClient } from '@/api/enhancedCachedClient';
-import { CACHE_TTL } from '@/config/cacheTTL';
 
 interface AssignSubjectToClassFormProps {
   onSuccess: () => void;
@@ -102,27 +100,27 @@ const AssignSubjectToClassForm: React.FC<AssignSubjectToClassFormProps> = ({
     return headers;
   };
 
-  const handleLoadSubjects = async (forceRefresh = false) => {
+  const handleLoadSubjects = async () => {
     setSubjectsLoading(true);
     try {
-      const params: Record<string, any> = { page: '1', limit: '50' };
+      const baseUrl = getBaseUrl();
+      const headers = getApiHeaders();
+      
+      const params = new URLSearchParams({ page: '1', limit: '50' });
       if (selectedInstituteType) {
-        params.instituteType = selectedInstituteType;
+        params.set('instituteType', selectedInstituteType);
+      }
+      const url = `${baseUrl}/subjects?${params.toString()}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch subjects: ${response.status}`);
       }
       
-      // Use enhanced cached client
-      const result: Subject[] = await enhancedCachedClient.get(
-        '/subjects',
-        params,
-        {
-          ttl: CACHE_TTL.SUBJECTS,
-          forceRefresh,
-          userId: user?.id,
-          role: userRole,
-          instituteId: currentInstituteId
-        }
-      );
-      
+      const result: Subject[] = await response.json();
       setSubjects(result.filter(subject => subject.isActive));
     } catch (error) {
       console.error('Error loading subjects:', error);
@@ -136,7 +134,7 @@ const AssignSubjectToClassForm: React.FC<AssignSubjectToClassFormProps> = ({
     }
   };
 
-  const handleLoadClasses = async (forceRefresh = false) => {
+  const handleLoadClasses = async () => {
     if (!currentInstituteId) {
       toast({
         title: "Error",
@@ -148,37 +146,39 @@ const AssignSubjectToClassForm: React.FC<AssignSubjectToClassFormProps> = ({
 
     setClassesLoading(true);
     try {
+      const baseUrl = getBaseUrl();
+      const headers = getApiHeaders();
+      
+      let url: string;
       let classData: any[] = [];
       
       if (userRole === 'Teacher' && user?.id) {
-        // Use teacher-specific API for Teachers with caching
-        const result = await enhancedCachedClient.get(
-          `/institute-classes/${currentInstituteId}/teacher/${user.id}`,
-          { page: '1', limit: '10' },
-          {
-            ttl: CACHE_TTL.CLASSES,
-            forceRefresh,
-            userId: user?.id,
-            role: userRole,
-            instituteId: currentInstituteId
-          }
-        );
+        // Use teacher-specific API for Teachers
+        url = `${baseUrl}/institute-classes/${currentInstituteId}/teacher/${user.id}?page=1&limit=10`;
+        const response = await fetch(url, {
+          method: 'GET',
+          headers
+        });
         
+        if (!response.ok) {
+          throw new Error(`Failed to fetch teacher classes: ${response.status}`);
+        }
+        
+        const result = await response.json();
         classData = result.data || [];
       } else if (userRole === 'InstituteAdmin') {
-        // Use regular API for InstituteAdmin with caching
-        const result = await enhancedCachedClient.get(
-          `/institute-classes/institute/${currentInstituteId}`,
-          {},
-          {
-            ttl: CACHE_TTL.CLASSES,
-            forceRefresh,
-            userId: user?.id,
-            role: userRole,
-            instituteId: currentInstituteId
-          }
-        );
+        // Use regular API for InstituteAdmin
+        url = `${baseUrl}/institute-classes/institute/${currentInstituteId}`;
+        const response = await fetch(url, {
+          method: 'GET',
+          headers
+        });
         
+        if (!response.ok) {
+          throw new Error(`Failed to fetch classes: ${response.status}`);
+        }
+        
+        const result = await response.json();
         classData = result || [];
       }
       
@@ -319,7 +319,7 @@ const AssignSubjectToClassForm: React.FC<AssignSubjectToClassFormProps> = ({
           <CardContent>
             <div className="text-center py-8">
               <Button 
-                onClick={() => handleLoadClasses(false)}
+                onClick={handleLoadClasses}
                 disabled={classesLoading}
                 className="bg-blue-600 hover:bg-blue-700"
               >
@@ -385,7 +385,7 @@ const AssignSubjectToClassForm: React.FC<AssignSubjectToClassFormProps> = ({
                 <Label>Select Subjects to Assign</Label>
                 {subjects.length === 0 && (
                   <Button 
-                    onClick={() => handleLoadSubjects(false)}
+                    onClick={handleLoadSubjects}
                     disabled={subjectsLoading}
                     variant="outline"
                     size="sm"

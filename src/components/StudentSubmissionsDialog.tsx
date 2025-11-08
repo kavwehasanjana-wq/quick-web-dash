@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,10 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { FileText, CheckCircle, AlertCircle, Calendar, DollarSign, Clock, XCircle, Download, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { enhancedCachedClient } from '@/api/enhancedCachedClient';
-import { CACHE_TTL } from '@/config/cacheTTL';
-import { useAuth } from '@/contexts/AuthContext';
-import { useInstituteRole } from '@/hooks/useInstituteRole';
+import { getBaseUrl } from '@/contexts/utils/auth.api';
 
 interface PaymentSubmission {
   id: string;
@@ -125,29 +122,32 @@ const StudentSubmissionsDialog = ({
   subjectId
 }: StudentSubmissionsDialogProps) => {
   const { toast } = useToast();
-  const { user } = useAuth();
-  const userRole = useInstituteRole();
   const [submissionsData, setSubmissionsData] = useState<SubmissionsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('PENDING');
 
-  const loadSubmissions = async (forceRefresh = false) => {
+  const loadSubmissions = async () => {
     setLoading(true);
     try {
-      const result = await enhancedCachedClient.get(
-        `/institute-class-subject-payment-submissions/institute/${instituteId}/class/${classId}/subject/${subjectId}/my-submissions`,
-        {},
+      const baseUrl = getBaseUrl();
+      const token = localStorage.getItem('access_token');
+      
+      const response = await fetch(
+        `${baseUrl}/institute-class-subject-payment-submissions/institute/${instituteId}/class/${classId}/subject/${subjectId}/my-submissions`,
         {
-          ttl: CACHE_TTL.PAYMENT_SUBMISSIONS,
-          forceRefresh,
-          userId: user?.id,
-          role: userRole,
-          instituteId,
-          classId,
-          subjectId
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         }
       );
 
+      if (!response.ok) {
+        throw new Error(`Failed to fetch submissions: ${response.status}`);
+      }
+
+      const result = await response.json();
       setSubmissionsData(result);
       
       toast({
@@ -165,13 +165,6 @@ const StudentSubmissionsDialog = ({
       setLoading(false);
     }
   };
-
-  // Auto-load submissions when dialog opens (uses cache if available)
-  useEffect(() => {
-    if (open && instituteId && classId && subjectId) {
-      loadSubmissions(false); // Load from cache
-    }
-  }, [open, instituteId, classId, subjectId]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -355,8 +348,8 @@ const StudentSubmissionsDialog = ({
         <div className="space-y-4">
           {/* Load Button */}
           <div className="flex justify-between items-center">
-            <Button onClick={() => loadSubmissions(true)} disabled={loading}>
-              {loading ? 'Refreshing...' : 'Refresh Submissions'}
+            <Button onClick={loadSubmissions} disabled={loading}>
+              {loading ? 'Loading...' : 'Load My Submissions'}
             </Button>
             
             {/* Summary Stats */}

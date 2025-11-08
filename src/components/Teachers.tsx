@@ -16,8 +16,6 @@ import { useToast } from '@/hooks/use-toast';
 import CreateTeacherForm from '@/components/forms/CreateTeacherForm';
 import { getBaseUrl } from '@/contexts/utils/auth.api';
 import TeacherProfile from '@/components/TeacherProfile';
-import { enhancedCachedClient } from '@/api/enhancedCachedClient';
-import { CACHE_TTL } from '@/config/cacheTTL';
 
 const mockTeachers = [
   {
@@ -133,31 +131,30 @@ const Teachers = () => {
     return body;
   };
 
-  const handleLoadData = async (forceRefresh = false) => {
+  const handleLoadData = async () => {
     setIsLoading(true);
     console.log('Loading teachers data...');
     console.log(`Current context - Institute: ${selectedInstitute?.name}, Class: ${selectedClass?.name}, Subject: ${selectedSubject?.name}`);
     
     try {
-      const userRole = useInstituteRole();
+      const baseUrl = getBaseUrl();
+      const headers = getApiHeaders();
       
       // For InstituteAdmin, use the new API endpoint to get institute teachers
       if (userRole === 'InstituteAdmin' && currentInstituteId) {
         console.log('Loading institute teachers for InstituteAdmin...');
+        const url = `${baseUrl}/institute-users/institute/${currentInstituteId}/teachers`;
         
-        // Use enhanced cached client with context
-        const apiData = await enhancedCachedClient.get(
-          `/institute-users/institute/${currentInstituteId}/teachers`,
-          {},
-          {
-            ttl: CACHE_TTL.TEACHERS,
-            forceRefresh,
-            userId: user?.id,
-            instituteId: currentInstituteId,
-            role: userRole
-          }
-        );
+        const response = await fetch(url, { 
+          method: 'GET', 
+          headers 
+        });
         
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const apiData = await response.json();
         console.log('API Response:', apiData);
         
         // Transform the API data to match the expected format
@@ -370,7 +367,7 @@ const Teachers = () => {
             Click the button below to load teachers data
           </p>
           <Button 
-            onClick={() => handleLoadData(false)} 
+            onClick={handleLoadData} 
             disabled={isLoading}
             className="bg-blue-600 hover:bg-blue-700"
           >
@@ -423,7 +420,7 @@ const Teachers = () => {
             </div>
             
             <Button 
-              onClick={() => handleLoadData(true)} 
+              onClick={handleLoadData} 
               disabled={isLoading}
               variant="outline"
               size="sm"

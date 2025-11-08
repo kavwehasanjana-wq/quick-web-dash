@@ -9,9 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth, type UserRole } from '@/contexts/AuthContext';
 import { AccessControl } from '@/utils/permissions';
 import ProfileImageUpload from '@/components/ProfileImageUpload';
-import { enhancedCachedClient } from '@/api/enhancedCachedClient';
-import { apiClient } from '@/api/client'; // For POST operations
-import { CACHE_TTL } from '@/config/cacheTTL';
+import { apiClient } from '@/api/client';
 import { useToast } from '@/hooks/use-toast';
 import { User, Mail, Phone, MapPin, Calendar, Shield, Edit, Save, X, Lock, Download, FileText, CreditCard, Eye, EyeOff } from 'lucide-react';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
@@ -67,15 +65,7 @@ const Profile = () => {
     setLoading(true);
     try {
       console.log('Fetching user data for ID:', user.id);
-      const response = await enhancedCachedClient.get<UserData>(
-        `/users/${user.id}`,
-        {},
-        {
-          ttl: CACHE_TTL.USER_PROFILE,
-          forceRefresh: false,
-          userId: user.id
-        }
-      );
+      const response = await apiClient.get<UserData>(`/users/${user.id}`);
       console.log('User data response:', response);
       setUserData(response);
 

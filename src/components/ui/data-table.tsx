@@ -289,11 +289,12 @@ const DataTable = ({
                 <tr>
                   <td 
                     colSpan={columns.length + ((onEdit || onView || onDelete || onExport || customActions.length > 0) ? 1 : 0)} 
-                    className="px-4 py-12 text-center text-muted-foreground"
+                    className="px-4 py-12 text-center text-gray-500 dark:text-gray-400"
                   >
                     <div className="flex flex-col items-center space-y-2">
-                      <Search className="h-8 w-8 opacity-20" />
-                      <p className="text-sm">No records found</p>
+                      <Search className="h-8 w-8 text-gray-300" />
+                      <p className="text-lg">No data found</p>
+                      <p className="text-sm">Try adjusting your search criteria</p>
                     </div>
                   </td>
                 </tr>

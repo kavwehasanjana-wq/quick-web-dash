@@ -8,9 +8,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Users, User, Calendar, Phone, Heart, AlertTriangle } from 'lucide-react';
 import { getBaseUrl } from '@/contexts/utils/auth.api';
-import { enhancedCachedClient } from '@/api/enhancedCachedClient';
-import { CACHE_TTL } from '@/config/cacheTTL';
-import { useInstituteRole } from '@/hooks/useInstituteRole';
 
 interface Child {
   id: string;
@@ -42,27 +39,23 @@ const ParentChildrenSelector = () => {
     };
   };
 
-  const fetchParentChildren = async (forceRefresh = false) => {
+  const fetchParentChildren = async () => {
     if (!user?.id) return;
 
     try {
       setIsLoading(true);
-      const userRole = useInstituteRole();
-      
-      // Use enhanced cached client
-      const data = await enhancedCachedClient.get(
-        `/parents/${user.id}/children`,
-        {},
-        {
-          ttl: CACHE_TTL.STUDENTS,  // Children data cached like students
-          forceRefresh,
-          userId: user?.id,
-          role: userRole || 'Parent'
-        }
-      );
+      const baseUrl = getBaseUrl();
+      const response = await fetch(`${baseUrl}/parents/${user.id}/children`, {
+        headers: getApiHeaders(),
+      });
 
-      console.log('Parent children data:', data);
-      setParentData(data);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Parent children data:', data);
+        setParentData(data);
+      } else {
+        throw new Error(`Failed to fetch children: ${response.status}`);
+      }
     } catch (error) {
       console.error('Error fetching parent children:', error);
       setError(error instanceof Error ? error.message : 'Failed to fetch children');
@@ -77,7 +70,7 @@ const ParentChildrenSelector = () => {
   };
 
   useEffect(() => {
-    fetchParentChildren(false); // Use cache on mount
+    fetchParentChildren();
   }, [user?.id]);
 
   const handleChildSelect = (child: Child) => {
@@ -146,7 +139,7 @@ const ParentChildrenSelector = () => {
               <p className="text-gray-600 dark:text-gray-400 mb-4">
                 {error || 'Failed to load children information'}
               </p>
-              <Button onClick={() => fetchParentChildren(true)}>
+              <Button onClick={fetchParentChildren}>
                 Try Again
               </Button>
             </div>

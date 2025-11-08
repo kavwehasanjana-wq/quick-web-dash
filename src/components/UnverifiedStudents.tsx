@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Paper from '@mui/material/Paper';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -15,8 +15,6 @@ import { Button } from '@/components/ui/button';
 import { AlertCircle, UserCheck, UserX, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/hooks/use-toast';
-import { enhancedCachedClient } from '@/api/enhancedCachedClient';
-import { CACHE_TTL } from '@/config/cacheTTL';
 import { getBaseUrl } from '@/contexts/utils/auth.api';
 
 interface UnverifiedStudent {
@@ -63,7 +61,7 @@ interface InstituteClassUnverifiedResponse {
 }
 
 const UnverifiedStudents = () => {
-  const { user, selectedInstitute, selectedClass, selectedSubject } = useAuth();
+  const { selectedInstitute, selectedClass, selectedSubject } = useAuth();
   const userRole = useInstituteRole();
   const [students, setStudents] = useState<(UnverifiedStudent | NewUnverifiedStudent)[]>([]);
   const [loading, setLoading] = useState(false);
@@ -75,34 +73,33 @@ const UnverifiedStudents = () => {
   const [limit, setLimit] = useState(50);
   const [rowsPerPageOptions] = useState([25, 50, 100]);
 
-  const fetchUnverifiedStudents = async (page: number = 0, forceRefresh = false) => {
+  const fetchUnverifiedStudents = async (page: number = 0) => {
     if (!selectedInstitute || !selectedClass) return;
     
     setLoading(true);
     try {
+      const token = localStorage.getItem('access_token');
       let endpoint = '';
       
       if (selectedSubject) {
         // Fetch institute class subject unverified students
-        endpoint = `/institute-class-subject-students/unverified/${selectedInstitute.id}/${selectedClass.id}/${selectedSubject.id}`;
+        endpoint = `${getBaseUrl()}/institute-class-subject-students/unverified/${selectedInstitute.id}/${selectedClass.id}/${selectedSubject.id}`;
       } else {
         // Fetch institute class unverified students - NEW API with pagination
-        endpoint = `/institute-classes/${selectedClass.id}/unverified-students?limit=${limit}&page=${page + 1}`;
+        endpoint = `${getBaseUrl()}/institute-classes/${selectedClass.id}/unverified-students?limit=${limit}&page=${page + 1}`;
       }
 
-      const data = await enhancedCachedClient.get(
-        endpoint,
-        {},
-        {
-          ttl: CACHE_TTL.UNVERIFIED_STUDENTS,
-          forceRefresh,
-          userId: user?.id,
-          role: userRole,
-          instituteId: selectedInstitute.id,
-          classId: selectedClass.id,
-          ...(selectedSubject ? { subjectId: selectedSubject.id } : {})
+      const response = await fetch(endpoint, {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-      );
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch unverified students');
+      }
+
+      const data = await response.json();
       
       if (selectedSubject) {
         // For subject unverified students - use existing structure
@@ -132,13 +129,6 @@ const UnverifiedStudents = () => {
       setLoading(false);
     }
   };
-
-  // Auto-load data when context changes (uses cache if available)
-  useEffect(() => {
-    if (selectedInstitute && selectedClass) {
-      fetchUnverifiedStudents(0, false); // Load from cache
-    }
-  }, [selectedInstitute?.id, selectedClass?.id, selectedSubject?.id, limit]);
 
   const handleVerifyStudent = async (studentIdentifier: string, approve: boolean) => {
     if (!selectedInstitute || !selectedClass) return;
@@ -392,12 +382,12 @@ const UnverifiedStudents = () => {
           </p>
         </div>
         <Button 
-          onClick={() => fetchUnverifiedStudents(0, true)} // Force refresh from backend
+          onClick={() => fetchUnverifiedStudents(0)}
           disabled={loading}
           className="flex items-center gap-2"
         >
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? 'Refreshing...' : 'Refresh'}
+          {loading ? 'Loading...' : 'Load Students'}
         </Button>
       </div>
 

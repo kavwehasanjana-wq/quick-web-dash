@@ -35,7 +35,6 @@ import { usersApi, BasicUser } from '@/api/users.api';
 import UserInfoDialog from '@/components/forms/UserInfoDialog';
 import UserOrganizationsDialog from '@/components/forms/UserOrganizationsDialog';
 import { getBaseUrl } from '@/contexts/utils/auth.api';
-import ImagePreviewModal from '@/components/ImagePreviewModal';
 
 interface InstituteUserData {
   id: string;
@@ -91,39 +90,34 @@ const InstituteUsers = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [orgDialogOpen, setOrgDialogOpen] = useState(false);
   const [selectedUserForOrg, setSelectedUserForOrg] = useState<{ id: string; name: string } | null>(null);
-  const [imagePreview, setImagePreview] = useState<{ isOpen: boolean; url: string; title: string }>({
-    isOpen: false,
-    url: '',
-    title: ''
-  });
 
   // Table data management for each user type
   const studentsTable = useTableData<InstituteUserData>({
     endpoint: `/institute-users/institute/${currentInstituteId}/users/STUDENT`,
     dependencies: [], // Remove dependencies to prevent auto-reloading
     pagination: { defaultLimit: 50, availableLimits: [25, 50, 100] },
-    autoLoad: true // Enable auto-loading from cache
+    autoLoad: false
   });
 
   const teachersTable = useTableData<InstituteUserData>({
     endpoint: `/institute-users/institute/${currentInstituteId}/users/TEACHER`,
     dependencies: [], // Remove dependencies to prevent auto-reloading
     pagination: { defaultLimit: 50, availableLimits: [25, 50, 100] },
-    autoLoad: true // Enable auto-loading from cache
+    autoLoad: false
   });
 
   const attendanceMarkersTable = useTableData<InstituteUserData>({
     endpoint: `/institute-users/institute/${currentInstituteId}/users/ATTENDANCE_MARKER`,
     dependencies: [], // Remove dependencies to prevent auto-reloading
     pagination: { defaultLimit: 50, availableLimits: [25, 50, 100] },
-    autoLoad: true // Enable auto-loading from cache
+    autoLoad: false
   });
 
   const instituteAdminsTable = useTableData<InstituteUserData>({
     endpoint: `/institute-users/institute/${currentInstituteId}/users/INSTITUTE_ADMIN`,
     dependencies: [], // Remove dependencies to prevent auto-reloading
     pagination: { defaultLimit: 50, availableLimits: [25, 50, 100] },
-    autoLoad: true // Enable auto-loading from cache
+    autoLoad: false
   });
 
   // Use API request hook for creating users with duplicate prevention
@@ -645,7 +639,7 @@ const InstituteUsers = () => {
                 <TableCell>Name</TableCell>
                 <TableCell>Email</TableCell>
                 <TableCell>Phone Number</TableCell>
-                <TableCell>Institute ID</TableCell>
+                <TableCell>Status</TableCell>
                 <TableCell>Org</TableCell>
                 <TableCell>Upload</TableCell>
                 {activeTab === 'STUDENT' && <TableCell>Parent</TableCell>}
@@ -659,31 +653,23 @@ const InstituteUsers = () => {
                 .map((userData) => (
                 <TableRow hover role="checkbox" tabIndex={-1} key={userData.id}>
                   <TableCell>
-                    <div 
-                      className="cursor-pointer flex justify-center"
-                      onClick={() => {
-                        if (userData.imageUrl) {
-                          setImagePreview({ 
-                            isOpen: true, 
-                            url: userData.imageUrl, 
-                            title: userData.name 
-                          });
-                        }
-                      }}
-                    >
-                      <Avatar className="h-10 w-10 md:h-12 md:w-12 lg:h-14 lg:w-14 hover:opacity-80 transition-opacity border-2 border-border">
-                        <AvatarImage src={userData.imageUrl || ''} alt={userData.name} className="object-cover" />
-                        <AvatarFallback className="bg-muted">
-                          {userData.name.split(' ').map(n => n.charAt(0)).join('').slice(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
-                    </div>
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={userData.imageUrl || ''} alt={userData.name} />
+                      <AvatarFallback>
+                        {userData.name.split(' ').map(n => n.charAt(0)).join('').slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
                   </TableCell>
                   <TableCell>
                     <span className="font-mono text-sm">{userData.id}</span>
                   </TableCell>
                   <TableCell>
-                    <div className="font-medium">{userData.name}</div>
+                    <div>
+                      <div className="font-medium">{userData.name}</div>
+                      <div className="text-sm text-gray-500">
+                        {userData.userIdByInstitute ? `Institute ID: ${userData.userIdByInstitute}` : 'No Institute ID'}
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <span className="text-sm">{userData.email || 'Not provided'}</span>
@@ -692,7 +678,9 @@ const InstituteUsers = () => {
                     <span className="text-sm">{userData.phoneNumber || 'Not provided'}</span>
                   </TableCell>
                   <TableCell>
-                    <span className="font-mono text-sm">{userData.userIdByInstitute || 'Not assigned'}</span>
+                    <Badge variant={userData.verifiedBy ? "default" : "secondary"}>
+                      {userData.verifiedBy ? 'Verified' : 'Unverified'}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <Button
@@ -1086,13 +1074,6 @@ const InstituteUsers = () => {
           </div>
         </DialogContent>
       </Dialog>
-
-      <ImagePreviewModal
-        isOpen={imagePreview.isOpen}
-        onClose={() => setImagePreview({ isOpen: false, url: '', title: '' })}
-        imageUrl={imagePreview.url}
-        title={imagePreview.title}
-      />
     </div>
   );
 };

@@ -73,7 +73,7 @@ const Subjects = () => {
       defaultLimit: 50,
       availableLimits: [25, 50, 100]
     },
-    autoLoad: true, // Enable auto-loading from cache // DISABLE AUTO-LOADING
+    autoLoad: false // DISABLE AUTO-LOADING
   });
   const {
     state: {
@@ -108,32 +108,7 @@ const Subjects = () => {
     actions.updateFilters(newFilters);
     actions.refresh();
   };
-  const getBaseUrl = () => {
-    return import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-  };
-
-  const resolveImageUrl = (url?: string | null) => {
-    if (!url) return '/placeholder.svg';
-    if (url.startsWith('http')) return url;
-    const base = getBaseUrl();
-    return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
-  };
-
   const subjectsColumns = [{
-    id: 'imgUrl',
-    key: 'imgUrl',
-    header: 'Image',
-    format: (value: string | null, row: any) => (
-      <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted">
-        <img
-          src={resolveImageUrl(row?.imgUrl || value)}
-          alt={row?.name ? `Subject ${row.name}` : 'Subject image'}
-          className="w-full h-full object-cover"
-          onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/placeholder.svg'; }}
-        />
-      </div>
-    )
-  }, {
     key: 'code',
     header: 'Code'
   }, {
@@ -358,7 +333,7 @@ const Subjects = () => {
                 id: col.key,
                 label: col.header,
                 minWidth: 170,
-                format: col.render || col.format
+                format: col.render
               }))}
               onEdit={!isInstituteAdmin && canEdit ? handleEditSubject : undefined}
               onDelete={!isInstituteAdmin && canDelete ? handleDeleteSubject : undefined}

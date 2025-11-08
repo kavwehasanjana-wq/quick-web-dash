@@ -13,27 +13,15 @@ import { getBaseUrl, getApiHeaders } from '@/contexts/utils/auth.api';
 interface ProfileImageUploadProps {
   currentImageUrl?: string | null;
   onImageUpdate: (newImageUrl: string) => void;
-  isOpen?: boolean;
-  onClose?: () => void;
-  dialogOnly?: boolean; // Only show the dialog, not the avatar UI
 }
 
 const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
   currentImageUrl,
-  onImageUpdate,
-  isOpen,
-  onClose,
-  dialogOnly = false
+  onImageUpdate
 }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [showUploadDialog, setShowUploadDialog] = useState(false);
-  
-  // Use controlled state if provided, otherwise use internal state
-  const dialogOpen = isOpen !== undefined ? isOpen : showUploadDialog;
-  const setDialogOpen = onClose !== undefined 
-    ? (open: boolean) => { if (!open) onClose(); } 
-    : setShowUploadDialog;
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imageSrc, setImageSrc] = useState<string>('');
   const [crop, setCrop] = useState<Crop>({
@@ -47,13 +35,6 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
   const [uploading, setUploading] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Auto-trigger file input in dialogOnly mode
-  React.useEffect(() => {
-    if (dialogOnly && isOpen && fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  }, [dialogOnly, isOpen]);
 
   const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -83,7 +64,7 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
       const reader = new FileReader();
       reader.addEventListener('load', () => {
         setImageSrc(reader.result?.toString() || '');
-        setDialogOpen(true);
+        setShowUploadDialog(true);
       });
       reader.readAsDataURL(file);
     }
@@ -202,7 +183,7 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
   };
 
   const handleCloseDialog = () => {
-    setDialogOpen(false);
+    setShowUploadDialog(false);
     setSelectedFile(null);
     setImageSrc('');
     setCrop({ unit: '%', width: 50, height: 50, x: 25, y: 25 });
@@ -218,52 +199,48 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
   };
 
   return (
-    <>
-      {!dialogOnly && (
-        <div className="flex flex-col items-center space-y-4">
-          <div className="relative">
-            <Avatar className="h-24 w-24 sm:h-32 sm:w-32">
-              <AvatarImage src={currentImageUrl || ''} alt="Profile" />
-              <AvatarFallback className="text-lg sm:text-xl">
-                {getUserInitials()}
-              </AvatarFallback>
-            </Avatar>
-            <Button
-              size="sm"
-              variant="outline"
-              className="absolute -bottom-2 -right-2 rounded-full h-8 w-8 p-0"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Camera className="h-4 w-4" />
-            </Button>
-            {currentImageUrl && (
-              <Button
-                size="sm"
-                variant="destructive"
-                className="absolute -top-2 -right-2 rounded-full h-8 w-8 p-0"
-                onClick={() => {
-                  onImageUpdate('');
-                  toast({
-                    title: "Image Removed",
-                    description: "Profile image has been removed."
-                  });
-                }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-
+    <div className="flex flex-col items-center space-y-4">
+      <div className="relative">
+        <Avatar className="h-24 w-24 sm:h-32 sm:w-32">
+          <AvatarImage src={currentImageUrl || ''} alt="Profile" />
+          <AvatarFallback className="text-lg sm:text-xl">
+            {getUserInitials()}
+          </AvatarFallback>
+        </Avatar>
+        <Button
+          size="sm"
+          variant="outline"
+          className="absolute -bottom-2 -right-2 rounded-full h-8 w-8 p-0"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <Camera className="h-4 w-4" />
+        </Button>
+        {currentImageUrl && (
           <Button
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2"
+            size="sm"
+            variant="destructive"
+            className="absolute -top-2 -right-2 rounded-full h-8 w-8 p-0"
+            onClick={() => {
+              onImageUpdate('');
+              toast({
+                title: "Image Removed",
+                description: "Profile image has been removed."
+              });
+            }}
           >
-            <Upload className="h-4 w-4" />
-            Change Photo
+            <X className="h-4 w-4" />
           </Button>
-        </div>
-      )}
+        )}
+      </div>
+
+      <Button
+        variant="outline"
+        onClick={() => fileInputRef.current?.click()}
+        className="flex items-center gap-2"
+      >
+        <Upload className="h-4 w-4" />
+        Change Photo
+      </Button>
 
       <input
         ref={fileInputRef}
@@ -273,7 +250,7 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
         className="hidden"
       />
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Crop Profile Image</DialogTitle>
@@ -329,7 +306,7 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
           </div>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 };
 

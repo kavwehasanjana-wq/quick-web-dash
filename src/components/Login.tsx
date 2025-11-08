@@ -613,7 +613,7 @@ const Login = ({
 
       {/* Left Side - Form */}
       <div className="w-full md:w-1/2 lg:w-2/5 flex items-center justify-center p-4 sm:p-6 md:p-8 bg-background -mt-8 md:mt-0 rounded-t-[3rem] md:rounded-none relative z-10">
-        <div className="w-full max-w-2xl space-y-4 md:space-y-6">
+        <div className="w-full max-w-md space-y-4 md:space-y-6">
           {/* Logo and Header */}
           <div className="space-y-1 text-center">
             <div className="flex items-center justify-start gap-4 mb-4 md:mb-6">
@@ -631,9 +631,9 @@ const Login = ({
 
           {/* Main Login/First Login/Forgot Password Card */}
           <Card className="border-border">
-            <CardContent className="pt-12 px-8 pb-12">
+            <CardContent className="pt-6">
             {/* Regular Login Form */}
-            {loginStep === 'login' && <form onSubmit={handleLogin} className="space-y-6">
+            {loginStep === 'login' && <form onSubmit={handleLogin} className="space-y-4">
                 {/* Role Selection - Only show for mock login */}
                 {!useApiLogin && <div className="space-y-2">
                     <Label htmlFor="role">Role</Label>

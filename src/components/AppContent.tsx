@@ -120,8 +120,8 @@ const AppContent = ({ initialPage }: AppContentProps) => {
       
       // Remove leading slash and use as page name
       const pageName = pathname.slice(1);
-      console.log('🔍 Final page name from URL:', pageName, 'pathname:', pathname);
-      return pageName || 'dashboard';
+      console.log('Final page name from URL:', pageName);
+      return pageName;
     } catch (error) {
       console.error('Error getting page from URL:', error);
       return 'dashboard';
@@ -543,12 +543,6 @@ const AppContent = ({ initialPage }: AppContentProps) => {
           return <InstituteProfile />;
         case 'organizations':
           return renderComponent();
-        case 'institute-payments':
-          return <InstitutePayments />;
-        case 'subject-payments':
-          return <SubjectPayments />;
-        case 'my-children':
-          return <MyChildren />;
         default:
           return <Dashboard />;
       }
@@ -743,21 +737,11 @@ const AppContent = ({ initialPage }: AppContentProps) => {
       'institute-payments',
       'subject-payments'
     ];
-    
-    console.log('🔍 Student Role - Debug:', { 
-      currentPage, 
-      selectedInstitute: !!selectedInstitute,
-      isInExceptionList: pagesWithoutClassRequirement.includes(currentPage)
-    });
-    
-    // Only redirect to institute selector if institute is not selected AND page is not in exception list
-    if (!selectedInstitute && currentPage !== 'institutes' && currentPage !== 'select-institute' && currentPage !== 'organizations' && !pagesWithoutClassRequirement.includes(currentPage)) {
-      console.log('❌ Redirecting to InstituteSelector');
+    if (!selectedInstitute && currentPage !== 'institutes' && currentPage !== 'select-institute' && !pagesWithoutClassRequirement.includes(currentPage)) {
       return <InstituteSelector />;
     }
 
-    // NEVER redirect to class selector for pages that don't need it
-    if (currentPage === 'select-class' && !pagesWithoutClassRequirement.includes(currentPage)) {
+    if (currentPage === 'select-class') {
       return <ClassSelector />;
     }
 
@@ -765,14 +749,9 @@ const AppContent = ({ initialPage }: AppContentProps) => {
       return <SubjectSelector />;
     }
 
-    // ONLY show class selector for pages that explicitly require a class
-    // AND are NOT in the exception list
-    if (!pagesWithoutClassRequirement.includes(currentPage)) {
-      const classRequiredPages = ['grading'];
-      if (selectedInstitute && !selectedClass && classRequiredPages.includes(currentPage)) {
-        console.log('❌ Redirecting to ClassSelector for class-required page');
-        return <ClassSelector />;
-      }
+    const classRequiredPages = ['grading'];
+    if (selectedInstitute && !selectedClass && classRequiredPages.includes(currentPage) && !pagesWithoutClassRequirement.includes(currentPage)) {
+      return <ClassSelector />;
     }
 
     const subjectRequiredPages = ['lectures'];
