@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import ImageCropUpload from '@/components/common/ImageCropUpload';
 
 const instituteSchema = z.object({
   name: z.string().min(2, 'Institute name must be at least 2 characters'),
@@ -201,19 +202,16 @@ const CreateInstituteForm = ({ onSubmit, onCancel, initialData }: CreateInstitut
               )}
             />
             
-            <FormField
-              control={form.control}
-              name="imageUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Image URL (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://cambridge-school.edu/logo.png" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <FormLabel>Institute Image (Optional)</FormLabel>
+              <ImageCropUpload
+                currentImageUrl={form.watch('imageUrl')}
+                onImageUpdate={(url) => form.setValue('imageUrl', url)}
+                folder="institute-images"
+                aspectRatio={16/9}
+                label="Institute Image"
+              />
+            </div>
             
             <div className="flex justify-end space-x-2">
               <Button type="button" variant="outline" onClick={onCancel}>
