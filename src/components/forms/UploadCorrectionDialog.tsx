@@ -13,6 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/api/client';
 import { Upload, X } from 'lucide-react';
+import { uploadWithSignedUrl } from '@/utils/signedUploadHelper';
 
 export interface HomeworkSubmission {
   id: string;
@@ -53,6 +54,8 @@ const UploadCorrectionDialog = ({
   const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [formData, setFormData] = useState({
     homeworkId: '',
     studentId: '',
@@ -94,17 +97,30 @@ const UploadCorrectionDialog = ({
 
     setIsUploading(true);
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('homeworkId', formData.homeworkId);
-      formDataToSend.append('studentId', formData.studentId);
-      formDataToSend.append('submissionDate', formData.submissionDate);
-      formDataToSend.append('remarks', formData.remarks);
-      formDataToSend.append('isActive', formData.isActive.toString());
-      formDataToSend.append('teacherCorrectionFileUrl', file);
+      // Step 1: Upload correction file using signed URL
+      setUploadMessage('Uploading correction file...');
+      const relativePath = await uploadWithSignedUrl(
+        file,
+        'correction-files',
+        (message, progress) => {
+          setUploadMessage(message);
+          setUploadProgress(progress);
+        }
+      );
+
+      // Step 2: Update submission with relativePath
+      const updateData = {
+        homeworkId: formData.homeworkId,
+        studentId: formData.studentId,
+        submissionDate: formData.submissionDate,
+        remarks: formData.remarks,
+        isActive: formData.isActive,
+        teacherCorrectionFileUrl: relativePath
+      };
 
       const response = await apiClient.patch(
         `/institute-class-subject-homeworks-submissions/${submissionId}`,
-        formDataToSend
+        updateData
       );
 
       toast({
@@ -251,7 +267,7 @@ const UploadCorrectionDialog = ({
               type="submit"
               disabled={!file || isUploading}
             >
-              {isUploading ? 'Updating...' : 'Update Submission'}
+              {isUploading ? (uploadMessage || 'Updating...') : 'Update Submission'}
             </Button>
           </div>
         </form>

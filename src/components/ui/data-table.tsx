@@ -48,7 +48,7 @@ interface DataTableProps {
   onPageChange?: (page: number) => void;
   onItemsPerPageChange?: (itemsPerPage: number) => void;
   // Section-specific props for InstituteAdmin
-  sectionType?: 'lectures' | 'homework' | 'exams';
+  sectionType?: 'lectures' | 'homework' | 'exams' | 'students';
 }
 
 const DataTable = ({
@@ -228,16 +228,16 @@ const DataTable = ({
                               {sectionType === 'lectures' ? 'Edit Lectures' : sectionType === 'homework' ? 'Edit Homework' : 'Edit Exam'}
                             </Button>
                           )}
-                          {onView && (instituteRole === 'InstituteAdmin' || instituteRole === 'Teacher') && sectionType !== 'lectures' && (
+                          {onView && (instituteRole === 'InstituteAdmin' || instituteRole === 'Teacher' || sectionType === 'students') && sectionType !== 'lectures' && (
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => onView(row)}
-                              title={sectionType === 'homework' ? 'View Submissions' : 'View Results'}
+                              title={sectionType === 'homework' ? 'View Submissions' : sectionType === 'students' ? 'View Details' : 'View Results'}
                               className="h-8 px-3 text-xs"
                             >
                               <Eye className="h-3 w-3 mr-1" />
-                              {sectionType === 'homework' ? 'View Submissions' : 'View Results'}
+                              {sectionType === 'homework' ? 'View Submissions' : sectionType === 'students' ? 'View' : 'View Results'}
                             </Button>
                           )}
                           {/* Student-specific actions */}

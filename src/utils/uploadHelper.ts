@@ -101,10 +101,13 @@ export class FileUploader {
       throw new Error('No authentication token found');
     }
 
+    // Ensure content type is never empty - default to application/octet-stream
+    const contentType = file.type || 'application/octet-stream';
+
     const params = new URLSearchParams({
       folder: folder,
       fileName: file.name,
-      contentType: file.type,
+      contentType: contentType,
       fileSize: file.size.toString(),
       expiresIn: '600' // 10 minutes
     });
@@ -136,7 +139,8 @@ export class FileUploader {
     const response = await fetch(uploadUrl, {
       method: 'PUT',
       headers: {
-        'Content-Type': contentType
+        'Content-Type': contentType,
+        'x-goog-content-length-range': `0,${file.size}`
       },
       body: file
     });
@@ -183,6 +187,7 @@ export class FileUploader {
 
       xhr.open('PUT', uploadUrl);
       xhr.setRequestHeader('Content-Type', contentType);
+      xhr.setRequestHeader('x-goog-content-length-range', `0,${file.size}`);
       xhr.send(file);
     });
   }
@@ -233,6 +238,9 @@ export class FileUploader {
 
       const signedUrlData = await this.getSignedUrl(file, folder);
 
+      // Ensure we use the same content type for upload as was used for signing
+      const contentType = file.type || 'application/octet-stream';
+
       // Step 2: Upload to cloud storage
       onProgress?.({
         stage: 'uploading',
@@ -244,11 +252,11 @@ export class FileUploader {
         await this.uploadToCloudWithProgress(
           file,
           signedUrlData.uploadUrl,
-          file.type,
+          contentType,
           onProgress
         );
       } else {
-        await this.uploadToCloud(file, signedUrlData.uploadUrl, file.type);
+        await this.uploadToCloud(file, signedUrlData.uploadUrl, contentType);
       }
 
       // Step 3: Verify and publish

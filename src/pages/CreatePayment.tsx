@@ -24,6 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { getBaseUrl } from '@/contexts/utils/auth.api';
+import { uploadWithSignedUrl } from '@/utils/signedUploadHelper';
 
 interface PaymentFormData {
   paymentAmount: string;
@@ -41,6 +42,8 @@ const CreatePayment = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successData, setSuccessData] = useState<any>(null);
+  const [uploadMessage, setUploadMessage] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [formData, setFormData] = useState<PaymentFormData>({
     paymentAmount: '',
     paymentMethod: '',
@@ -95,10 +98,12 @@ const CreatePayment = () => {
   };
 
   const validateForm = (): boolean => {
-    if (!formData.paymentAmount || parseFloat(formData.paymentAmount) <= 0) {
+    const amount = parseFloat(formData.paymentAmount);
+    
+    if (!formData.paymentAmount || amount <= 0.01 || amount > 999999.99) {
       toast({
         title: "Validation Error",
-        description: "Please enter a valid payment amount",
+        description: "Payment amount must be between 0.01 and 999,999.99",
         variant: "destructive",
       });
       return false;
@@ -168,29 +173,37 @@ const CreatePayment = () => {
     try {
       const baseUrl = getBaseUrl();
       
-      // Create FormData for multipart/form-data
-      const formDataToSend = new FormData();
-      formDataToSend.append('paymentAmount', parseFloat(formData.paymentAmount).toFixed(2));
-      formDataToSend.append('paymentMethod', formData.paymentMethod);
-      formDataToSend.append('paymentDate', new Date(formData.paymentDate).toISOString());
-      formDataToSend.append('paymentMonth', formData.paymentMonth);
-      
-      if (formData.paymentReference) {
-        formDataToSend.append('paymentReference', formData.paymentReference);
-      }
-      if (formData.notes) {
-        formDataToSend.append('notes', formData.notes);
-      }
-      if (formData.paymentSlip) {
-        formDataToSend.append('paymentSlip', formData.paymentSlip);
-      }
+      // Step 1: Upload payment slip using signed URL
+      setUploadMessage('Uploading payment slip...');
+      const paymentSlipUrl = await uploadWithSignedUrl(
+        formData.paymentSlip!,
+        'payment-receipts',
+        (message, progress) => {
+          setUploadMessage(message);
+          setUploadProgress(progress);
+        }
+      );
 
+      // Step 2: Prepare payment data with proper types
+      const paymentData = {
+        paymentAmount: parseFloat(formData.paymentAmount),
+        paymentMethod: formData.paymentMethod,
+        paymentDate: new Date(formData.paymentDate).toISOString(),
+        paymentMonth: formData.paymentMonth,
+        paymentSlipUrl: paymentSlipUrl,
+        ...(formData.paymentReference && { paymentReference: formData.paymentReference }),
+        ...(formData.notes && { notes: formData.notes })
+      };
+
+      // Step 3: Submit payment data as JSON
+      setUploadMessage('Submitting payment...');
       const response = await fetch(`${baseUrl}/payment`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          'Content-Type': 'application/json'
         },
-        body: formDataToSend
+        body: JSON.stringify(paymentData)
       });
 
       if (!response.ok) {
@@ -426,7 +439,7 @@ const CreatePayment = () => {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Submitting...
+                    {uploadMessage || 'Submitting...'}
                   </>
                 ) : (
                   'Submit Payment'

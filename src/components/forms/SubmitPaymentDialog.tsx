@@ -6,10 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { Upload, FileText } from 'lucide-react';
+import { Upload, FileText, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { institutePaymentsApi, SubmitPaymentRequest, InstitutePayment } from '@/api/institutePayments.api';
-import { fileUploader, UploadProgress } from '@/utils/uploadHelper';
+import { uploadWithSignedUrl } from '@/utils/signedUploadHelper';
 
 interface SubmitPaymentDialogProps {
   open: boolean;
@@ -22,11 +22,8 @@ interface SubmitPaymentDialogProps {
 const SubmitPaymentDialog = ({ open, onOpenChange, payment, instituteId, onSuccess }: SubmitPaymentDialogProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<UploadProgress>({
-    stage: 'idle',
-    message: '',
-    progress: 0
-  });
+  const [uploadMessage, setUploadMessage] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [formData, setFormData] = useState<Omit<SubmitPaymentRequest, 'receiptUrl'>>({
     paymentAmount: 0,
     paymentMethod: 'BANK_TRANSFER',
@@ -58,17 +55,21 @@ const SubmitPaymentDialog = ({ open, onOpenChange, payment, instituteId, onSucce
 
     setLoading(true);
     try {
-      // Step 1: Upload receipt file
-      const receiptUrl = await fileUploader.uploadFile(
+      // Step 1: Upload receipt file using signed URL and get relativePath
+      setUploadMessage('Uploading receipt...');
+      const relativePath = await uploadWithSignedUrl(
         receiptFile,
         'payment-receipts',
-        (progress) => setUploadProgress(progress)
+        (message, progress) => {
+          setUploadMessage(message);
+          setUploadProgress(progress);
+        }
       );
 
-      // Step 2: Submit payment with receipt URL
+      // Step 2: Submit payment with relativePath as receiptUrl
       const submitData: SubmitPaymentRequest = {
         ...formData,
-        receiptUrl
+        receiptUrl: relativePath
       };
 
       await institutePaymentsApi.submitPayment(instituteId, payment.id, submitData);
@@ -237,15 +238,15 @@ const SubmitPaymentDialog = ({ open, onOpenChange, payment, instituteId, onSucce
           <div>
             <Label htmlFor="receipt">Receipt Upload *</Label>
             <div className="mt-1">
-              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6">
-                <div className="text-center">
-                  <Upload className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                  <div className="mt-4">
+              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4">
+                {!receiptFile ? (
+                  <div className="text-center">
+                    <Upload className="mx-auto h-10 w-10 text-muted-foreground/50 mb-2" />
                     <Label htmlFor="receipt" className="cursor-pointer">
-                      <span className="mt-2 block text-sm font-medium">
-                        {receiptFile ? receiptFile.name : 'Upload receipt file'}
+                      <span className="block text-sm font-medium">
+                        Upload receipt file
                       </span>
-                      <span className="mt-1 block text-xs text-muted-foreground">
+                      <span className="block text-xs text-muted-foreground mt-1">
                         PDF, JPG, PNG up to 5MB
                       </span>
                     </Label>
@@ -257,13 +258,28 @@ const SubmitPaymentDialog = ({ open, onOpenChange, payment, instituteId, onSucce
                       className="hidden"
                     />
                   </div>
-                  {receiptFile && (
-                    <div className="mt-2 flex items-center justify-center text-sm text-green-600">
-                      <FileText className="h-4 w-4 mr-1" />
-                      {receiptFile.name} ({(receiptFile.size / 1024 / 1024).toFixed(2)} MB)
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-sm font-medium">{receiptFile.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(receiptFile.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
                     </div>
-                  )}
-                </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setReceiptFile(null)}
+                      className="h-8 w-8 p-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -273,7 +289,7 @@ const SubmitPaymentDialog = ({ open, onOpenChange, payment, instituteId, onSucce
               Cancel
             </Button>
             <Button type="submit" disabled={loading || !receiptFile}>
-              {loading ? (uploadProgress.message || 'Submitting...') : 'Submit Payment'}
+              {loading ? (uploadMessage || 'Submitting...') : 'Submit Payment'}
             </Button>
           </div>
         </form>

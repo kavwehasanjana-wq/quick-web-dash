@@ -84,14 +84,12 @@ const CreateSubjectForm = ({ onSubmit, onCancel, initialData }: CreateSubjectFor
     return headers;
   };
 
-  const handleImageUpload = (imageUrl: string, file: File) => {
+  const handleImageUpload = (imageUrl: string) => {
     setImagePreviewUrl(imageUrl);
-    setSelectedImage(file);
   };
 
   const handleImageRemove = () => {
     setImagePreviewUrl('');
-    setSelectedImage(null);
   };
 
   const handleSubmit = async (data: SubjectFormData) => {
@@ -109,34 +107,33 @@ const CreateSubjectForm = ({ onSubmit, onCancel, initialData }: CreateSubjectFor
     
     try {
       if (!isEditing) {
-        // Use direct API call for creating subjects with FormData for image upload
+        // Use direct API call for creating subjects with JSON body (image URL already uploaded)
         const baseUrl = getBaseUrl();
         const token = getAuthToken();
         
-        const formData = new FormData();
-        formData.append('code', data.code);
-        formData.append('name', data.name);
-        formData.append('description', data.description);
-        formData.append('category', data.category);
-        formData.append('creditHours', data.creditHours.toString());
-        formData.append('isActive', data.isActive.toString());
-        formData.append('subjectType', data.subjectType);
-        formData.append('instituteType', data.instituteType);
-        formData.append('instituteId', currentInstituteId);
-        formData.append('basketCategory', data.basketCategory);
-        
-        if (selectedImage) {
-          formData.append('image', selectedImage);
-        }
+        const requestBody = {
+          code: data.code,
+          name: data.name,
+          description: data.description,
+          category: data.category,
+          creditHours: data.creditHours,
+          isActive: data.isActive,
+          subjectType: data.subjectType,
+          instituteType: data.instituteType,
+          instituteId: currentInstituteId,
+          basketCategory: data.basketCategory,
+          imgUrl: imagePreviewUrl || undefined
+        };
 
-        console.log('Submitting subject data with FormData');
+        console.log('Submitting subject data:', requestBody);
         
         const response = await fetch(`${baseUrl}/subjects`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           },
-          body: formData
+          body: JSON.stringify(requestBody)
         });
         
         if (!response.ok) {
@@ -148,7 +145,6 @@ const CreateSubjectForm = ({ onSubmit, onCancel, initialData }: CreateSubjectFor
         console.log('Subject created successfully:', result);
         
         toast.success('Subject created successfully!');
-        // Pass the original form data to parent, not the API response
         onSubmit(data);
       } else {
         onSubmit(data);

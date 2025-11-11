@@ -4,16 +4,18 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import MUITable from '@/components/ui/mui-table';
-import { Users, RefreshCw, Search, Plus, AlertTriangle, User, MapPin, Phone, Briefcase, Calendar, Home, Filter, ChevronDown, ChevronUp } from 'lucide-react';
+import { Users, RefreshCw, Search, Plus, AlertTriangle, User, MapPin, Phone, Briefcase, Calendar, Home, Filter, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { type UserRole } from '@/contexts/types/auth.types';
 import { useToast } from '@/hooks/use-toast';
 import { useTableData } from '@/hooks/useTableData';
 import ImagePreviewModal from '@/components/ImagePreviewModal';
+import { Occupation, formatOccupation } from '@/types/occupation.types';
 
 const Parents = () => {
   const {
@@ -33,12 +35,12 @@ const Parents = () => {
   });
 
   // Filter states
+  const [selectedOccupation, setSelectedOccupation] = useState<string>('');
   const [filters, setFilters] = useState({
     instituteId: '',
     name: '',
     phone: '',
-    address: '',
-    occupation: ''
+    address: ''
   });
   const userRole = useInstituteRole();
   const canViewParents = userRole === 'InstituteAdmin';
@@ -47,11 +49,16 @@ const Parents = () => {
   // Use the useTableData hook for better data management and pagination
   const tableData = useTableData({
     endpoint: selectedInstitute ? `/institute-users/institute/${selectedInstitute.id}/users/PARENT` : '',
-    autoLoad: true, // Enable auto-loading from cache
+    defaultParams: {
+      parent: 'true',
+      ...(selectedOccupation && { occupation: selectedOccupation })
+    },
+    autoLoad: true,
     pagination: {
       defaultLimit: 50,
       availableLimits: [25, 50, 100]
-    }
+    },
+    dependencies: [selectedOccupation]
   });
 
   // Table columns configuration
@@ -134,15 +141,22 @@ const Parents = () => {
   // Filter data based on search term and filters
   const filteredData = tableData.state.data.filter(parent => {
     // Search term filter
-    const matchesSearch = !searchTerm.trim() || parent.name?.toLowerCase().includes(searchTerm.toLowerCase()) || parent.addressLine1?.toLowerCase().includes(searchTerm.toLowerCase()) || parent.addressLine2?.toLowerCase().includes(searchTerm.toLowerCase()) || parent.occupation?.toLowerCase().includes(searchTerm.toLowerCase()) || parent.workPlace?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = !searchTerm.trim() || 
+      parent.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      parent.addressLine1?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      parent.addressLine2?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      parent.occupation?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      parent.workPlace?.toLowerCase().includes(searchTerm.toLowerCase());
 
     // Additional filters
     const matchesInstituteId = !filters.instituteId.trim() || parent.userIdByInstitute?.toLowerCase().includes(filters.instituteId.toLowerCase());
     const matchesName = !filters.name.trim() || parent.name?.toLowerCase().includes(filters.name.toLowerCase());
     const matchesPhone = !filters.phone.trim() || parent.phoneNumber?.toLowerCase().includes(filters.phone.toLowerCase());
-    const matchesAddress = !filters.address.trim() || parent.addressLine1?.toLowerCase().includes(filters.address.toLowerCase()) || parent.addressLine2?.toLowerCase().includes(filters.address.toLowerCase());
-    const matchesOccupation = !filters.occupation.trim() || parent.occupation?.toLowerCase().includes(filters.occupation.toLowerCase()) || parent.workPlace?.toLowerCase().includes(filters.occupation.toLowerCase());
-    return matchesSearch && matchesInstituteId && matchesName && matchesPhone && matchesAddress && matchesOccupation;
+    const matchesAddress = !filters.address.trim() || 
+      parent.addressLine1?.toLowerCase().includes(filters.address.toLowerCase()) || 
+      parent.addressLine2?.toLowerCase().includes(filters.address.toLowerCase());
+    
+    return matchesSearch && matchesInstituteId && matchesName && matchesPhone && matchesAddress;
   });
 
   // Clear all filters
@@ -151,9 +165,9 @@ const Parents = () => {
       instituteId: '',
       name: '',
       phone: '',
-      address: '',
-      occupation: ''
+      address: ''
     });
+    setSelectedOccupation('');
     setSearchTerm('');
   };
 
@@ -192,11 +206,38 @@ const Parents = () => {
         </div>
         
         <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+          {/* Occupation Filter */}
+          <Select value={selectedOccupation} onValueChange={setSelectedOccupation}>
+            <SelectTrigger className="w-full sm:w-[220px] bg-background">
+              <SelectValue placeholder="Filter by Occupation" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover max-h-[300px]">
+              <SelectItem value="all" className="hover:bg-accent">All Occupations</SelectItem>
+              {Object.values(Occupation).map((occupation) => (
+                <SelectItem key={occupation} value={occupation} className="hover:bg-accent">
+                  {formatOccupation(occupation)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          {selectedOccupation && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedOccupation('')}
+              className="w-full sm:w-auto"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Clear
+            </Button>
+          )}
+          
           <Collapsible open={showFilters} onOpenChange={setShowFilters}>
             <CollapsibleTrigger asChild>
               <Button variant="outline" size="sm" className="flex items-center gap-2 w-full sm:w-auto">
                 <Filter className="w-4 h-4" />
-                Filters
+                More Filters
                 {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </Button>
             </CollapsibleTrigger>
@@ -253,14 +294,6 @@ const Parents = () => {
                     <Input placeholder="Filter by address..." value={filters.address} onChange={e => setFilters(prev => ({
                     ...prev,
                     address: e.target.value
-                  }))} />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Occupation</label>
-                    <Input placeholder="Filter by occupation..." value={filters.occupation} onChange={e => setFilters(prev => ({
-                    ...prev,
-                    occupation: e.target.value
                   }))} />
                   </div>
                 </div>

@@ -21,6 +21,7 @@ import { getBaseUrl } from '@/contexts/utils/auth.api';
 import ImagePreviewModal from '@/components/ImagePreviewModal';
 import { enhancedCachedClient } from '@/api/enhancedCachedClient';
 import { CACHE_TTL } from '@/config/cacheTTL';
+import StudentDetailsDialog from '@/components/forms/StudentDetailsDialog';
 
 interface InstituteStudent {
   id: string;
@@ -35,6 +36,18 @@ interface InstituteStudent {
   fatherId?: string | null;
   motherId?: string | null;
   guardianId?: string | null;
+  studentId?: string;
+  emergencyContact?: string;
+  medicalConditions?: string;
+  allergies?: string;
+  father?: {
+    id: string;
+    name: string;
+    email?: string;
+    occupation?: string;
+    workPlace?: string;
+    children?: any[];
+  };
 }
 
 interface InstituteStudentsResponse {
@@ -133,6 +146,10 @@ const Students = () => {
     url: '',
     title: ''
   });
+  const [studentDetailsDialog, setStudentDetailsDialog] = useState<{ open: boolean; student: InstituteStudent | null }>({
+    open: false,
+    student: null
+  });
 
   // Enhanced pagination with useTableData hook - DISABLE AUTO-LOADING
   const {
@@ -221,7 +238,7 @@ const Students = () => {
     try {
       const data: InstituteStudentsResponse = await enhancedCachedClient.get(
         `/institute-users/institute/${selectedInstitute.id}/users/STUDENT/class/${selectedClass.id}`,
-        {},
+        { parent: 'true' },
         {
           ttl: CACHE_TTL.STUDENTS,
           forceRefresh,
@@ -279,7 +296,7 @@ const Students = () => {
     try {
       const data: InstituteStudentsResponse = await enhancedCachedClient.get(
         `/institute-users/institute/${selectedInstitute.id}/users/STUDENT/class/${selectedClass.id}/subject/${selectedSubject.id}`,
-        {},
+        { parent: 'true' },
         {
           ttl: CACHE_TTL.STUDENTS,
           forceRefresh,
@@ -857,7 +874,7 @@ const Students = () => {
             onAdd={undefined}
             onEdit={undefined}
             onDelete={undefined}
-            onView={undefined}
+            onView={(row: InstituteStudent) => setStudentDetailsDialog({ open: true, student: row })}
             page={pagination.page}
             rowsPerPage={pagination.limit}
             totalCount={filteredStudents.length}
@@ -911,6 +928,13 @@ const Students = () => {
         onClose={() => setImagePreview({ isOpen: false, url: '', title: '' })}
         imageUrl={imagePreview.url}
         title={imagePreview.title}
+      />
+
+      {/* Student Details Dialog */}
+      <StudentDetailsDialog
+        open={studentDetailsDialog.open}
+        onOpenChange={(open) => setStudentDetailsDialog({ open, student: null })}
+        student={studentDetailsDialog.student}
       />
     </div>
   );

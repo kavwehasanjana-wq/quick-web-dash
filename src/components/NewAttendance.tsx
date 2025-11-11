@@ -4,11 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RefreshCw, Search, Filter, Calendar, User, Clock, CheckCircle, MapPin, School, BookOpen, UserCheck, UserX, TrendingUp } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { RefreshCw, Search, Filter, Calendar, User, Clock, CheckCircle, MapPin, School, BookOpen, UserCheck, UserX, TrendingUp, ChevronsUpDown, Check } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { useToast } from '@/hooks/use-toast';
 import { getAttendanceUrl, getBaseUrl } from '@/contexts/utils/auth.api';
+import { Occupation, formatOccupation } from '@/types/occupation.types';
+import { cn } from '@/lib/utils';
 import Paper from '@mui/material/Paper';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -120,6 +124,8 @@ const NewAttendance = () => {
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [occupationFilter, setOccupationFilter] = useState<string>('');
+  const [occupationSearchOpen, setOccupationSearchOpen] = useState(false);
   const [startDate, setStartDate] = useState(getDefaultDates().startDate);
   const [endDate, setEndDate] = useState(getDefaultDates().endDate);
   const [sortOrder, setSortOrder] = useState<string>('descending');
@@ -503,7 +509,7 @@ const NewAttendance = () => {
             </div>
 
             {/* Additional Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {/* Search */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -522,6 +528,37 @@ const NewAttendance = () => {
                   <SelectItem value="late">Late</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* Occupation Filter */}
+              <Popover open={occupationSearchOpen} onOpenChange={setOccupationSearchOpen}>
+                <PopoverTrigger asChild>
+                  
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0 pointer-events-auto bg-background border shadow-md z-50" align="start">
+                  <Command className="bg-background">
+                    <CommandInput placeholder="Search occupation..." className="h-9 border-b" />
+                    <CommandList className="max-h-[300px] overflow-y-auto">
+                      <CommandEmpty className="py-6 text-center text-sm">No occupation found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem value="all" onSelect={() => {
+                      setOccupationFilter('');
+                      setOccupationSearchOpen(false);
+                    }} className="cursor-pointer">
+                          <Check className={cn("mr-2 h-4 w-4", occupationFilter === '' ? "opacity-100" : "opacity-0")} />
+                          All Occupations
+                        </CommandItem>
+                        {Object.values(Occupation).map(occupation => <CommandItem key={occupation} value={formatOccupation(occupation)} onSelect={() => {
+                      setOccupationFilter(occupation === occupationFilter ? '' : occupation);
+                      setOccupationSearchOpen(false);
+                    }} className="cursor-pointer">
+                            <Check className={cn("mr-2 h-4 w-4", occupationFilter === occupation ? "opacity-100" : "opacity-0")} />
+                            {formatOccupation(occupation)}
+                          </CommandItem>)}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
 
               {/* Sort Order */}
               <Select value={sortOrder} onValueChange={setSortOrder}>

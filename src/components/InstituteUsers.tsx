@@ -36,6 +36,7 @@ import UserInfoDialog from '@/components/forms/UserInfoDialog';
 import UserOrganizationsDialog from '@/components/forms/UserOrganizationsDialog';
 import { getBaseUrl } from '@/contexts/utils/auth.api';
 import ImagePreviewModal from '@/components/ImagePreviewModal';
+import StudentDetailsDialog from '@/components/forms/StudentDetailsDialog';
 
 interface InstituteUserData {
   id: string;
@@ -52,6 +53,18 @@ interface InstituteUserData {
   fatherId?: string;
   motherId?: string;
   guardianId?: string;
+  studentId?: string;
+  emergencyContact?: string;
+  medicalConditions?: string;
+  allergies?: string;
+  father?: {
+    id: string;
+    name: string;
+    email?: string;
+    occupation?: string;
+    workPlace?: string;
+    children?: any[];
+  };
 }
 
 interface InstituteUsersResponse {
@@ -96,10 +109,15 @@ const InstituteUsers = () => {
     url: '',
     title: ''
   });
+  const [studentDetailsDialog, setStudentDetailsDialog] = useState<{ open: boolean; student: InstituteUserData | null }>({
+    open: false,
+    student: null
+  });
 
   // Table data management for each user type
   const studentsTable = useTableData<InstituteUserData>({
     endpoint: `/institute-users/institute/${currentInstituteId}/users/STUDENT`,
+    defaultParams: { parent: 'true' }, // Add parent=true parameter
     dependencies: [], // Remove dependencies to prevent auto-reloading
     pagination: { defaultLimit: 50, availableLimits: [25, 50, 100] },
     autoLoad: true // Enable auto-loading from cache
@@ -742,14 +760,26 @@ const InstituteUsers = () => {
                     </TableCell>
                   )}
                   <TableCell>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleViewUser(userData)}
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
+                    <div className="flex gap-2">
+                      {activeTab === 'STUDENT' && (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => setStudentDetailsDialog({ open: true, student: userData })}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleViewUser(userData)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Info
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -1092,6 +1122,13 @@ const InstituteUsers = () => {
         onClose={() => setImagePreview({ isOpen: false, url: '', title: '' })}
         imageUrl={imagePreview.url}
         title={imagePreview.title}
+      />
+
+      {/* Student Details Dialog */}
+      <StudentDetailsDialog
+        open={studentDetailsDialog.open}
+        onOpenChange={(open) => setStudentDetailsDialog({ open, student: null })}
+        student={studentDetailsDialog.student}
       />
     </div>
   );

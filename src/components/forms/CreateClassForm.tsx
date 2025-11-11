@@ -12,10 +12,10 @@ import { getBaseUrl } from '@/contexts/utils/auth.api';
 import { instituteClassesApi } from '@/api/instituteClasses.api';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Upload } from 'lucide-react';
+import { CalendarIcon, Upload, X, Image as ImageIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import ClassImageUpload from '@/components/ClassImageUpload';
+import { uploadFileSimple } from '@/utils/imageUploadHelper';
 
 interface CreateClassFormProps {
   onSubmit: (data: any) => void;
@@ -26,8 +26,9 @@ const CreateClassForm = ({ onSubmit, onCancel }: CreateClassFormProps) => {
   const { user, selectedInstitute } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [teachers, setTeachers] = useState<any[]>([]);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [uploadMessage, setUploadMessage] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -81,35 +82,50 @@ const CreateClassForm = ({ onSubmit, onCancel }: CreateClassFormProps) => {
     setIsLoading(true);
     
     try {
+      // Step 1: Upload image if selected
+      let imageUrl = formData.imageUrl;
+      if (selectedImage) {
+        setUploadMessage('Uploading image...');
+        imageUrl = await uploadFileSimple(
+          selectedImage,
+          'institute-images',
+          (message, progress) => {
+            setUploadMessage(message);
+            setUploadProgress(progress);
+          }
+        );
+      }
+
+      // Step 2: Create class with imageUrl (relativePath)
+      const classData = {
+        instituteId: selectedInstitute.id,
+        name: formData.name,
+        code: formData.code,
+        academicYear: formData.academicYear,
+        level: formData.level,
+        grade: formData.grade,
+        specialty: formData.specialty,
+        classType: formData.classType,
+        capacity: formData.capacity,
+        classTeacherId: formData.classTeacherId || null,
+        description: formData.description,
+        isActive: formData.isActive,
+        startDate: formData.startDate ? new Date(formData.startDate).toISOString() : new Date().toISOString(),
+        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : new Date(new Date().getFullYear() + 1, 5, 30).toISOString(),
+        enrollmentCode: formData.enrollmentCode,
+        enrollmentEnabled: formData.enrollmentEnabled,
+        requireTeacherVerification: formData.requireTeacherVerification,
+        imageUrl: imageUrl
+      };
+
       const token = localStorage.getItem('access_token');
-      const formDataToSend = new FormData();
-      
-      // Append all form fields
-      formDataToSend.append('instituteId', selectedInstitute.id);
-      formDataToSend.append('name', formData.name);
-      formDataToSend.append('code', formData.code);
-      formDataToSend.append('academicYear', formData.academicYear);
-      formDataToSend.append('level', String(formData.level));
-      formDataToSend.append('grade', String(formData.grade));
-      formDataToSend.append('specialty', formData.specialty);
-      formDataToSend.append('classType', formData.classType);
-      formDataToSend.append('capacity', String(formData.capacity));
-      if (formData.classTeacherId) formDataToSend.append('classTeacherId', formData.classTeacherId);
-      formDataToSend.append('description', formData.description);
-      formDataToSend.append('isActive', String(formData.isActive));
-      formDataToSend.append('startDate', formData.startDate ? new Date(formData.startDate).toISOString() : new Date().toISOString());
-      formDataToSend.append('endDate', formData.endDate ? new Date(formData.endDate).toISOString() : new Date(new Date().getFullYear() + 1, 5, 30).toISOString());
-      formDataToSend.append('enrollmentCode', formData.enrollmentCode);
-      formDataToSend.append('enrollmentEnabled', String(formData.enrollmentEnabled));
-      formDataToSend.append('requireTeacherVerification', String(formData.requireTeacherVerification));
-      if (selectedImage) formDataToSend.append('image', selectedImage);
-      
       const responseRaw = await fetch(`${getBaseUrl()}/institute-classes`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
-        body: formDataToSend
+        body: JSON.stringify(classData)
       });
       
       if (!responseRaw.ok) {
@@ -366,13 +382,62 @@ const CreateClassForm = ({ onSubmit, onCancel }: CreateClassFormProps) => {
             </div>
             <div className="space-y-2">
               <Label className="text-xs">Class Image</Label>
-              <ClassImageUpload
-                currentImageUrl={formData.imageUrl}
-                onImageUpdate={(newImageUrl, file) => {
-                  handleInputChange('imageUrl', newImageUrl);
-                  if (file) setSelectedImage(file);
-                }}
-              />
+              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4">
+                {!selectedImage ? (
+                  <div>
+                    <input
+                      type="file"
+                      id="class-image-upload"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+                          if (!allowedTypes.includes(file.type)) {
+                            toast({
+                              title: "Invalid file type",
+                              description: "Please upload an image (JPG, PNG, WEBP)",
+                              variant: "destructive"
+                            });
+                            return;
+                          }
+                          if (file.size > 5 * 1024 * 1024) {
+                            toast({
+                              title: "File too large",
+                              description: "Image must be less than 5MB",
+                              variant: "destructive"
+                            });
+                            return;
+                          }
+                          setSelectedImage(file);
+                        }
+                      }}
+                      accept="image/jpeg,image/jpg,image/png,image/webp"
+                      className="hidden"
+                    />
+                    <Label htmlFor="class-image-upload" className="flex flex-col items-center justify-center cursor-pointer">
+                      <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                      <span className="text-xs text-muted-foreground">Click to upload class image</span>
+                      <span className="text-xs text-muted-foreground/70 mt-1">JPG, PNG, WEBP (max 5MB)</span>
+                    </Label>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className="h-5 w-5 text-primary" />
+                      <span className="text-xs">{selectedImage.name}</span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedImage(null)}
+                      className="h-6 w-6 p-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
               <div className="flex items-center space-x-2">
                 <Switch
                   id="isActive"
@@ -401,7 +466,7 @@ const CreateClassForm = ({ onSubmit, onCancel }: CreateClassFormProps) => {
           disabled={isLoading}
           className="h-8 px-3 text-sm"
         >
-          {isLoading ? 'Creating...' : 'Create'}
+          {isLoading ? (uploadMessage || 'Creating...') : 'Create Class'}
         </Button>
       </div>
     </form>

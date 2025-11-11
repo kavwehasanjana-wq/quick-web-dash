@@ -1,5 +1,58 @@
 import { getAttendanceUrl, getApiHeaders } from '@/contexts/utils/auth.api';
 
+export interface StudentListRecord {
+  id: string;
+  name: string;
+  email: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  phoneNumber: string;
+  imageUrl?: string;
+  dateOfBirth?: string;
+  userIdByInstitute?: string;
+  fatherId?: string;
+  motherId?: string;
+  guardianId?: string;
+  emergencyContact?: string;
+  medicalConditions?: string;
+  allergies?: string;
+  studentId?: string;
+  father?: {
+    id: string;
+    name: string;
+    email: string;
+    occupation?: string;
+    workPlace?: string;
+    children: any[];
+  };
+  mother?: {
+    id: string;
+    name: string;
+    email: string;
+    occupation?: string;
+    workPlace?: string;
+    children: any[];
+  };
+  guardian?: {
+    id: string;
+    name: string;
+    email: string;
+    occupation?: string;
+    workPlace?: string;
+    children: any[];
+  };
+}
+
+export interface StudentListResponse {
+  data: StudentListRecord[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
 export interface StudentAttendanceRecord {
   studentId: string;
   studentName: string;
@@ -42,6 +95,61 @@ export interface StudentAttendanceParams {
 }
 
 class InstituteStudentsApi {
+  // STUDENT LIST METHODS
+  
+  // Get students by class
+  async getStudentsByClass(
+    instituteId: string,
+    classId: string,
+    params: { page?: number; limit?: number; parent?: boolean } = {}
+  ): Promise<StudentListResponse> {
+    const queryParams = new URLSearchParams({
+      page: String(params.page || 1),
+      limit: String(params.limit || 50),
+      parent: String(params.parent ?? true)
+    });
+
+    console.log('Fetching students for institute:', instituteId, 'class:', classId);
+
+    const attendanceUrl = getAttendanceUrl();
+    const endpoint = `${attendanceUrl}/institute-users/institute/${instituteId}/users/STUDENT/class/${classId}?${queryParams}`;
+    const headers = await getApiHeaders();
+    
+    const response = await fetch(endpoint, { headers });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  // Get students by class and subject
+  async getStudentsBySubject(
+    instituteId: string,
+    classId: string,
+    subjectId: string,
+    params: { page?: number; limit?: number; parent?: boolean } = {}
+  ): Promise<StudentListResponse> {
+    const queryParams = new URLSearchParams({
+      page: String(params.page || 1),
+      limit: String(params.limit || 50),
+      parent: String(params.parent ?? true)
+    });
+
+    console.log('Fetching students for institute:', instituteId, 'class:', classId, 'subject:', subjectId);
+
+    const attendanceUrl = getAttendanceUrl();
+    const endpoint = `${attendanceUrl}/institute-users/institute/${instituteId}/users/STUDENT/class/${classId}/subject/${subjectId}?${queryParams}`;
+    const headers = await getApiHeaders();
+    
+    const response = await fetch(endpoint, { headers });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  // ATTENDANCE METHODS
+  
   // 1. Institute-level attendance (InstituteAdmin only)
   async getInstituteStudentAttendance(
     instituteId: string, 

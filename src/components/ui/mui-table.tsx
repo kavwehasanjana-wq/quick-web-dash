@@ -159,9 +159,9 @@ export default function MUITable({
                             Edit
                           </Button>}
                         
-                         {onView && (instituteRole === 'InstituteAdmin' || instituteRole === 'Teacher' || (instituteRole === 'Student' && sectionType === 'homework')) && sectionType !== 'lectures' && <Button variant="outline" size="sm" onClick={() => onView(row)} title={sectionType === 'homework' ? 'View Homework' : sectionType === 'exams' ? 'View Results' : 'View'} className="h-8 px-3 text-xs">
+                         {onView && (instituteRole === 'InstituteAdmin' || instituteRole === 'Teacher' || (instituteRole === 'Student' && sectionType === 'homework') || sectionType === 'students') && sectionType !== 'lectures' && <Button variant="outline" size="sm" onClick={() => onView(row)} title={sectionType === 'homework' ? 'View Homework' : sectionType === 'exams' ? 'View Results' : sectionType === 'students' ? 'View Details' : 'View'} className="h-8 px-3 text-xs">
                             <Eye className="h-3 w-3 mr-1" />
-                            View
+                            {sectionType === 'students' ? 'View' : 'View'}
                           </Button>}
                         
                         {/* Student Actions */}

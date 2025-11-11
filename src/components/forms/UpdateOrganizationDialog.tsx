@@ -3,12 +3,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Organization, organizationSpecificApi, OrganizationUpdateData } from '@/api/organization.api';
-import { Save, Loader2, Upload } from 'lucide-react';
+import { Save, Loader2 } from 'lucide-react';
 import { getBaseUrl } from '@/contexts/utils/auth.api';
+import ImageCropUpload from '@/components/common/ImageCropUpload';
 
 interface UpdateOrganizationDialogProps {
   open: boolean;
@@ -25,7 +25,6 @@ const UpdateOrganizationDialog = ({
 }: UpdateOrganizationDialogProps) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [formData, setFormData] = useState<OrganizationUpdateData>({
     name: organization.name,
     isPublic: organization.isPublic,
@@ -51,22 +50,23 @@ const UpdateOrganizationDialog = ({
 
     try {
       const token = localStorage.getItem('access_token');
-      const formDataToSend = new FormData();
+      const updatePayload = {
+        name: formData.name,
+        isPublic: formData.isPublic,
+        needEnrollmentVerification: formData.needEnrollmentVerification,
+        enabledEnrollments: formData.enabledEnrollments,
+        enrollmentKey: formData.enrollmentKey,
+        instituteId: formData.instituteId,
+        imageUrl: formData.imageUrl
+      };
       
-      formDataToSend.append('name', formData.name || '');
-      formDataToSend.append('isPublic', String(formData.isPublic));
-      formDataToSend.append('needEnrollmentVerification', String(formData.needEnrollmentVerification));
-      formDataToSend.append('enabledEnrollments', String(formData.enabledEnrollments));
-      if (formData.enrollmentKey) formDataToSend.append('enrollmentKey', formData.enrollmentKey);
-      if (formData.instituteId) formDataToSend.append('instituteId', formData.instituteId);
-      if (selectedImage) formDataToSend.append('image', selectedImage);
-      
-      const response = await fetch(`${getBaseUrl()}/organizations/${organization.organizationId}/upload-image`, {
+      const response = await fetch(`${getBaseUrl()}/organizations/${organization.organizationId}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
-        body: formDataToSend
+        body: JSON.stringify(updatePayload)
       });
       
       if (!response.ok) {
@@ -124,30 +124,13 @@ const UpdateOrganizationDialog = ({
 
             <div>
               <Label htmlFor="image">Organization Image (Optional)</Label>
-              <div className="flex items-center gap-4">
-                {(selectedImage || formData.imageUrl) && (
-                  <div className="w-16 h-16 rounded-lg border overflow-hidden flex-shrink-0">
-                    <img
-                      src={selectedImage ? URL.createObjectURL(selectedImage) : formData.imageUrl}
-                      alt="Organization preview"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-                <div className="flex-1">
-                  <Input
-                    id="image"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setSelectedImage(e.target.files?.[0] || null)}
-                  />
-                  {selectedImage && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Selected: {selectedImage.name}
-                    </p>
-                  )}
-                </div>
-              </div>
+              <ImageCropUpload
+                currentImageUrl={formData.imageUrl}
+                onImageUpdate={(url) => handleInputChange('imageUrl', url)}
+                folder="organizations"
+                aspectRatio={1}
+                label="Organization Image"
+              />
             </div>
 
             <div>

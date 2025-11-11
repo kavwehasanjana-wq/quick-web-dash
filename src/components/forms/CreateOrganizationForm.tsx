@@ -10,6 +10,7 @@ import { Building2, Upload, X, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { organizationApi, OrganizationCreateData } from '@/api/organization.api';
 import { getBaseUrl } from '@/contexts/utils/auth.api';
+import OrganizationImageUpload from '@/components/OrganizationImageUpload';
 
 interface CreateOrganizationFormProps {
   onSuccess?: (organization: any) => void;
@@ -30,65 +31,13 @@ const CreateOrganizationForm = ({ onSuccess, onCancel, instituteId, instituteNam
     instituteId: instituteId || ''
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const { toast } = useToast();
 
   // UX constants
   const MAX_NAME_LEN = 100;
   const MAX_KEY_LEN = 50;
-  const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
-  const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
-  const [errors, setErrors] = useState<{ name?: string; enrollmentKey?: string; image?: string }>({});
-  const [isDragging, setIsDragging] = useState(false);
-
-  const processImageFile = (file: File) => {
-    // Validate type
-    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      setErrors((prev) => ({ ...prev, image: 'Unsupported file type. Use PNG, JPG or WEBP.' }));
-      toast({ title: 'Invalid file type', description: 'Please upload PNG, JPG or WEBP images.', variant: 'destructive' });
-      return;
-    }
-    // Validate size
-    if (file.size > MAX_IMAGE_SIZE) {
-      setErrors((prev) => ({ ...prev, image: 'File too large. Max 5MB.' }));
-      toast({ title: 'File too large', description: 'Please select an image smaller than 5MB.', variant: 'destructive' });
-      return;
-    }
-    setSelectedImage(file);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-    setErrors((prev) => ({ ...prev, image: undefined }));
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) processImageFile(file);
-  };
-
-  const handleDropZoneDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDropZoneLeave = () => setIsDragging(false);
-
-  const handleDropZoneDrop = (e: React.DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) processImageFile(file);
-  };
-
-  const removeImage = () => {
-    setSelectedImage(null);
-    setImagePreview(null);
-    setErrors((prev) => ({ ...prev, image: undefined }));
-  };
+  const [errors, setErrors] = useState<{ name?: string; enrollmentKey?: string }>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,24 +69,25 @@ const CreateOrganizationForm = ({ onSuccess, onCancel, instituteId, instituteNam
     
     try {
       const token = localStorage.getItem('access_token');
-      const formDataToSend = new FormData();
       
-      // Append form fields
-      formDataToSend.append('name', formData.name);
-      formDataToSend.append('type', formData.type);
-      formDataToSend.append('isPublic', String(formData.isPublic));
-      formDataToSend.append('needEnrollmentVerification', String(formData.needEnrollmentVerification));
-      formDataToSend.append('enabledEnrollments', String(formData.enabledEnrollments));
-      if (formData.enrollmentKey) formDataToSend.append('enrollmentKey', formData.enrollmentKey);
-      if (formData.instituteId) formDataToSend.append('instituteId', formData.instituteId);
-      if (selectedImage) formDataToSend.append('image', selectedImage);
+      const requestBody = {
+        name: formData.name,
+        type: formData.type,
+        isPublic: formData.isPublic,
+        needEnrollmentVerification: formData.needEnrollmentVerification,
+        enabledEnrollments: formData.enabledEnrollments,
+        enrollmentKey: formData.enrollmentKey || undefined,
+        instituteId: formData.instituteId || undefined,
+        imageUrl: formData.imageUrl || undefined
+      };
       
       const response = await fetch(`${getBaseUrl()}/organizations`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
-        body: formDataToSend
+        body: JSON.stringify(requestBody)
       });
       
       if (!response.ok) {
@@ -319,56 +269,14 @@ const CreateOrganizationForm = ({ onSuccess, onCancel, instituteId, instituteNam
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="image" className="text-xs sm:text-sm font-medium">
+              <Label className="text-xs sm:text-sm font-medium">
                 Organization Image (Optional)
               </Label>
-              {!imagePreview ? (
-                <>
-                  <label 
-                    htmlFor="image" 
-                    onDragOver={handleDropZoneDragOver}
-                    onDragLeave={handleDropZoneLeave}
-                    onDrop={handleDropZoneDrop}
-                    className={`flex flex-col items-center justify-center w-full h-32 sm:h-40 border-2 border-dashed rounded-lg cursor-pointer transition-colors bg-muted/20 ${isDragging ? 'border-primary' : 'border-border hover:border-primary/50'}`}
-                  >
-                    <div className="flex flex-col items-center justify-center py-4">
-                      <Upload className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground mb-2" />
-                      <p className="text-xs sm:text-sm text-muted-foreground text-center px-2">
-                        Click to upload or drag and drop
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        PNG, JPG or WEBP (Max 5MB)
-                      </p>
-                    </div>
-                    <Input
-                      id="image"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="hidden"
-                    />
-                  </label>
-                  {errors.image && <p className="text-xs text-destructive mt-1">{errors.image}</p>}
-                </>
-              ) : (
-                <div className="relative w-full h-32 sm:h-40 border-2 border-border rounded-lg overflow-hidden bg-muted/20">
-                  <img 
-                    src={imagePreview} 
-                    alt="Preview" 
-                    className="w-full h-full object-contain"
-                  />
-                   <Button
-                    type="button"
-                    variant="destructive"
-                    size="icon"
-                    className="absolute top-2 right-2 h-7 w-7 sm:h-8 sm:w-8"
-                    onClick={removeImage}
-                    aria-label="Remove selected image"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
+              <OrganizationImageUpload
+                currentImageUrl={formData.imageUrl}
+                onImageUpdate={(newImageUrl) => handleInputChange('imageUrl', newImageUrl)}
+                organizationName={formData.name}
+              />
             </div>
 
             <div className="space-y-3 sm:space-y-4 pt-2 border-t">

@@ -340,9 +340,8 @@ const UpdateClassForm: React.FC<UpdateClassFormProps> = ({ classData, onSubmit, 
             <FormLabel>Class Image</FormLabel>
             <ClassImageUpload
               currentImageUrl={form.watch('imageUrl')}
-              onImageUpdate={(newImageUrl, file) => {
+              onImageUpdate={(newImageUrl) => {
                 form.setValue('imageUrl', newImageUrl);
-                if (file) setSelectedImage(file);
               }}
             />
           </div>

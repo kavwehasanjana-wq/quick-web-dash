@@ -1,15 +1,41 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Upload, X, Crop } from 'lucide-react';
+import { Upload, X, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import ReactCrop, { Crop as CropType, PixelCrop } from 'react-image-crop';
+import ReactCrop, { 
+  type Crop, 
+  type PixelCrop,
+  centerCrop,
+  makeAspectCrop,
+} from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { getSignedUrl, uploadToSignedUrl, verifyAndPublish } from '@/utils/imageUploadHelper';
 
 interface SubjectImageUploadProps {
   value?: string;
-  onChange: (imageUrl: string, file: File) => void;
+  onChange: (imageUrl: string) => void;
   onRemove?: () => void;
+}
+
+function centerAspectCrop(
+  mediaWidth: number,
+  mediaHeight: number,
+  aspect: number,
+) {
+  return centerCrop(
+    makeAspectCrop(
+      {
+        unit: '%',
+        width: 90,
+      },
+      aspect,
+      mediaWidth,
+      mediaHeight,
+    ),
+    mediaWidth,
+    mediaHeight,
+  )
 }
 
 const SubjectImageUpload: React.FC<SubjectImageUploadProps> = ({ value, onChange, onRemove }) => {
@@ -17,8 +43,9 @@ const SubjectImageUpload: React.FC<SubjectImageUploadProps> = ({ value, onChange
   const [previewUrl, setPreviewUrl] = useState<string>(value || '');
   const [showCropDialog, setShowCropDialog] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<string>('');
-  const [crop, setCrop] = useState<CropType>({ unit: '%', width: 90, x: 5, y: 5, height: 50.625 });
-  const [completedCrop, setCompletedCrop] = useState<PixelCrop | null>(null);
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+  const [isUploading, setIsUploading] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -30,7 +57,7 @@ const SubjectImageUpload: React.FC<SubjectImageUploadProps> = ({ value, onChange
     if (!file.type.startsWith('image/')) {
       toast({
         title: "Invalid file type",
-        description: "Please select an image file",
+        description: "Please select an image file (PNG, JPG, etc.)",
         variant: "destructive"
       });
       return;
@@ -46,6 +73,7 @@ const SubjectImageUpload: React.FC<SubjectImageUploadProps> = ({ value, onChange
     }
 
     setSelectedFile(file);
+    setCrop(undefined);
     const reader = new FileReader();
     reader.onloadend = () => {
       setImageToCrop(reader.result as string);
@@ -54,39 +82,129 @@ const SubjectImageUpload: React.FC<SubjectImageUploadProps> = ({ value, onChange
     reader.readAsDataURL(file);
   };
 
-  const handleCropComplete = async () => {
-    if (!completedCrop || !imgRef.current || !selectedFile) return;
+  const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { width, height } = e.currentTarget;
+    setCrop(centerAspectCrop(width, height, 16 / 9));
+  };
 
-    const canvas = document.createElement('canvas');
-    const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
-    const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
-    canvas.width = completedCrop.width;
-    canvas.height = completedCrop.height;
-    const ctx = canvas.getContext('2d');
+  const getCroppedImg = useCallback(
+    (image: HTMLImageElement, crop: PixelCrop): Promise<Blob> => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
 
-    if (!ctx) return;
+      if (!ctx) {
+        throw new Error('No 2d context');
+      }
 
-    ctx.drawImage(
-      imgRef.current,
-      completedCrop.x * scaleX,
-      completedCrop.y * scaleY,
-      completedCrop.width * scaleX,
-      completedCrop.height * scaleY,
-      0,
-      0,
-      completedCrop.width,
-      completedCrop.height
-    );
+      const scaleX = image.naturalWidth / image.width;
+      const scaleY = image.naturalHeight / image.height;
 
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      const croppedFile = new File([blob], selectedFile.name, { type: selectedFile.type });
-      const croppedUrl = URL.createObjectURL(blob);
-      setPreviewUrl(croppedUrl);
-      onChange(croppedUrl, croppedFile);
-      setShowCropDialog(false);
-      setImageToCrop('');
-    }, selectedFile.type);
+      const pixelRatio = window.devicePixelRatio;
+
+      canvas.width = Math.floor(crop.width * scaleX * pixelRatio);
+      canvas.height = Math.floor(crop.height * scaleY * pixelRatio);
+
+      ctx.scale(pixelRatio, pixelRatio);
+      ctx.imageSmoothingQuality = 'high';
+
+      const cropX = crop.x * scaleX;
+      const cropY = crop.y * scaleY;
+
+      const centerX = image.naturalWidth / 2;
+      const centerY = image.naturalHeight / 2;
+
+      ctx.save();
+
+      ctx.translate(-cropX, -cropY);
+      ctx.translate(centerX, centerY);
+      ctx.translate(-centerX, -centerY);
+      ctx.drawImage(
+        image,
+        0,
+        0,
+        image.naturalWidth,
+        image.naturalHeight,
+        0,
+        0,
+        image.naturalWidth,
+        image.naturalHeight,
+      );
+
+      ctx.restore();
+
+      return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error('Canvas is empty'));
+            return;
+          }
+          resolve(blob);
+        }, 'image/png');
+      });
+    },
+    [],
+  );
+
+  const handleUpload = async () => {
+    if (!imgRef.current || !completedCrop || !selectedFile) return;
+
+    setIsUploading(true);
+    
+    try {
+      // Get cropped image blob
+      const croppedImageBlob = await getCroppedImg(imgRef.current, completedCrop);
+      
+      // Step 1: Get signed URL
+      const fileName = selectedFile.name.replace(/\.[^/.]+$/, "") + '.png';
+      const signedUrlData = await getSignedUrl(
+        'subject-images',
+        fileName,
+        'image/png',
+        croppedImageBlob.size
+      );
+
+      // Step 2: Upload to signed URL
+      await uploadToSignedUrl(
+        signedUrlData.uploadUrl,
+        croppedImageBlob,
+        'image/png',
+        signedUrlData.maxFileSize || croppedImageBlob.size
+      );
+
+      // Step 3: Verify and publish
+      await verifyAndPublish(signedUrlData.relativePath);
+
+      // Step 4: Use public URL
+      setPreviewUrl(signedUrlData.publicUrl);
+      onChange(signedUrlData.publicUrl);
+      
+      toast({
+        title: "Success",
+        description: "Subject image uploaded successfully!",
+      });
+      
+      handleCloseDialog();
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "Failed to upload image. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleCloseDialog = () => {
+    setShowCropDialog(false);
+    setImageToCrop('');
+    setCrop(undefined);
+    setCompletedCrop(undefined);
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleRemove = () => {
@@ -140,7 +258,7 @@ const SubjectImageUpload: React.FC<SubjectImageUploadProps> = ({ value, onChange
         </div>
       )}
 
-      <Dialog open={showCropDialog} onOpenChange={setShowCropDialog}>
+      <Dialog open={showCropDialog} onOpenChange={handleCloseDialog}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Crop Subject Image (16:9)</DialogTitle>
@@ -149,26 +267,41 @@ const SubjectImageUpload: React.FC<SubjectImageUploadProps> = ({ value, onChange
             {imageToCrop && (
               <ReactCrop
                 crop={crop}
-                onChange={(c) => setCrop(c)}
+                onChange={(_, percentCrop) => setCrop(percentCrop)}
                 onComplete={(c) => setCompletedCrop(c)}
                 aspect={16 / 9}
+                minWidth={100}
+                minHeight={56}
               >
                 <img
                   ref={imgRef}
                   src={imageToCrop}
                   alt="Crop preview"
                   style={{ maxHeight: '60vh' }}
+                  onLoad={onImageLoad}
                 />
               </ReactCrop>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCropDialog(false)}>
+            <Button variant="outline" onClick={handleCloseDialog} disabled={isUploading}>
               Cancel
             </Button>
-            <Button onClick={handleCropComplete}>
-              <Crop className="h-4 w-4 mr-2" />
-              Apply Crop
+            <Button 
+              onClick={handleUpload} 
+              disabled={!completedCrop || isUploading}
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
