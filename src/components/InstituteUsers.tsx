@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Eye, RefreshCw, GraduationCap, Users, UserCheck, Plus, UserPlus, UserCog, Filter, Search, Shield, CheckCircle, Upload } from 'lucide-react';
+import { Eye, RefreshCw, GraduationCap, Users, UserCheck, Plus, UserPlus, UserCog, Filter, Search, Shield, Upload, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
@@ -37,7 +37,6 @@ import UserOrganizationsDialog from '@/components/forms/UserOrganizationsDialog'
 import { getBaseUrl } from '@/contexts/utils/auth.api';
 import ImagePreviewModal from '@/components/ImagePreviewModal';
 import StudentDetailsDialog from '@/components/forms/StudentDetailsDialog';
-import ImageCropUpload from '@/components/common/ImageCropUpload';
 
 interface InstituteUserData {
   id: string;
@@ -102,7 +101,7 @@ const InstituteUsers = () => {
     user: null,
   });
   const [uploadingUserId, setUploadingUserId] = useState<string | null>(null);
-  const [userImageUrl, setUserImageUrl] = useState<string>('');
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [orgDialogOpen, setOrgDialogOpen] = useState(false);
   const [selectedUserForOrg, setSelectedUserForOrg] = useState<{ id: string; name: string } | null>(null);
   const [imagePreview, setImagePreview] = useState<{ isOpen: boolean; url: string; title: string }>({
@@ -227,7 +226,10 @@ const InstituteUsers = () => {
   };
 
   const handleImageUpload = async (userId: string) => {
-    if (!userImageUrl || !currentInstituteId) return;
+    if (!selectedImage || !currentInstituteId) return;
+
+    const formData = new FormData();
+    formData.append('image', selectedImage);
 
     try {
       const token = localStorage.getItem('access_token');
@@ -236,10 +238,9 @@ const InstituteUsers = () => {
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({ imageUrl: userImageUrl })
+          body: formData
         }
       );
 
@@ -256,7 +257,7 @@ const InstituteUsers = () => {
       });
 
       setUploadingUserId(null);
-      setUserImageUrl('');
+      setSelectedImage(null);
       getCurrentTable().actions.refresh();
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -1081,30 +1082,32 @@ const InstituteUsers = () => {
       )}
 
       {/* Upload Image Dialog */}
-      <Dialog open={!!uploadingUserId} onOpenChange={() => { setUploadingUserId(null); setUserImageUrl(''); }}>
-        <DialogContent className="max-w-lg">
+      <Dialog open={!!uploadingUserId} onOpenChange={() => { setUploadingUserId(null); setSelectedImage(null); }}>
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Upload User Image</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <ImageCropUpload
-              currentImageUrl={userImageUrl}
-              onImageUpdate={setUserImageUrl}
-              folder="institute-user-images"
-              aspectRatio={1}
-              label="User Photo"
-            />
+            <div>
+              <label className="block text-sm font-medium mb-2">Select Image</label>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setSelectedImage(e.target.files?.[0] || null)}
+              />
+            </div>
             <div className="flex gap-2">
               <Button
                 onClick={() => uploadingUserId && handleImageUpload(uploadingUserId)}
-                disabled={!userImageUrl}
+                disabled={!selectedImage}
                 className="flex-1"
               >
+                <Upload className="h-4 w-4 mr-2" />
                 Upload Image
               </Button>
               <Button
                 variant="outline"
-                onClick={() => { setUploadingUserId(null); setUserImageUrl(''); }}
+                onClick={() => { setUploadingUserId(null); setSelectedImage(null); }}
                 className="flex-1"
               >
                 Close

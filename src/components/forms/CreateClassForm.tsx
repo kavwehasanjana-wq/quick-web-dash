@@ -12,10 +12,10 @@ import { getBaseUrl } from '@/contexts/utils/auth.api';
 import { instituteClassesApi } from '@/api/instituteClasses.api';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Upload, X, Image as ImageIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import ClassImageUpload from '@/components/ClassImageUpload';
+import { uploadFileSimple } from '@/utils/imageUploadHelper';
 
 interface CreateClassFormProps {
   onSubmit: (data: any) => void;
@@ -26,6 +26,9 @@ const CreateClassForm = ({ onSubmit, onCancel }: CreateClassFormProps) => {
   const { user, selectedInstitute } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [uploadMessage, setUploadMessage] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -79,7 +82,21 @@ const CreateClassForm = ({ onSubmit, onCancel }: CreateClassFormProps) => {
     setIsLoading(true);
     
     try {
-      // Create class with imageUrl (already uploaded via ImageCropUpload)
+      // Step 1: Upload image if selected
+      let imageUrl = formData.imageUrl;
+      if (selectedImage) {
+        setUploadMessage('Uploading image...');
+        imageUrl = await uploadFileSimple(
+          selectedImage,
+          'institute-images',
+          (message, progress) => {
+            setUploadMessage(message);
+            setUploadProgress(progress);
+          }
+        );
+      }
+
+      // Step 2: Create class with imageUrl (relativePath)
       const classData = {
         instituteId: selectedInstitute.id,
         name: formData.name,
@@ -98,7 +115,7 @@ const CreateClassForm = ({ onSubmit, onCancel }: CreateClassFormProps) => {
         enrollmentCode: formData.enrollmentCode,
         enrollmentEnabled: formData.enrollmentEnabled,
         requireTeacherVerification: formData.requireTeacherVerification,
-        imageUrl: formData.imageUrl
+        imageUrl: imageUrl
       };
 
       const token = localStorage.getItem('access_token');
@@ -365,12 +382,63 @@ const CreateClassForm = ({ onSubmit, onCancel }: CreateClassFormProps) => {
             </div>
             <div className="space-y-2">
               <Label className="text-xs">Class Image</Label>
-              <ClassImageUpload
-                currentImageUrl={formData.imageUrl}
-                onImageUpdate={(url) => handleInputChange('imageUrl', url)}
-                className="h-32"
-              />
-              <div className="flex items-center space-x-2 mt-2">
+              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4">
+                {!selectedImage ? (
+                  <div>
+                    <input
+                      type="file"
+                      id="class-image-upload"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+                          if (!allowedTypes.includes(file.type)) {
+                            toast({
+                              title: "Invalid file type",
+                              description: "Please upload an image (JPG, PNG, WEBP)",
+                              variant: "destructive"
+                            });
+                            return;
+                          }
+                          if (file.size > 5 * 1024 * 1024) {
+                            toast({
+                              title: "File too large",
+                              description: "Image must be less than 5MB",
+                              variant: "destructive"
+                            });
+                            return;
+                          }
+                          setSelectedImage(file);
+                        }
+                      }}
+                      accept="image/jpeg,image/jpg,image/png,image/webp"
+                      className="hidden"
+                    />
+                    <Label htmlFor="class-image-upload" className="flex flex-col items-center justify-center cursor-pointer">
+                      <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                      <span className="text-xs text-muted-foreground">Click to upload class image</span>
+                      <span className="text-xs text-muted-foreground/70 mt-1">JPG, PNG, WEBP (max 5MB)</span>
+                    </Label>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className="h-5 w-5 text-primary" />
+                      <span className="text-xs">{selectedImage.name}</span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedImage(null)}
+                      className="h-6 w-6 p-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center space-x-2">
                 <Switch
                   id="isActive"
                   checked={formData.isActive}
@@ -398,7 +466,7 @@ const CreateClassForm = ({ onSubmit, onCancel }: CreateClassFormProps) => {
           disabled={isLoading}
           className="h-8 px-3 text-sm"
         >
-          {isLoading ? 'Creating...' : 'Create Class'}
+          {isLoading ? (uploadMessage || 'Creating...') : 'Create Class'}
         </Button>
       </div>
     </form>

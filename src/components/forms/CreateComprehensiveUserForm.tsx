@@ -6,14 +6,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/api/client';
-import { CalendarIcon, User, GraduationCap, Users } from 'lucide-react';
+import { CalendarIcon, User, GraduationCap, Users, Camera, ImageIcon, X } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast as sonnerToast } from 'sonner';
-import ImageCropUpload from '@/components/common/ImageCropUpload';
 interface CreateComprehensiveUserFormProps {
   onSubmit: (data: any) => void;
   onCancel: () => void;
@@ -249,7 +248,14 @@ const CreateComprehensiveUserForm = ({
   } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [userType, setUserType] = useState<UserType>('USER');
-  const [profileImageUrl, setProfileImageUrl] = useState<string>('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
 
   // Basic user data
   const [formData, setFormData] = useState({
@@ -312,10 +318,97 @@ const CreateComprehensiveUserForm = ({
       [field]: value
     }));
   };
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  const openCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode
+        }
+      });
+      streamRef.current = stream;
+      setIsCameraOpen(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }, 100);
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      sonnerToast.error('Failed to access camera. Please check permissions.');
+    }
+  };
+  const switchCamera = async () => {
+    const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(newFacingMode);
 
+    // Close current stream
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+
+    // Open with new facing mode
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: newFacingMode
+        }
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      sonnerToast.success(`Switched to ${newFacingMode === 'user' ? 'front' : 'back'} camera`);
+    } catch (error) {
+      console.error('Error switching camera:', error);
+      sonnerToast.error('Failed to switch camera.');
+    }
+  };
+  const closeCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setIsCameraOpen(false);
+  };
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      if (context) {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(blob => {
+          if (blob) {
+            const file = new File([blob], 'camera-photo.jpg', {
+              type: 'image/jpeg'
+            });
+            setImageFile(file);
+            setImagePreview(canvas.toDataURL('image/jpeg'));
+            closeCamera();
+            sonnerToast.success('Photo captured successfully');
+          }
+        }, 'image/jpeg', 0.9);
+      }
+    }
+  };
   useEffect(() => {
     return () => {
-      // Cleanup if needed
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
     };
   }, []);
   const handleSubmit = async (e: React.FormEvent) => {
@@ -324,9 +417,9 @@ const CreateComprehensiveUserForm = ({
     try {
       const formDataToSend = new FormData();
 
-      // Add profile image URL if provided
-      if (profileImageUrl) {
-        formDataToSend.append('imageUrl', profileImageUrl);
+      // Add image if selected
+      if (imageFile) {
+        formDataToSend.append('image', imageFile);
       }
 
       // Add basic user data
@@ -451,18 +544,39 @@ const CreateComprehensiveUserForm = ({
               <div className="bg-gradient-to-r from-primary/5 to-primary/10 p-6 rounded-lg border">
                 <h3 className="text-2xl font-semibold flex items-center gap-2 mb-6">
                   <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center">
-                    <User className="h-4 w-4 text-primary" />
+                    <ImageIcon className="h-4 w-4 text-primary" />
                   </div>
                   Profile Image
                 </h3>
                 
-                <ImageCropUpload
-                  currentImageUrl={profileImageUrl}
-                  onImageUpdate={setProfileImageUrl}
-                  folder="profile-images"
-                  aspectRatio={1}
-                  label="Profile Photo"
-                />
+                <div className="space-y-4">
+                  {imagePreview && <div className="flex flex-col items-center gap-4">
+                      <div className="relative">
+                        <img src={imagePreview} alt="Preview" className="w-32 h-32 rounded-full object-cover border-4 border-primary/20" />
+                        <Button type="button" variant="destructive" size="icon" className="absolute -top-2 -right-2 h-8 w-8 rounded-full" onClick={() => {
+                      setImagePreview(null);
+                      setImageFile(null);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = '';
+                      }
+                    }}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>}
+                  
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+                    <input type="file" ref={fileInputRef} onChange={handleImageSelect} accept="image/*" className="hidden" />
+                    <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 w-full sm:w-auto">
+                      <ImageIcon className="h-4 w-4" />
+                      Choose Image
+                    </Button>
+                    <Button type="button" variant="outline" onClick={openCamera} className="flex items-center gap-2 w-full sm:w-auto">
+                      <Camera className="h-4 w-4" />
+                      Take Photo
+                    </Button>
+                  </div>
+                </div>
               </div>
 
               {/* Personal Information Section */}
@@ -751,6 +865,35 @@ const CreateComprehensiveUserForm = ({
           </div>
         </form>
       </DialogContent>
+
+      {/* Camera Modal */}
+      <Dialog open={isCameraOpen} onOpenChange={open => !open && closeCamera()}>
+        <DialogContent className="max-w-[95vw] sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Take Photo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <AspectRatio ratio={3 / 4} className="bg-black rounded-lg overflow-hidden">
+              <video ref={videoRef} autoPlay playsInline className="h-full w-full object-cover" />
+            </AspectRatio>
+            <canvas ref={canvasRef} className="hidden" />
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button type="button" variant="outline" onClick={switchCamera} className="w-full sm:flex-1">
+                <Camera className="h-4 w-4 mr-2" />
+                Switch to {facingMode === 'user' ? 'Back' : 'Front'} Camera
+              </Button>
+              <Button type="button" onClick={capturePhoto} className="w-full sm:flex-1">
+                <Camera className="h-4 w-4 mr-2" />
+                Capture Photo
+              </Button>
+              <Button type="button" variant="outline" onClick={closeCamera} className="w-full sm:w-auto">
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>;
 };
 export default CreateComprehensiveUserForm;
