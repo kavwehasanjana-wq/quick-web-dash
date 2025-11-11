@@ -5,12 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, CalendarIcon, Eye, Upload } from 'lucide-react';
+import { Loader2, CalendarIcon, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { studentsApi, StudentCreateData } from '@/api/students.api';
 import { usersApi, BasicUser } from '@/api/users.api';
 import UserInfoDialog from './UserInfoDialog';
 import { getBaseUrl } from '@/contexts/utils/auth.api';
+import ImageCropUpload from '@/components/common/ImageCropUpload';
 interface CreateInstituteStudentFormProps {
   isOpen: boolean;
   onClose: () => void;
@@ -23,7 +24,7 @@ const CreateInstituteStudentForm: React.FC<CreateInstituteStudentFormProps> = ({
 }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [studentImageUrl, setStudentImageUrl] = useState<string>('');
   const [userInfoDialog, setUserInfoDialog] = useState<{ open: boolean; user: BasicUser | null }>({
     open: false,
     user: null
@@ -129,31 +130,30 @@ const CreateInstituteStudentForm: React.FC<CreateInstituteStudentFormProps> = ({
       };
       const newStudent = await studentsApi.create(studentData);
       
-      // If image is selected, upload it
-      if (selectedImage && newStudent.userId) {
+      // If image URL is provided, update student with image
+      if (studentImageUrl && newStudent.userId) {
         try {
           const token = localStorage.getItem('access_token');
-          const imageFormData = new FormData();
-          imageFormData.append('image', selectedImage);
           
           const imageResponse = await fetch(`${getBaseUrl()}/students/${newStudent.userId}/upload-image`, {
             method: 'PATCH',
             headers: {
-              'Authorization': `Bearer ${token}`
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
             },
-            body: imageFormData
+            body: JSON.stringify({ imageUrl: studentImageUrl })
           });
           
           if (!imageResponse.ok) {
-            console.error('Failed to upload student image');
+            console.error('Failed to update student image');
             toast({
               title: "Warning",
-              description: "Student created but image upload failed",
+              description: "Student created but image update failed",
               variant: "destructive"
             });
           }
         } catch (imageError) {
-          console.error('Error uploading student image:', imageError);
+          console.error('Error updating student image:', imageError);
         }
       }
       
@@ -188,7 +188,7 @@ const CreateInstituteStudentForm: React.FC<CreateInstituteStudentFormProps> = ({
         allergies: '',
         bloodGroup: ''
       });
-      setSelectedImage(null);
+      setStudentImageUrl('');
       onSuccess();
       onClose();
     } catch (error) {
@@ -299,21 +299,14 @@ const CreateInstituteStudentForm: React.FC<CreateInstituteStudentFormProps> = ({
               </div>
               
               <div>
-                <Label htmlFor="studentImage">Student Image</Label>
-                <div className="space-y-2">
-                  <Input
-                    id="studentImage"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setSelectedImage(e.target.files?.[0] || null)}
-                    className="h-16 text-lg"
-                  />
-                  {selectedImage && (
-                    <span className="text-xs text-muted-foreground">
-                      Selected: {selectedImage.name}
-                    </span>
-                  )}
-                </div>
+                <Label>Student Image</Label>
+                <ImageCropUpload
+                  currentImageUrl={studentImageUrl}
+                  onImageUpdate={setStudentImageUrl}
+                  folder="student-images"
+                  aspectRatio={1}
+                  label="Student Photo"
+                />
               </div>
             </div>
 
