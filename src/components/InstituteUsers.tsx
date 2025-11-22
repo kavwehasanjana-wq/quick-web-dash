@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Eye, RefreshCw, GraduationCap, Users, UserCheck, Plus, UserPlus, UserCog, Filter, Search, Shield, Upload, CheckCircle } from 'lucide-react';
+import { Eye, RefreshCw, GraduationCap, Users, UserCheck, Plus, UserPlus, UserCog, Filter, Search, Shield, Upload, CheckCircle, UserX, UserMinus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
@@ -37,6 +37,8 @@ import UserOrganizationsDialog from '@/components/forms/UserOrganizationsDialog'
 import { getBaseUrl } from '@/contexts/utils/auth.api';
 import ImagePreviewModal from '@/components/ImagePreviewModal';
 import StudentDetailsDialog from '@/components/forms/StudentDetailsDialog';
+import { uploadWithSignedUrl } from '@/utils/signedUploadHelper';
+import InstituteUsersFilters, { InstituteUserFilterParams } from '@/components/InstituteUsersFilters';
 
 interface InstituteUserData {
   id: string;
@@ -77,7 +79,7 @@ interface InstituteUsersResponse {
   };
 }
 
-type UserType = 'STUDENT' | 'TEACHER' | 'ATTENDANCE_MARKER' | 'INSTITUTE_ADMIN';
+type UserType = 'STUDENT' | 'TEACHER' | 'ATTENDANCE_MARKER' | 'INSTITUTE_ADMIN' | 'INACTIVE';
 
 const InstituteUsers = () => {
   const { toast } = useToast();
@@ -93,15 +95,21 @@ const InstituteUsers = () => {
   const [selectedStudentForParent, setSelectedStudentForParent] = useState<InstituteUserData | null>(null);
   const [assignInitialUserId, setAssignInitialUserId] = useState<string | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<UserType>('STUDENT');
-  const [showFilters, setShowFilters] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'verified' | 'unverified'>('all');
+  const [isApplyingFilters, setIsApplyingFilters] = useState(false);
+  
+  // Filter state for each user type
+  const [studentFilters, setStudentFilters] = useState<InstituteUserFilterParams>({ parent: 'true' } as any);
+  const [teacherFilters, setTeacherFilters] = useState<InstituteUserFilterParams>({});
+  const [markerFilters, setMarkerFilters] = useState<InstituteUserFilterParams>({});
+  const [adminFilters, setAdminFilters] = useState<InstituteUserFilterParams>({});
+  const [inactiveFilters, setInactiveFilters] = useState<InstituteUserFilterParams>({});
   const [userInfoDialog, setUserInfoDialog] = useState<{ open: boolean; user: BasicUser | null }>({
     open: false,
     user: null,
   });
   const [uploadingUserId, setUploadingUserId] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [orgDialogOpen, setOrgDialogOpen] = useState(false);
   const [selectedUserForOrg, setSelectedUserForOrg] = useState<{ id: string; name: string } | null>(null);
   const [imagePreview, setImagePreview] = useState<{ isOpen: boolean; url: string; title: string }>({
@@ -114,10 +122,32 @@ const InstituteUsers = () => {
     student: null
   });
 
+  // Get current filters based on active tab
+  const getCurrentFilters = () => {
+    switch (activeTab) {
+      case 'STUDENT': return studentFilters;
+      case 'TEACHER': return teacherFilters;
+      case 'ATTENDANCE_MARKER': return markerFilters;
+      case 'INSTITUTE_ADMIN': return adminFilters;
+      case 'INACTIVE': return inactiveFilters;
+      default: return studentFilters;
+    }
+  };
+
+  const setCurrentFilters = (filters: InstituteUserFilterParams) => {
+    switch (activeTab) {
+      case 'STUDENT': setStudentFilters(filters); break;
+      case 'TEACHER': setTeacherFilters(filters); break;
+      case 'ATTENDANCE_MARKER': setMarkerFilters(filters); break;
+      case 'INSTITUTE_ADMIN': setAdminFilters(filters); break;
+      case 'INACTIVE': setInactiveFilters(filters); break;
+    }
+  };
+
   // Table data management for each user type
   const studentsTable = useTableData<InstituteUserData>({
     endpoint: `/institute-users/institute/${currentInstituteId}/users/STUDENT`,
-    defaultParams: { parent: 'true' }, // Add parent=true parameter
+    defaultParams: { parent: 'true', ...studentFilters },
     dependencies: [], // Remove dependencies to prevent auto-reloading
     pagination: { defaultLimit: 50, availableLimits: [25, 50, 100] },
     autoLoad: true // Enable auto-loading from cache
@@ -125,6 +155,7 @@ const InstituteUsers = () => {
 
   const teachersTable = useTableData<InstituteUserData>({
     endpoint: `/institute-users/institute/${currentInstituteId}/users/TEACHER`,
+    defaultParams: teacherFilters,
     dependencies: [], // Remove dependencies to prevent auto-reloading
     pagination: { defaultLimit: 50, availableLimits: [25, 50, 100] },
     autoLoad: true // Enable auto-loading from cache
@@ -132,6 +163,7 @@ const InstituteUsers = () => {
 
   const attendanceMarkersTable = useTableData<InstituteUserData>({
     endpoint: `/institute-users/institute/${currentInstituteId}/users/ATTENDANCE_MARKER`,
+    defaultParams: markerFilters,
     dependencies: [], // Remove dependencies to prevent auto-reloading
     pagination: { defaultLimit: 50, availableLimits: [25, 50, 100] },
     autoLoad: true // Enable auto-loading from cache
@@ -139,6 +171,15 @@ const InstituteUsers = () => {
 
   const instituteAdminsTable = useTableData<InstituteUserData>({
     endpoint: `/institute-users/institute/${currentInstituteId}/users/INSTITUTE_ADMIN`,
+    defaultParams: adminFilters,
+    dependencies: [], // Remove dependencies to prevent auto-reloading
+    pagination: { defaultLimit: 50, availableLimits: [25, 50, 100] },
+    autoLoad: true // Enable auto-loading from cache
+  });
+
+  const inactiveUsersTable = useTableData<InstituteUserData>({
+    endpoint: `/institute-users/institute/${currentInstituteId}/users/inactive`,
+    defaultParams: inactiveFilters,
     dependencies: [], // Remove dependencies to prevent auto-reloading
     pagination: { defaultLimit: 50, availableLimits: [25, 50, 100] },
     autoLoad: true // Enable auto-loading from cache
@@ -228,27 +269,53 @@ const InstituteUsers = () => {
   const handleImageUpload = async (userId: string) => {
     if (!selectedImage || !currentInstituteId) return;
 
-    const formData = new FormData();
-    formData.append('image', selectedImage);
-
+    setUploading(true);
     try {
+      // Step 1: Upload file using signed URL and get relativePath
+      console.log('Step 1: Getting signed URL and uploading file...');
+      const relativePath = await uploadWithSignedUrl(
+        selectedImage,
+        'institute-user-images',
+        (message, progress) => {
+          console.log(`Upload progress: ${progress}% - ${message}`);
+        }
+      );
+      console.log('Step 1 complete. RelativePath:', relativePath);
+
+      // Step 2: Send relativePath as imageUrl to backend
+      console.log('Step 2: Sending relativePath to backend...');
       const token = localStorage.getItem('access_token');
+      const requestBody = { imageUrl: relativePath };
+      console.log('Request body:', requestBody);
+      
       const response = await fetch(
         `${getBaseUrl()}/institute-users/institute/${currentInstituteId}/users/${userId}/upload-image`,
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           },
-          body: formData
+          body: JSON.stringify(requestBody)
         }
       );
 
+      console.log('Response status:', response.status);
+      
       if (!response.ok) {
-        throw new Error('Failed to upload image');
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { message: errorText };
+        }
+        throw new Error(errorData.message || `Server error: ${response.status}`);
       }
 
       const result = await response.json();
+      console.log('Success response:', result);
       
       toast({
         title: "Success",
@@ -259,11 +326,96 @@ const InstituteUsers = () => {
       setUploadingUserId(null);
       setSelectedImage(null);
       getCurrentTable().actions.refresh();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading image:', error);
       toast({
         title: "Error",
-        description: "Failed to upload image",
+        description: error.message || "Failed to upload image",
+        variant: "destructive",
+        duration: 1500
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleActivateUser = async (userId: string) => {
+    if (!currentInstituteId) return;
+    
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(
+        `${getBaseUrl()}/institute-users/institute/${currentInstituteId}/users/${userId}/activate`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to activate user');
+      }
+
+      const result = await response.json();
+      
+      toast({
+        title: "Success",
+        description: result.message || "User activated successfully",
+        duration: 1500
+      });
+
+      // Refresh both inactive and active tables
+      inactiveUsersTable.actions.refresh();
+      getCurrentTable().actions.refresh();
+    } catch (error: any) {
+      console.error('Error activating user:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to activate user",
+        variant: "destructive",
+        duration: 1500
+      });
+    }
+  };
+
+  const handleDeactivateUser = async (userId: string) => {
+    if (!currentInstituteId) return;
+    
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(
+        `${getBaseUrl()}/institute-users/institute/${currentInstituteId}/users/${userId}/deactivate`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to deactivate user');
+      }
+
+      const result = await response.json();
+      
+      toast({
+        title: "Success",
+        description: result.message || "User deactivated successfully",
+        duration: 1500
+      });
+
+      // Refresh the current table
+      getCurrentTable().actions.refresh();
+    } catch (error: any) {
+      console.error('Error deactivating user:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to deactivate user",
         variant: "destructive",
         duration: 1500
       });
@@ -280,6 +432,8 @@ const InstituteUsers = () => {
         return attendanceMarkersTable;
       case 'INSTITUTE_ADMIN':
         return instituteAdminsTable;
+      case 'INACTIVE':
+        return inactiveUsersTable;
       default:
         return studentsTable;
     }
@@ -297,6 +451,29 @@ const InstituteUsers = () => {
     return getCurrentTable().state.data;
   };
 
+  const handleFiltersChange = (newFilters: InstituteUserFilterParams) => {
+    setCurrentFilters(newFilters);
+  };
+
+  const handleApplyFilters = async () => {
+    setIsApplyingFilters(true);
+    const currentFilters = getCurrentFilters();
+    const currentTable = getCurrentTable();
+    
+    try {
+      // Update filters and immediately trigger API call
+      currentTable.actions.updateFilters(currentFilters);
+      await currentTable.actions.refresh();
+    } finally {
+      setIsApplyingFilters(false);
+    }
+  };
+
+  const handleClearFilters = () => {
+    setCurrentFilters({});
+    getCurrentTable().actions.updateFilters({});
+  };
+
   const getUserTypeLabel = (type: UserType) => {
     switch (type) {
       case 'STUDENT':
@@ -307,6 +484,8 @@ const InstituteUsers = () => {
         return 'Attendance Markers';
       case 'INSTITUTE_ADMIN':
         return 'Institute Admins';
+      case 'INACTIVE':
+        return 'Inactive Users';
       default:
         return '';
     }
@@ -322,6 +501,8 @@ const InstituteUsers = () => {
         return UserCheck;
       case 'INSTITUTE_ADMIN':
         return Shield;
+      case 'INACTIVE':
+        return UserX;
       default:
         return Users;
     }
@@ -347,15 +528,6 @@ const InstituteUsers = () => {
 
   const currentTable = getCurrentTable();
   const currentUsers = getCurrentUsers();
-  const filteredUsers = currentUsers.filter((u) => {
-    const term = searchTerm.trim().toLowerCase();
-    const matchesTerm = !term || [u.name, u.id, u.email, u.phoneNumber]
-      .filter(Boolean)
-      .some((v) => String(v).toLowerCase().includes(term));
-    const matchesStatus =
-      statusFilter === 'all' || (statusFilter === 'verified' ? !!u.verifiedBy : !u.verifiedBy);
-    return matchesTerm && matchesStatus;
-  });
   const currentLoading = currentTable.state.loading;
   const IconComponent = getUserTypeIcon(activeTab);
 
@@ -369,15 +541,6 @@ const InstituteUsers = () => {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 flex-1 sm:flex-none"
-            size="sm"
-          >
-            <Filter className="h-4 w-4" />
-            Filters
-          </Button>
           <Button 
             onClick={() => setShowAssignMethodsDialog(true)}
             variant="outline"
@@ -397,6 +560,16 @@ const InstituteUsers = () => {
           </Button>
         </div>
       </div>
+
+      {/* Filters Component */}
+      <InstituteUsersFilters
+        filters={getCurrentFilters()}
+        onFiltersChange={handleFiltersChange}
+        onApplyFilters={handleApplyFilters}
+        onClearFilters={handleClearFilters}
+        userType={activeTab}
+        isApplying={isApplyingFilters}
+      />
 
       {/* Tabs for different user types */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as UserType)}>
@@ -431,12 +604,19 @@ const InstituteUsers = () => {
               <Shield className="h-4 w-4" />
               {activeTab === 'INSTITUTE_ADMIN' && <span className="text-sm">Admins</span>}
             </TabsTrigger>
+            <TabsTrigger 
+              value="INACTIVE" 
+              className="flex items-center gap-2 px-3 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md whitespace-nowrap data-[state=inactive]:px-2"
+            >
+              <UserX className="h-4 w-4" />
+              {activeTab === 'INACTIVE' && <span className="text-sm">Inactive</span>}
+            </TabsTrigger>
           </TabsList>
         </div>
 
         {/* Desktop: Full width tabs with text */}
         <div className="hidden lg:block">
-          <TabsList className="grid w-full grid-cols-4 gap-2 p-2 h-auto bg-muted/50">
+          <TabsList className="grid w-full grid-cols-5 gap-2 p-2 h-auto bg-muted/50">
             <TabsTrigger 
               value="STUDENT" 
               className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
@@ -464,6 +644,13 @@ const InstituteUsers = () => {
             >
               <Shield className="h-4 w-4" />
               <span>Admins</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="INACTIVE" 
+              className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              <UserX className="h-4 w-4" />
+              <span>Inactive</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -587,70 +774,36 @@ const InstituteUsers = () => {
             </Button>
           </div>
         </TabsContent>
-      </Tabs>
 
-      {/* Filter Controls */}
-      {showFilters && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Filter className="h-5 w-5" />
-              Filter {getUserTypeLabel(activeTab)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder={`Search ${activeTab.toLowerCase()}s...`}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Select 
-                value={statusFilter}
-                onValueChange={(value) => setStatusFilter(value as 'all' | 'verified' | 'unverified')}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="verified">Verified</SelectItem>
-                  <SelectItem value="unverified">Unverified</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select 
-                value={currentTable.pagination.limit.toString()} 
-                onValueChange={(value) => currentTable.actions.setLimit(parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Items per page" />
-                </SelectTrigger>
-                <SelectContent>
-                  {currentTable.availableLimits.map((limit) => (
-                    <SelectItem key={limit} value={limit.toString()}>
-                      {limit} per page
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearchTerm('');
-                  setStatusFilter('all');
-                }}
-                className="w-full"
-              >
-                Clear Filters
-              </Button>
+        <TabsContent value="INACTIVE" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="flex items-center gap-1">
+                <UserX className="h-4 w-4" />
+                {inactiveUsersTable.pagination.totalCount} Inactive Users
+              </Badge>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <Button 
+              onClick={() => inactiveUsersTable.actions.refresh()} 
+              disabled={inactiveUsersTable.state.loading}
+              variant="outline"
+              size="sm"
+            >
+              {inactiveUsersTable.state.loading ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Load Inactive Users
+                </>
+              )}
+            </Button>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Users MUI Table */}
       <Paper sx={{ width: '100%', overflow: 'hidden' }}>
@@ -671,10 +824,7 @@ const InstituteUsers = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredUsers
-                .slice(currentTable.pagination.page * currentTable.pagination.limit, 
-                       currentTable.pagination.page * currentTable.pagination.limit + currentTable.pagination.limit)
-                .map((userData) => (
+              {currentUsers.map((userData) => (
                 <TableRow hover role="checkbox" tabIndex={-1} key={userData.id}>
                   <TableCell>
                     <div 
@@ -771,6 +921,26 @@ const InstituteUsers = () => {
                           View
                         </Button>
                       )}
+                      {activeTab === 'INACTIVE' ? (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => handleActivateUser(userData.id)}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <UserCheck className="h-4 w-4 mr-1" />
+                          Activate
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDeactivateUser(userData.id)}
+                        >
+                          <UserMinus className="h-4 w-4 mr-1" />
+                          Deactivate
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"
@@ -783,9 +953,9 @@ const InstituteUsers = () => {
                   </TableCell>
                 </TableRow>
               ))}
-              {filteredUsers.length === 0 && (
+              {currentUsers.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={activeTab === 'STUDENT' ? 10 : 9} align="center">
+                  <TableCell colSpan={activeTab === 'STUDENT' ? 10 : (activeTab === 'INACTIVE' ? 9 : 9)} align="center">
                     <div className="py-12 text-center text-gray-500">
                       <IconComponent className="h-12 w-12 mx-auto mb-4 opacity-50" />
                       <p className="text-lg">No {getUserTypeLabel(activeTab).toLowerCase()}</p>
@@ -1099,11 +1269,11 @@ const InstituteUsers = () => {
             <div className="flex gap-2">
               <Button
                 onClick={() => uploadingUserId && handleImageUpload(uploadingUserId)}
-                disabled={!selectedImage}
+                disabled={!selectedImage || uploading}
                 className="flex-1"
               >
                 <Upload className="h-4 w-4 mr-2" />
-                Upload Image
+                {uploading ? 'Uploading...' : 'Upload Image'}
               </Button>
               <Button
                 variant="outline"

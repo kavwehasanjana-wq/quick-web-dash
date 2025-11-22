@@ -13,6 +13,7 @@ import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast as sonnerToast } from 'sonner';
+import { getSignedUrl, uploadToSignedUrl, detectFolder } from '@/utils/imageUploadHelper';
 interface CreateComprehensiveUserFormProps {
   onSubmit: (data: any) => void;
   onCancel: () => void;
@@ -250,6 +251,8 @@ const CreateComprehensiveUserForm = ({
   const [userType, setUserType] = useState<UserType>('USER');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [idFile, setIdFile] = useState<File | null>(null);
+  const [idPreview, setIdPreview] = useState<string | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -415,56 +418,109 @@ const CreateComprehensiveUserForm = ({
     e.preventDefault();
     setIsLoading(true);
     try {
-      const formDataToSend = new FormData();
+      let profileImageRelativePath = '';
+      let idDocumentRelativePath = '';
 
-      // Add image if selected
+      // Upload profile image if selected
       if (imageFile) {
-        formDataToSend.append('image', imageFile);
+        sonnerToast.info('Uploading profile image...');
+        const folder = detectFolder(imageFile, 'profile');
+        const signedUrlData = await getSignedUrl(
+          folder,
+          imageFile.name,
+          imageFile.type,
+          imageFile.size
+        );
+        
+        await uploadToSignedUrl(
+          signedUrlData.uploadUrl,
+          imageFile,
+          imageFile.type,
+          signedUrlData.maxFileSize || imageFile.size
+        );
+        
+        profileImageRelativePath = signedUrlData.relativePath;
+        sonnerToast.success('Profile image uploaded');
       }
 
-      // Add basic user data
-      formDataToSend.append('firstName', formData.firstName);
-      formDataToSend.append('lastName', formData.lastName);
-      formDataToSend.append('email', formData.email);
-      formDataToSend.append('phoneNumber', formData.phoneNumber);
-      formDataToSend.append('userType', userType);
-      formDataToSend.append('gender', formData.gender);
-      formDataToSend.append('dateOfBirth', formData.dateOfBirth);
-      if (formData.nic) formDataToSend.append('nic', formData.nic);
-      if (formData.birthCertificateNo) formDataToSend.append('birthCertificateNo', formData.birthCertificateNo);
-      if (formData.addressLine1) formDataToSend.append('addressLine1', formData.addressLine1);
-      if (formData.addressLine2) formDataToSend.append('addressLine2', formData.addressLine2);
-      if (formData.city) formDataToSend.append('city', formData.city);
-      if (formData.district) formDataToSend.append('district', formData.district);
-      if (formData.province) formDataToSend.append('province', formData.province);
-      if (formData.postalCode) formDataToSend.append('postalCode', formData.postalCode);
-      if (formData.country) formDataToSend.append('country', formData.country);
-      if (formData.idUrl) formDataToSend.append('idUrl', formData.idUrl);
-      formDataToSend.append('isActive', String(formData.isActive));
+      // Upload ID document if selected
+      if (idFile) {
+        sonnerToast.info('Uploading ID document...');
+        const folder = detectFolder(idFile, 'id-document');
+        const signedUrlData = await getSignedUrl(
+          folder,
+          idFile.name,
+          idFile.type,
+          idFile.size
+        );
+        
+        await uploadToSignedUrl(
+          signedUrlData.uploadUrl,
+          idFile,
+          idFile.type,
+          signedUrlData.maxFileSize || idFile.size
+        );
+        
+        idDocumentRelativePath = signedUrlData.relativePath;
+        sonnerToast.success('ID document uploaded');
+      }
+
+      // Build JSON payload
+      const payload: any = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        phone: formData.phoneNumber,
+        userType,
+        gender: formData.gender,
+        dateOfBirth: formData.dateOfBirth,
+        isActive: formData.isActive
+      };
+
+      // Add optional fields
+      if (formData.nic) payload.nic = formData.nic;
+      if (formData.birthCertificateNo) payload.birthCertificateNo = formData.birthCertificateNo;
+      if (formData.addressLine1) payload.addressLine1 = formData.addressLine1;
+      if (formData.addressLine2) payload.addressLine2 = formData.addressLine2;
+      if (formData.city) payload.city = formData.city;
+      if (formData.district) payload.district = formData.district;
+      if (formData.province) payload.province = formData.province;
+      if (formData.postalCode) payload.postalCode = formData.postalCode;
+      if (formData.country) payload.country = formData.country;
+      
+      // Add uploaded file paths
+      if (profileImageRelativePath) payload.imageUrl = profileImageRelativePath;
+      if (idDocumentRelativePath) payload.idUrl = idDocumentRelativePath;
 
       // Add student data if applicable
       if (userType === 'USER' || userType === 'USER_WITHOUT_PARENT') {
-        if (studentData.studentId) formDataToSend.append('studentId', studentData.studentId);
-        if (studentData.emergencyContact) formDataToSend.append('emergencyContact', studentData.emergencyContact);
-        if (studentData.medicalConditions) formDataToSend.append('medicalConditions', studentData.medicalConditions);
-        if (studentData.allergies) formDataToSend.append('allergies', studentData.allergies);
-        if (studentData.bloodGroup) formDataToSend.append('bloodGroup', studentData.bloodGroup);
-        if (studentData.fatherId) formDataToSend.append('fatherId', studentData.fatherId);
-        if (studentData.fatherPhoneNumber) formDataToSend.append('fatherPhoneNumber', studentData.fatherPhoneNumber);
-        if (studentData.motherId) formDataToSend.append('motherId', studentData.motherId);
-        if (studentData.motherPhoneNumber) formDataToSend.append('motherPhoneNumber', studentData.motherPhoneNumber);
-        if (studentData.guardianId) formDataToSend.append('guardianId', studentData.guardianId);
-        if (studentData.guardianPhoneNumber) formDataToSend.append('guardianPhoneNumber', studentData.guardianPhoneNumber);
+        payload.studentData = {
+          studentId: studentData.studentId || undefined,
+          emergencyContact: studentData.emergencyContact || undefined,
+          medicalConditions: studentData.medicalConditions || undefined,
+          allergies: studentData.allergies || undefined,
+          bloodGroup: studentData.bloodGroup || undefined,
+          fatherId: studentData.fatherId ? Number(String(studentData.fatherId)) : undefined,
+          fatherPhoneNumber: studentData.fatherPhoneNumber || undefined,
+          motherId: studentData.motherId ? Number(String(studentData.motherId)) : undefined,
+          motherPhoneNumber: studentData.motherPhoneNumber || undefined,
+          guardianId: studentData.guardianId ? Number(String(studentData.guardianId)) : undefined,
+          guardianPhoneNumber: studentData.guardianPhoneNumber || undefined
+        };
       }
 
       // Add parent data if applicable
       if (userType === 'USER' || userType === 'USER_WITHOUT_STUDENT') {
-        if (parentData.occupation) formDataToSend.append('occupation', parentData.occupation);
-        if (parentData.workplace) formDataToSend.append('workplace', parentData.workplace);
-        if (parentData.workPhone) formDataToSend.append('workPhone', parentData.workPhone);
-        if (parentData.educationLevel) formDataToSend.append('educationLevel', parentData.educationLevel);
+        payload.parentData = {
+          occupation: parentData.occupation || undefined,
+          workplace: parentData.workplace || undefined,
+          workPhone: parentData.workPhone || undefined,
+          educationLevel: parentData.educationLevel || undefined
+        };
       }
-      const response = await apiClient.post('/users', formDataToSend);
+
+      const response = await apiClient.post('/users/comprehensive', payload);
       toast({
         title: "Success",
         description: response.message || "User created successfully!"

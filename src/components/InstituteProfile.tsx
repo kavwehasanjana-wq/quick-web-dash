@@ -131,141 +131,189 @@ const InstituteProfile = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-background/80 p-4 md:p-6 lg:p-8">
-      <div className="max-w-4xl mx-auto space-y-8">
-        {/* Header Section */}
-        <div className="text-center space-y-4">
-          <div className="relative inline-block">
-            <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
-            <Avatar className="relative h-32 w-32 border-4 border-background shadow-xl">
-              <AvatarImage src={profileData.instituteUserImageUrl || ''} />
-              <AvatarFallback className="text-3xl">
-                {profileData.firstName.charAt(0)}{profileData.lastName.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-          </div>
-          <div>
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent mb-2">
-              {profileData.firstName} {profileData.lastName}
-            </h1>
-            <p className="text-muted-foreground text-lg">
-              {profileData.userType}
-            </p>
-          </div>
-          <div className="flex items-center justify-center gap-4">
-            {getStatusBadge(profileData.status)}
-            {getVerificationBadge(profileData.imageVerificationStatus)}
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/10 p-4 md:p-6 lg:p-8">
+      <div className="max-w-5xl mx-auto space-y-8">
+        {/* Header Section with Modern Design */}
+        <div className="relative">
+          {/* Decorative Background Elements */}
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-3xl blur-3xl -z-10" />
+          
+          <div className="relative bg-gradient-to-br from-card/80 to-card/50 backdrop-blur-xl rounded-3xl border border-border/50 shadow-2xl overflow-hidden">
+            {/* Gradient Overlay */}
+            <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-primary/5 to-transparent" />
+            
+            <div className="relative p-8 md:p-12">
+              <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
+                {/* Profile Image */}
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-purple-500/30 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="relative">
+                    <Avatar className="h-32 w-32 md:h-40 md:w-40 ring-4 ring-background shadow-xl">
+                      <AvatarImage src={profileData.instituteUserImageUrl || ''} alt="Institute Profile" />
+                      <AvatarFallback className="text-3xl font-semibold bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
+                        {profileData.firstName.charAt(0)}{profileData.lastName.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                </div>
+
+                {/* User Info */}
+                <div className="flex-1 text-center md:text-left space-y-4">
+                  <div>
+                    <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text mb-2">
+                      {profileData.firstName} {profileData.lastName}
+                    </h1>
+                    <p className="text-muted-foreground text-base md:text-lg flex items-center justify-center md:justify-start gap-2 flex-wrap">
+                      <Badge variant="secondary" className="text-sm">
+                        <Shield className="h-3 w-3 mr-1" />
+                        {profileData.userType}
+                      </Badge>
+                      <span>•</span>
+                      <span>Member since {new Date(profileData.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}</span>
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 pt-2">
+                    {getStatusBadge(profileData.status)}
+                    {getVerificationBadge(profileData.imageVerificationStatus)}
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                    {profileData.email && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
+                        <Mail className="h-4 w-4" />
+                        <span className="hidden sm:inline">{profileData.email}</span>
+                      </div>
+                    )}
+                    {profileData.phoneNumber && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
+                        <Phone className="h-4 w-4" />
+                        <span>{profileData.phoneNumber}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Profile Information Card */}
-        <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <User className="h-5 w-5 text-primary" />
-              Institute Profile Information
-            </CardTitle>
-            <CardDescription>
-              Your profile details within the institute
-            </CardDescription>
+        <Card className="border-0 shadow-xl bg-gradient-to-br from-card via-card/95 to-card/90 backdrop-blur-xl overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-3xl -z-10" />
+          <CardHeader className="pb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/15 to-primary/5">
+                <Building className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-2xl">Institute Profile Details</CardTitle>
+                <CardDescription className="text-base">
+                  Your profile information within the institute
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* User ID */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                   <IdCard className="h-4 w-4" />
                   User ID
                 </div>
-                <div className="p-3 rounded-md bg-muted/50 border">
-                  <p className="font-medium">{profileData.userId}</p>
+                <div className="h-12 px-4 rounded-xl bg-gradient-to-r from-muted/70 to-muted/40 border border-border/50 flex items-center">
+                  <p className="font-medium text-sm">{profileData.userId}</p>
                 </div>
               </div>
 
               {/* Institute User ID */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                   <IdCard className="h-4 w-4" />
                   Institute User ID
                 </div>
-                <div className="p-3 rounded-md bg-muted/50 border">
+                <div className="h-12 px-4 rounded-xl bg-gradient-to-r from-muted/70 to-muted/40 border border-border/50 flex items-center">
                   <p className="font-medium">{profileData.userIdByInstitute}</p>
                 </div>
               </div>
 
               {/* Email */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                   <Mail className="h-4 w-4" />
                   Email Address
                 </div>
-                <div className="p-3 rounded-md bg-muted/50 border">
+                <div className="h-12 px-4 rounded-xl bg-gradient-to-r from-muted/70 to-muted/40 border border-border/50 flex items-center gap-3">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
                   <p className="font-medium">{profileData.email}</p>
                 </div>
               </div>
 
               {/* Phone Number */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                   <Phone className="h-4 w-4" />
                   Phone Number
                 </div>
-                <div className="p-3 rounded-md bg-muted/50 border">
+                <div className="h-12 px-4 rounded-xl bg-gradient-to-r from-muted/70 to-muted/40 border border-border/50 flex items-center gap-3">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
                   <p className="font-medium">{profileData.phoneNumber}</p>
                 </div>
               </div>
 
               {/* Institute ID */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                   <Building className="h-4 w-4" />
                   Institute ID
                 </div>
-                <div className="p-3 rounded-md bg-muted/50 border">
-                  <p className="font-medium">{profileData.instituteId}</p>
+                <div className="h-12 px-4 rounded-xl bg-gradient-to-r from-muted/70 to-muted/40 border border-border/50 flex items-center">
+                  <p className="font-medium text-sm">{profileData.instituteId}</p>
                 </div>
               </div>
 
               {/* Institute Card ID */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                   <IdCard className="h-4 w-4" />
                   Institute Card ID
                 </div>
-                <div className="p-3 rounded-md bg-muted/50 border">
+                <div className="h-12 px-4 rounded-xl bg-gradient-to-r from-muted/70 to-muted/40 border border-border/50 flex items-center">
                   <p className="font-medium">{profileData.instituteCardId || 'Not assigned'}</p>
                 </div>
               </div>
 
               {/* User Type */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                   <Shield className="h-4 w-4" />
                   User Type
                 </div>
-                <div className="p-3 rounded-md bg-muted/50 border">
-                  <p className="font-medium">{profileData.userType}</p>
+                <div className="h-12 px-4 rounded-xl bg-gradient-to-r from-muted/70 to-muted/40 border border-border/50 flex items-center">
+                  <Badge variant="secondary">{profileData.userType}</Badge>
                 </div>
               </div>
 
               {/* Image Verified By */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                   <CheckCircle className="h-4 w-4" />
                   Image Verified By
                 </div>
-                <div className="p-3 rounded-md bg-muted/50 border">
+                <div className="h-12 px-4 rounded-xl bg-gradient-to-r from-muted/70 to-muted/40 border border-border/50 flex items-center">
                   <p className="font-medium">{profileData.imageVerifiedBy || 'Not verified yet'}</p>
                 </div>
               </div>
 
-              {/* Created At */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              {/* Member Since */}
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                   <Calendar className="h-4 w-4" />
                   Member Since
                 </div>
-                <div className="p-3 rounded-md bg-muted/50 border">
+                <div className="h-12 px-4 rounded-xl bg-gradient-to-r from-muted/70 to-muted/40 border border-border/50 flex items-center gap-3">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
                   <p className="font-medium">
                     {new Date(profileData.createdAt).toLocaleDateString('en-US', {
                       year: 'numeric',
@@ -276,13 +324,14 @@ const InstituteProfile = () => {
                 </div>
               </div>
 
-              {/* Updated At */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              {/* Last Updated */}
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                   <Calendar className="h-4 w-4" />
                   Last Updated
                 </div>
-                <div className="p-3 rounded-md bg-muted/50 border">
+                <div className="h-12 px-4 rounded-xl bg-gradient-to-r from-muted/70 to-muted/40 border border-border/50 flex items-center gap-3">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
                   <p className="font-medium">
                     {new Date(profileData.updatedAt).toLocaleDateString('en-US', {
                       year: 'numeric',
@@ -294,13 +343,15 @@ const InstituteProfile = () => {
               </div>
 
               {/* Active Status */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                   <CheckCircle className="h-4 w-4" />
                   Active Status
                 </div>
-                <div className="p-3 rounded-md bg-muted/50 border">
-                  <p className="font-medium">{profileData.isActive ? 'Active' : 'Inactive'}</p>
+                <div className="h-12 px-4 rounded-xl bg-gradient-to-r from-muted/70 to-muted/40 border border-border/50 flex items-center">
+                  <Badge variant={profileData.isActive ? "default" : "secondary"}>
+                    {profileData.isActive ? 'Active' : 'Inactive'}
+                  </Badge>
                 </div>
               </div>
             </div>

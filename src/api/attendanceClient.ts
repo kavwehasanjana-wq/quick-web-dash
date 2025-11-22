@@ -1,5 +1,5 @@
 import { apiCache } from '@/utils/apiCache';
-import { getAttendanceUrl, getApiHeaders } from '@/contexts/utils/auth.api';
+import { getAttendanceUrl, getApiHeaders, refreshAccessToken } from '@/contexts/utils/auth.api';
 
 export interface CachedRequestOptions {
   ttl?: number;
@@ -13,9 +13,51 @@ class AttendanceApiClient {
   private readonly PENDING_REQUEST_TTL = 30000; // 30 seconds
   private requestCooldown = new Map<string, number>();
   private readonly COOLDOWN_PERIOD = 1000; // 1 second between identical requests
+  private isRefreshing = false;
+  private refreshPromise: Promise<void> | null = null;
 
   constructor() {
     this.baseUrl = getAttendanceUrl();
+  }
+
+  /**
+   * Handle 401 errors by refreshing token and redirecting to login if refresh fails
+   */
+  private async handle401Error(): Promise<boolean> {
+    if (this.isRefreshing && this.refreshPromise) {
+      try {
+        await this.refreshPromise;
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    this.isRefreshing = true;
+    this.refreshPromise = (async () => {
+      try {
+        console.log('🔄 401 Error (Attendance) - Attempting token refresh...');
+        await refreshAccessToken();
+        console.log('✅ Token refreshed successfully');
+      } catch (error) {
+        console.error('❌ Token refresh failed:', error);
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user_data');
+        console.log('🚪 Redirecting to login page...');
+        window.location.href = '/login';
+        throw error;
+      } finally {
+        this.isRefreshing = false;
+        this.refreshPromise = null;
+      }
+    })();
+
+    try {
+      await this.refreshPromise;
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private generateRequestKey(endpoint: string, params?: Record<string, any>): string {
@@ -158,9 +200,37 @@ class AttendanceApiClient {
         
         console.error(`Attendance API Error ${response.status}:`, errorText);
         
-        // Handle auth errors
+        // Handle 401 - Try to refresh token
         if (response.status === 401) {
-          localStorage.removeItem('access_token');
+          const refreshed = await this.handle401Error();
+          
+          if (refreshed) {
+            console.log('🔁 Retrying attendance request with new token...');
+            const retryResponse = await fetch(url.toString(), {
+              method: 'GET',
+              headers: this.getHeaders()
+            });
+            
+            if (!retryResponse.ok) {
+              throw new Error(`HTTP ${retryResponse.status}: ${retryResponse.statusText}`);
+            }
+            
+            const retryContentType = retryResponse.headers.get('Content-Type') || '';
+            let retryData: T;
+            
+            if (retryContentType.includes('application/json')) {
+              retryData = await retryResponse.json();
+            } else {
+              retryData = {} as T;
+            }
+            
+            const requestKey = this.generateRequestKey(endpoint, params);
+            await apiCache.setCache(requestKey, retryData, params, ttl);
+            console.log('✅ Retry successful after token refresh');
+            return retryData;
+          }
+          
+          throw new Error('Authentication failed');
         }
         
         throw new Error(errorText || `HTTP ${response.status}: ${response.statusText}`);
@@ -249,6 +319,42 @@ class AttendanceApiClient {
         }
         
         console.error(`Attendance POST Error ${response.status}:`, errorText);
+        
+        // Handle 401 - Try to refresh token
+        if (response.status === 401) {
+          const refreshed = await this.handle401Error();
+          
+          if (refreshed) {
+            console.log('🔁 Retrying attendance POST request with new token...');
+            const retryResponse = await fetch(url, {
+              method: 'POST',
+              headers: {
+                ...this.getHeaders(),
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(body)
+            });
+            
+            if (!retryResponse.ok) {
+              throw new Error(`HTTP ${retryResponse.status}: ${retryResponse.statusText}`);
+            }
+            
+            const retryContentType = retryResponse.headers.get('Content-Type') || '';
+            let retryData: T;
+            
+            if (retryContentType.includes('application/json')) {
+              retryData = await retryResponse.json();
+            } else {
+              retryData = {} as T;
+            }
+            
+            console.log('✅ POST retry successful after token refresh');
+            return retryData;
+          }
+          
+          throw new Error('Authentication failed');
+        }
+        
         throw new Error(errorText || `HTTP ${response.status}: ${response.statusText}`);
       }
 

@@ -131,6 +131,11 @@ class LectureApi {
     return enhancedCachedClient.delete<void>(`/institute-class-subject-lectures/${id}`, context);
   }
 
+  async deleteInstituteLecturePermanent(id: string, context?: { instituteId?: string }): Promise<any> {
+    console.log('🗑️ Permanently deleting institute lecture (will invalidate cache):', id);
+    return enhancedCachedClient.delete<any>(`/institute-lectures/${id}/permanent`, context);
+  }
+
   async hasLecturesCached(params?: LectureQueryParams): Promise<boolean> {
     return enhancedCachedClient.hasCache('/institute-class-subject-lectures', params, {
       userId: params?.userId,

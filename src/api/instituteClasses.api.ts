@@ -166,7 +166,31 @@ export interface ClassQueryParams {
   classId?: string;
 }
 
+export interface TeacherInfo {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  imageUrl?: string;
+  phoneNumber?: string;
+  userType: string;
+}
+
 export const instituteClassesApi = {
+  // Assign teacher to class
+  assignTeacher: async (classId: string, teacherId: string): Promise<{ success: boolean; message: string; data: any }> => {
+    return enhancedCachedClient.patch(`/institute-classes/${classId}/assign-teacher`, { teacherId }, {
+      classId
+    });
+  },
+
+  // Unassign teacher from class
+  unassignTeacher: async (classId: string): Promise<{ success: boolean; message: string; data: any }> => {
+    return enhancedCachedClient.patch(`/institute-classes/${classId}/unassign-teacher`, {}, {
+      classId
+    });
+  },
+
   // Create with auto-invalidation
   create: async (data: InstituteClassCreateData): Promise<InstituteClassResponse> => {
     return enhancedCachedClient.post('/institute-classes', data, {

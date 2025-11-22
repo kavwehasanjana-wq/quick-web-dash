@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, FileText, CheckCircle, AlertCircle, Calendar, DollarSign, RefreshCw, ExternalLink, Eye, Search, Filter, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { PDFViewer } from '@/components/ui/pdf-viewer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -473,12 +474,12 @@ const PaymentSubmissions = () => {
 
         {/* Receipt Viewer Modal */}
         <Dialog open={receiptModalOpen} onOpenChange={setReceiptModalOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogContent className="max-w-5xl h-[90vh]">
             <DialogHeader>
               <DialogTitle>Payment Receipt</DialogTitle>
             </DialogHeader>
-            <div className="w-full h-[70vh]">
-              {selectedReceiptUrl && <iframe src={selectedReceiptUrl} className="w-full h-full border rounded" title="Payment Receipt" />}
+            <div className="w-full h-[calc(90vh-80px)]">
+              {selectedReceiptUrl && <PDFViewer url={selectedReceiptUrl} title="Payment Receipt" />}
             </div>
           </DialogContent>
         </Dialog>

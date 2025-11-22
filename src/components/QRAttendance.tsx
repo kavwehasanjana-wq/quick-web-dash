@@ -415,7 +415,7 @@ const QRAttendance = () => {
         studentCardId: studentCardId.trim(),
         instituteId: currentInstituteId,
         instituteName: selectedInstitute.name,
-        address: location.address,
+        address: `${selectedInstitute.name} - ${location.address}`,
         markingMethod: selectedMethod,
         status: status
       };
@@ -526,7 +526,7 @@ const QRAttendance = () => {
         studentId: studentId.trim(),
         instituteId: currentInstituteId,
         instituteName: selectedInstitute.name,
-        address: location.address,
+        address: `${selectedInstitute.name} - ${location.address}`,
         markingMethod: 'manual',
         status: status
       };

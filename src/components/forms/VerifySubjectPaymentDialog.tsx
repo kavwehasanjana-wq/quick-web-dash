@@ -65,19 +65,19 @@ const VerifySubjectPaymentDialog = ({ open, onOpenChange, submission, onVerify }
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
             <div className="flex items-center space-x-2">
               <User className="h-4 w-4 text-muted-foreground" />
-              <span><strong>Submitter:</strong> {submission.submitterName || 'Unknown User'}</span>
+              <span><strong>Submitter:</strong> {submission.username || 'Unknown User'}</span>
             </div>
             <div className="flex items-center space-x-2">
               <DollarSign className="h-4 w-4 text-muted-foreground" />
-              <span><strong>Amount:</strong> ₹{submission.paymentAmount ? parseFloat(submission.paymentAmount.toString()).toLocaleString() : '0'}</span>
+              <span><strong>Amount:</strong> ₹{submission.submittedAmount ? parseFloat(submission.submittedAmount.toString()).toLocaleString() : '0'}</span>
             </div>
             <div className="flex items-center space-x-2">
               <FileText className="h-4 w-4 text-muted-foreground" />
-              <span><strong>Method:</strong> {submission.paymentMethod}</span>
+              <span><strong>User Type:</strong> {submission.userType}</span>
             </div>
             <div className="flex items-center space-x-2">
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-              <span><strong>Transaction ID:</strong> {submission.transactionReference}</span>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <span><strong>Transaction ID:</strong> {submission.transactionId}</span>
             </div>
             <div className="flex items-center space-x-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -85,37 +85,46 @@ const VerifySubjectPaymentDialog = ({ open, onOpenChange, submission, onVerify }
             </div>
             <div className="flex items-center space-x-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span><strong>Submitted:</strong> {new Date(submission.createdAt).toLocaleDateString()}</span>
+              <span><strong>Submitted:</strong> {new Date(submission.uploadedAt).toLocaleDateString()}</span>
             </div>
           </div>
-          {submission.paymentRemarks && (
+          {submission.notes && (
             <div className="mt-3 p-2 bg-background rounded border">
-              <p className="text-sm"><strong>Payment Remarks:</strong> {submission.paymentRemarks}</p>
+              <p className="text-sm"><strong>Notes:</strong> {submission.notes}</p>
+            </div>
+          )}
+          {submission.receiptUrl && (
+            <div className="mt-3">
+              <a 
+                target="_blank"
+                rel="noopener noreferrer"
+                href={submission.receiptUrl}
+                className="text-primary hover:underline text-sm"
+              >
+                View Receipt
+              </a>
             </div>
           )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="status">Verification Decision *</Label>
-            <Select 
-              value={status} 
-              onValueChange={(value: 'VERIFIED' | 'REJECTED') => setStatus(value)}
-            >
-              <SelectTrigger>
+            <Label htmlFor="status">Verification Status</Label>
+            <Select value={status} onValueChange={(value: 'VERIFIED' | 'REJECTED') => setStatus(value)}>
+              <SelectTrigger id="status">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="VERIFIED">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span>Verified</span>
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                    Verify
                   </div>
                 </SelectItem>
                 <SelectItem value="REJECTED">
-                  <div className="flex items-center space-x-2">
-                    <XCircle className="h-4 w-4 text-red-600" />
-                    <span>Rejected</span>
+                  <div className="flex items-center">
+                    <XCircle className="h-4 w-4 mr-2 text-red-500" />
+                    Reject
                   </div>
                 </SelectItem>
               </SelectContent>
@@ -124,35 +133,38 @@ const VerifySubjectPaymentDialog = ({ open, onOpenChange, submission, onVerify }
 
           {status === 'REJECTED' && (
             <div>
-              <Label htmlFor="rejectionReason">Rejection Reason *</Label>
+              <Label htmlFor="rejectionReason">
+                Rejection Reason <span className="text-red-500">*</span>
+              </Label>
               <Textarea
                 id="rejectionReason"
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Please provide a reason for rejection..."
+                placeholder="Please provide a reason for rejection"
+                rows={3}
                 required
               />
             </div>
           )}
 
           <div>
-            <Label htmlFor="notes">Admin Notes</Label>
+            <Label htmlFor="notes">Additional Notes (Optional)</Label>
             <Textarea
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Additional notes (visible to the submitter)..."
+              placeholder="Any additional comments or observations"
+              rows={3}
             />
           </div>
 
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end gap-3 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button 
               type="submit" 
-              disabled={loading}
-              variant={status === 'VERIFIED' ? 'default' : 'destructive'}
+              disabled={loading || (status === 'REJECTED' && !rejectionReason.trim())}
             >
               {loading ? 'Processing...' : status === 'VERIFIED' ? 'Verify Submission' : 'Reject Submission'}
             </Button>

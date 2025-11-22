@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { subjectPaymentsApi, SubjectPayment } from '@/api/subjectPayments.api';
 import { Upload, Calendar, CreditCard, FileText, DollarSign } from 'lucide-react';
-import { fileUploader, UploadProgress } from '@/utils/uploadHelper';
+import { uploadWithSignedUrl } from '@/utils/signedUploadHelper';
 
 interface SubmitSubjectPaymentDialogProps {
   open: boolean;
@@ -24,11 +24,8 @@ const SubmitSubjectPaymentDialog: React.FC<SubmitSubjectPaymentDialogProps> = ({
 }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<UploadProgress>({
-    stage: 'idle',
-    message: '',
-    progress: 0
-  });
+  const [uploadMessage, setUploadMessage] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [formData, setFormData] = useState({
     paymentDate: new Date().toISOString().slice(0, 16),
     transactionId: '',
@@ -95,14 +92,17 @@ const SubmitSubjectPaymentDialog: React.FC<SubmitSubjectPaymentDialogProps> = ({
 
     setLoading(true);
     try {
-      // Step 1: Upload receipt file
-      const receiptUrl = await fileUploader.uploadFile(
+      // Step 1: Upload receipt file using signed URL
+      const relativePath = await uploadWithSignedUrl(
         receiptFile,
         'payment-receipts',
-        (progress) => setUploadProgress(progress)
+        (message, progress) => {
+          setUploadMessage(message);
+          setUploadProgress(progress);
+        }
       );
 
-      // Step 2: Submit payment with receipt URL
+      // Step 2: Submit payment with relativePath as receiptUrl
       const isoDate = new Date(formData.paymentDate).toISOString();
       const amountNumber = parseFloat(formData.submittedAmount);
 
@@ -111,7 +111,7 @@ const SubmitSubjectPaymentDialog: React.FC<SubmitSubjectPaymentDialogProps> = ({
         transactionId: formData.transactionId,
         submittedAmount: amountNumber,
         notes: formData.notes,
-        receiptUrl
+        receiptUrl: relativePath
       });
 
       const response = await subjectPaymentsApi.submitPayment(payment.id, {
@@ -119,12 +119,27 @@ const SubmitSubjectPaymentDialog: React.FC<SubmitSubjectPaymentDialogProps> = ({
         transactionId: formData.transactionId,
         submittedAmount: amountNumber,
         notes: formData.notes,
-        receiptUrl
+        receiptUrl: relativePath
       });
 
+      // Show success with receipt file link
+      const receiptUrl = response.data?.receiptFile;
       toast({
         title: "Success",
-        description: response.message || "Payment submitted successfully!"
+        description: receiptUrl ? (
+          <div className="space-y-2">
+            <p>{response.message || "Payment submitted successfully!"}</p>
+            <a 
+              href={receiptUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-primary hover:underline flex items-center gap-1 text-sm"
+            >
+              <Upload className="h-3 w-3" />
+              View uploaded receipt
+            </a>
+          </div>
+        ) : (response.message || "Payment submitted successfully!")
       });
 
       // Reset form
@@ -139,9 +154,22 @@ const SubmitSubjectPaymentDialog: React.FC<SubmitSubjectPaymentDialogProps> = ({
       onOpenChange(false);
       onSuccess?.();
     } catch (error: any) {
+      console.error('Payment submission error:', error);
+      
+      let errorMessage = "Failed to submit payment.";
+      
+      // Handle specific error types
+      if (error.message?.includes("already submitted") || error.message?.includes("DUPLICATE_SUBMISSION")) {
+        errorMessage = "You have already submitted a payment for this request. Please wait for verification.";
+      } else if (error.message?.includes("invalid") || error.message?.includes("validation")) {
+        errorMessage = "Please check all fields and try again.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
-        title: "Error",
-        description: error.message || "Failed to submit payment.",
+        title: "Submission Failed",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -282,7 +310,7 @@ const SubmitSubjectPaymentDialog: React.FC<SubmitSubjectPaymentDialogProps> = ({
               className="flex items-center space-x-2"
             >
               <CreditCard className="h-4 w-4" />
-              <span>{loading ? (uploadProgress.message || 'Submitting...') : 'Submit Payment'}</span>
+              <span>{loading ? (uploadMessage || 'Submitting...') : 'Submit Payment'}</span>
             </Button>
           </div>
         </form>

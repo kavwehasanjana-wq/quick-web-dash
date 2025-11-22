@@ -4,7 +4,7 @@
  */
 
 import { secureCache } from '@/utils/secureCache';
-import { getBaseUrl, getBaseUrl2, getApiHeaders } from '@/contexts/utils/auth.api';
+import { getBaseUrl, getBaseUrl2, getApiHeaders, refreshAccessToken } from '@/contexts/utils/auth.api';
 
 export interface EnhancedCacheOptions {
   ttl?: number; // Time to live in minutes
@@ -24,9 +24,71 @@ class EnhancedCachedApiClient {
   private readonly PENDING_REQUEST_TTL = 30000; // 30 seconds
   private requestCooldown = new Map<string, number>();
   private readonly COOLDOWN_PERIOD = 1000; // 1 second
+  private isRefreshing = false;
+  private refreshPromise: Promise<void> | null = null;
 
   constructor() {
     this.baseUrl = getBaseUrl();
+  }
+
+  /**
+   * Handle 401 errors by refreshing token and redirecting to login if refresh fails
+   */
+  private async handle401Error(options?: EnhancedCacheOptions): Promise<boolean> {
+    // If already refreshing, wait for the refresh to complete
+    if (this.isRefreshing && this.refreshPromise) {
+      try {
+        await this.refreshPromise;
+        return true; // Token refreshed successfully
+      } catch {
+        return false; // Refresh failed
+      }
+    }
+
+    // Start token refresh
+    this.isRefreshing = true;
+    this.refreshPromise = (async () => {
+      try {
+        console.log('🔄 401 Error - Attempting token refresh...');
+        await refreshAccessToken();
+        console.log('✅ Token refreshed successfully');
+        
+        // Clear user cache after refresh
+        if (options?.userId) {
+          await secureCache.clearUserCache(options.userId);
+        }
+      } catch (error) {
+        console.error('❌ Token refresh failed:', error);
+        
+        // Clear all auth data
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user_data');
+        if (this.useBaseUrl2) {
+          localStorage.removeItem('org_access_token');
+        }
+        
+        // Clear user cache
+        if (options?.userId) {
+          await secureCache.clearUserCache(options.userId);
+        }
+        
+        // Redirect to login page
+        console.log('🚪 Redirecting to login page...');
+        window.location.href = '/login';
+        
+        throw error;
+      } finally {
+        this.isRefreshing = false;
+        this.refreshPromise = null;
+      }
+    })();
+
+    try {
+      await this.refreshPromise;
+      return true; // Token refreshed successfully
+    } catch {
+      return false; // Refresh failed, user will be redirected
+    }
   }
 
   private generateRequestKey(endpoint: string, params?: Record<string, any>): string {
@@ -218,17 +280,39 @@ class EnhancedCachedApiClient {
         const errorText = await response.text().catch(() => '');
         console.error(`❌ API Error ${response.status}:`, errorText);
         
-        // Handle auth errors
+        // Handle 401 - Try to refresh token
         if (response.status === 401) {
-          localStorage.removeItem('access_token');
-          if (this.useBaseUrl2) {
-            localStorage.removeItem('org_access_token');
+          const refreshed = await this.handle401Error(options);
+          
+          if (refreshed) {
+            // Retry the request with new token
+            console.log('🔁 Retrying request with new token...');
+            const retryResponse = await fetch(url.toString(), {
+              method: 'GET',
+              headers: this.getHeaders()
+            });
+            
+            if (!retryResponse.ok) {
+              throw new Error(`HTTP ${retryResponse.status}: ${retryResponse.statusText}`);
+            }
+            
+            const retryContentType = retryResponse.headers.get('Content-Type');
+            const retryData: T = retryContentType && retryContentType.includes('application/json')
+              ? await retryResponse.json()
+              : {} as T;
+            
+            // Cache the successful retry
+            await secureCache.setCache(endpoint, retryData, params, {
+              ttl,
+              context: this.extractContext(options)
+            });
+            
+            console.log('✅ Retry successful after token refresh');
+            return retryData;
           }
-          // Clear user cache on auth error
-          const userId = options.userId;
-          if (userId) {
-            await secureCache.clearUserCache(userId);
-          }
+          
+          // If we get here, user is being redirected to login
+          throw new Error('Authentication failed');
         }
         
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -285,6 +369,37 @@ class EnhancedCachedApiClient {
     if (!response.ok) {
       const errorText = await response.text().catch(() => '');
       console.error(`❌ POST Error ${response.status}:`, errorText);
+      
+      // Handle 401 - Try to refresh token
+      if (response.status === 401) {
+        const refreshed = await this.handle401Error(options);
+        
+        if (refreshed) {
+          // Retry the request with new token
+          console.log('🔁 Retrying POST request with new token...');
+          const retryResponse = await fetch(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: data ? JSON.stringify(data) : undefined
+          });
+          
+          if (!retryResponse.ok) {
+            throw new Error(`HTTP ${retryResponse.status}: ${retryResponse.statusText}`);
+          }
+          
+          const retryContentType = retryResponse.headers.get('Content-Type');
+          const retryResult = retryContentType && retryContentType.includes('application/json')
+            ? await retryResponse.json()
+            : {} as T;
+          
+          await secureCache.invalidateOnMutation('POST', endpoint, this.extractContext(options));
+          console.log('✅ POST retry successful after token refresh');
+          return retryResult;
+        }
+        
+        throw new Error('Authentication failed');
+      }
+      
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
@@ -323,6 +438,36 @@ class EnhancedCachedApiClient {
     if (!response.ok) {
       const errorText = await response.text().catch(() => '');
       console.error(`❌ PUT Error ${response.status}:`, errorText);
+      
+      // Handle 401 - Try to refresh token
+      if (response.status === 401) {
+        const refreshed = await this.handle401Error(options);
+        
+        if (refreshed) {
+          console.log('🔁 Retrying PUT request with new token...');
+          const retryResponse = await fetch(url, {
+            method: 'PUT',
+            headers: this.getHeaders(),
+            body: data ? JSON.stringify(data) : undefined
+          });
+          
+          if (!retryResponse.ok) {
+            throw new Error(`HTTP ${retryResponse.status}: ${retryResponse.statusText}`);
+          }
+          
+          const retryContentType = retryResponse.headers.get('Content-Type');
+          const retryResult = retryContentType && retryContentType.includes('application/json')
+            ? await retryResponse.json()
+            : {} as T;
+          
+          await secureCache.invalidateOnMutation('PUT', endpoint, this.extractContext(options));
+          console.log('✅ PUT retry successful after token refresh');
+          return retryResult;
+        }
+        
+        throw new Error('Authentication failed');
+      }
+      
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
@@ -361,6 +506,36 @@ class EnhancedCachedApiClient {
     if (!response.ok) {
       const errorText = await response.text().catch(() => '');
       console.error(`❌ PATCH Error ${response.status}:`, errorText);
+      
+      // Handle 401 - Try to refresh token
+      if (response.status === 401) {
+        const refreshed = await this.handle401Error(options);
+        
+        if (refreshed) {
+          console.log('🔁 Retrying PATCH request with new token...');
+          const retryResponse = await fetch(url, {
+            method: 'PATCH',
+            headers: this.getHeaders(),
+            body: data ? JSON.stringify(data) : undefined
+          });
+          
+          if (!retryResponse.ok) {
+            throw new Error(`HTTP ${retryResponse.status}: ${retryResponse.statusText}`);
+          }
+          
+          const retryContentType = retryResponse.headers.get('Content-Type');
+          const retryResult = retryContentType && retryContentType.includes('application/json')
+            ? await retryResponse.json()
+            : {} as T;
+          
+          await secureCache.invalidateOnMutation('PATCH', endpoint, this.extractContext(options));
+          console.log('✅ PATCH retry successful after token refresh');
+          return retryResult;
+        }
+        
+        throw new Error('Authentication failed');
+      }
+      
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
@@ -398,6 +573,35 @@ class EnhancedCachedApiClient {
     if (!response.ok) {
       const errorText = await response.text().catch(() => '');
       console.error(`❌ DELETE Error ${response.status}:`, errorText);
+      
+      // Handle 401 - Try to refresh token
+      if (response.status === 401) {
+        const refreshed = await this.handle401Error(options);
+        
+        if (refreshed) {
+          console.log('🔁 Retrying DELETE request with new token...');
+          const retryResponse = await fetch(url, {
+            method: 'DELETE',
+            headers: this.getHeaders()
+          });
+          
+          if (!retryResponse.ok) {
+            throw new Error(`HTTP ${retryResponse.status}: ${retryResponse.statusText}`);
+          }
+          
+          const retryContentType = retryResponse.headers.get('Content-Type');
+          const retryResult = retryContentType && retryContentType.includes('application/json')
+            ? await retryResponse.json()
+            : {} as T;
+          
+          await secureCache.invalidateOnMutation('DELETE', endpoint, this.extractContext(options));
+          console.log('✅ DELETE retry successful after token refresh');
+          return retryResult;
+        }
+        
+        throw new Error('Authentication failed');
+      }
+      
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 

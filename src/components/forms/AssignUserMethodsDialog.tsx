@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/api/client';
 import { UserPlus, Phone, CreditCard, User, Eye, Mail, Upload, Camera, X } from 'lucide-react';
+import { uploadWithSignedUrl, detectFolder } from '@/utils/signedUploadHelper';
 
 interface AssignUserMethodsDialogProps {
   open: boolean;
@@ -85,20 +86,32 @@ const AssignUserMethodsDialog = ({ open, onClose, instituteId, onSuccess }: Assi
 
     setIsLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('userId', idFormData.userId);
-      formData.append('instituteUserType', idFormData.instituteUserType);
-      formData.append('userIdByInstitute', idFormData.userIdByInstitute);
-      if (idFormData.instituteCardId) {
-        formData.append('instituteCardId', idFormData.instituteCardId);
-      }
+      let imageUrl = '';
+      
+      // Upload image if provided using signed URL
       if (idFormData.image) {
-        formData.append('image', idFormData.image);
+        const folder = detectFolder(idFormData.image);
+        const relativePath = await uploadWithSignedUrl(
+          idFormData.image,
+          folder,
+          (message, progress) => {
+            console.log(`Upload: ${message} - ${progress}%`);
+          }
+        );
+        imageUrl = relativePath;
       }
+
+      const payload = {
+        userId: idFormData.userId,
+        instituteUserType: idFormData.instituteUserType,
+        userIdByInstitute: idFormData.userIdByInstitute,
+        ...(idFormData.instituteCardId && { instituteCardId: idFormData.instituteCardId }),
+        ...(imageUrl && { instituteImage: imageUrl })
+      };
 
       const response = await apiClient.post(
         `/institute-users/institute/${instituteId}/assign-user-by-id`,
-        formData
+        payload
       );
 
       if (response.success) {
@@ -132,20 +145,32 @@ const AssignUserMethodsDialog = ({ open, onClose, instituteId, onSuccess }: Assi
 
     setIsLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('phoneNumber', phoneFormData.phoneNumber);
-      formData.append('instituteUserType', phoneFormData.instituteUserType);
-      formData.append('userIdByInstitute', phoneFormData.userIdByInstitute);
-      if (phoneFormData.instituteCardId) {
-        formData.append('instituteCardId', phoneFormData.instituteCardId);
-      }
+      let imageUrl = '';
+      
+      // Upload image if provided using signed URL
       if (phoneFormData.image) {
-        formData.append('image', phoneFormData.image);
+        const folder = detectFolder(phoneFormData.image);
+        const relativePath = await uploadWithSignedUrl(
+          phoneFormData.image,
+          folder,
+          (message, progress) => {
+            console.log(`Upload: ${message} - ${progress}%`);
+          }
+        );
+        imageUrl = relativePath;
       }
+
+      const payload = {
+        phoneNumber: phoneFormData.phoneNumber,
+        instituteUserType: phoneFormData.instituteUserType,
+        userIdByInstitute: phoneFormData.userIdByInstitute,
+        ...(phoneFormData.instituteCardId && { instituteCardId: phoneFormData.instituteCardId }),
+        ...(imageUrl && { imageUrl })
+      };
 
       const response = await apiClient.post(
         `/institute-users/institute/${instituteId}/assign-user-by-phone`,
-        formData
+        payload
       );
 
       if (response.success) {
@@ -179,20 +204,32 @@ const AssignUserMethodsDialog = ({ open, onClose, instituteId, onSuccess }: Assi
 
     setIsLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('rfid', rfidFormData.rfid);
-      formData.append('instituteUserType', rfidFormData.instituteUserType);
-      formData.append('userIdByInstitute', rfidFormData.userIdByInstitute);
-      if (rfidFormData.instituteCardId) {
-        formData.append('instituteCardId', rfidFormData.instituteCardId);
-      }
+      let instituteImage = '';
+      
+      // Upload image if provided using signed URL
       if (rfidFormData.image) {
-        formData.append('image', rfidFormData.image);
+        const folder = detectFolder(rfidFormData.image);
+        const relativePath = await uploadWithSignedUrl(
+          rfidFormData.image,
+          folder,
+          (message, progress) => {
+            console.log(`Upload: ${message} - ${progress}%`);
+          }
+        );
+        instituteImage = relativePath;
       }
+
+      const payload = {
+        rfid: rfidFormData.rfid,
+        instituteUserType: rfidFormData.instituteUserType,
+        userIdByInstitute: rfidFormData.userIdByInstitute,
+        ...(rfidFormData.instituteCardId && { instituteCardId: rfidFormData.instituteCardId }),
+        ...(instituteImage && { instituteImage })
+      };
 
       const response = await apiClient.post(
         `/institute-users/institute/${instituteId}/assign-student-by-rfid`,
-        formData
+        payload
       );
 
       if (response.success) {
@@ -226,20 +263,32 @@ const AssignUserMethodsDialog = ({ open, onClose, instituteId, onSuccess }: Assi
 
     setIsLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('email', emailFormData.email);
-      formData.append('instituteUserType', emailFormData.instituteUserType);
-      formData.append('userIdByInstitute', emailFormData.userIdByInstitute);
-      if (emailFormData.instituteCardId) {
-        formData.append('instituteCardId', emailFormData.instituteCardId);
-      }
+      let imageUrl = '';
+      
+      // Upload image if provided using signed URL
       if (emailFormData.image) {
-        formData.append('image', emailFormData.image);
+        const folder = detectFolder(emailFormData.image);
+        const relativePath = await uploadWithSignedUrl(
+          emailFormData.image,
+          folder,
+          (message, progress) => {
+            console.log(`Upload: ${message} - ${progress}%`);
+          }
+        );
+        imageUrl = relativePath;
       }
+
+      const payload = {
+        email: emailFormData.email,
+        instituteUserType: emailFormData.instituteUserType,
+        userIdByInstitute: emailFormData.userIdByInstitute,
+        ...(emailFormData.instituteCardId && { instituteCardId: emailFormData.instituteCardId }),
+        ...(imageUrl && { instituteImage: imageUrl })
+      };
 
       const response = await apiClient.post(
         `/institute-users/institute/${instituteId}/assign-user-by-email`,
-        formData
+        payload
       );
 
       if (response.success) {

@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getBaseUrl } from '@/contexts/utils/auth.api';
 import { Input } from '@/components/ui/input';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
+import { useAppNavigation } from '@/hooks/useAppNavigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { cachedApiClient } from '@/api/cachedClient';
@@ -138,6 +139,7 @@ const ClassSelector = () => {
     toast
   } = useToast();
   const effectiveRole = useInstituteRole();
+  const { navigateToPage } = useAppNavigation();
   const [classesData, setClassesData] = useState<ClassCardData[]>([]);
   const [filteredClasses, setFilteredClasses] = useState<ClassCardData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -452,13 +454,17 @@ const ClassSelector = () => {
       description: `Selected ${classData.name} (${classData.code})`
     });
 
-    // For AttendanceMarker role, auto-navigate to select subject
-    if (effectiveRole === 'AttendanceMarker') {
-      console.log('AttendanceMarker detected - auto-navigating to select subject');
+    const shouldNavigateToSubject =
+      effectiveRole === 'AttendanceMarker' ||
+      effectiveRole === 'Teacher' ||
+      effectiveRole === 'InstituteAdmin' ||
+      effectiveRole === 'Student';
+
+    if (shouldNavigateToSubject) {
+      console.log(`${effectiveRole} detected - auto-navigating to select subject`);
       setTimeout(() => {
-        window.history.pushState({}, '', '/select-subject');
-        window.dispatchEvent(new PopStateEvent('popstate'));
-      }, 1000); // Small delay to show the toast
+        navigateToPage('select-subject');
+      }, 800); // Small delay to show the toast
     }
 
     // Explicitly log that no further API calls should happen

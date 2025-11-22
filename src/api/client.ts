@@ -1,4 +1,4 @@
-import { getBaseUrl, getBaseUrl2, getApiHeaders } from '@/contexts/utils/auth.api';
+import { getBaseUrl, getBaseUrl2, getApiHeaders, refreshAccessToken } from '@/contexts/utils/auth.api';
 
 export interface ApiResponse<T = any> {
   data?: T;
@@ -25,6 +25,8 @@ export interface ApiError {
 
 class ApiClient {
   private useBaseUrl2 = false;
+  private isRefreshing = false;
+  private refreshPromise: Promise<void> | null = null;
 
   setUseBaseUrl2(use: boolean) {
     this.useBaseUrl2 = use;
@@ -48,7 +50,59 @@ class ApiClient {
     return headers;
   }
 
-  private async handleResponse<T>(response: Response): Promise<T> {
+  /**
+   * Handle 401 errors by refreshing token and redirecting to login if refresh fails
+   */
+  private async handle401Error(): Promise<boolean> {
+    // If already refreshing, wait for the refresh to complete
+    if (this.isRefreshing && this.refreshPromise) {
+      try {
+        await this.refreshPromise;
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    // Start token refresh
+    this.isRefreshing = true;
+    this.refreshPromise = (async () => {
+      try {
+        console.log('🔄 401 Error - Attempting token refresh...');
+        await refreshAccessToken();
+        console.log('✅ Token refreshed successfully');
+      } catch (error) {
+        console.error('❌ Token refresh failed:', error);
+        
+        // Clear all auth data
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user_data');
+        localStorage.removeItem('token');
+        localStorage.removeItem('authToken');
+        if (this.useBaseUrl2) {
+          localStorage.removeItem('org_access_token');
+        }
+        
+        // Redirect to login page
+        console.log('🚪 Redirecting to login page...');
+        window.location.href = '/login';
+        
+        throw error;
+      } finally {
+        this.isRefreshing = false;
+        this.refreshPromise = null;
+      }
+    })();
+
+    try {
+      await this.refreshPromise;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private async handleResponse<T>(response: Response, retryFn?: () => Promise<Response>): Promise<T> {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({
         message: `HTTP Error: ${response.status}`,
@@ -58,16 +112,17 @@ class ApiClient {
       
       console.error('API Error:', errorData);
       
-      // Handle authentication errors
-      if (response.status === 401) {
-        console.warn('Authentication failed - token may be expired');
-        // Clear invalid tokens
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('token');
-        localStorage.removeItem('authToken');
-        if (this.useBaseUrl2) {
-          localStorage.removeItem('org_access_token');
+      // Handle 401 - Try to refresh token
+      if (response.status === 401 && retryFn) {
+        const refreshed = await this.handle401Error();
+        
+        if (refreshed) {
+          console.log('🔁 Retrying request with new token...');
+          const retryResponse = await retryFn();
+          return this.handleResponse<T>(retryResponse); // Recursive call without retry to avoid infinite loop
         }
+        
+        throw new Error('Authentication failed');
       }
       
       throw new Error(errorData.message || `HTTP Error: ${response.status}`);
@@ -96,12 +151,13 @@ class ApiClient {
     console.log('GET Request:', url.toString());
     console.log('Request Headers:', this.getHeaders());
     
-    const response = await fetch(url.toString(), {
+    const makeRequest = () => fetch(url.toString(), {
       method: 'GET',
       headers: this.getHeaders()
     });
-
-    return this.handleResponse<T>(response);
+    
+    const response = await makeRequest();
+    return this.handleResponse<T>(response, makeRequest);
   }
 
   async post<T = any>(endpoint: string, data?: any): Promise<T> {
@@ -110,28 +166,31 @@ class ApiClient {
     
     console.log('POST Request:', url, data);
     
-    const headers = this.getHeaders();
-    let body: any;
+    const makeRequest = () => {
+      const headers = this.getHeaders();
+      let body: any;
+      
+      // Handle FormData differently - don't stringify it and don't set Content-Type
+      if (data instanceof FormData) {
+        body = data;
+        // Remove Content-Type header to let browser set it with boundary
+        delete headers['Content-Type'];
+        console.log('FormData detected, removed Content-Type header');
+      } else {
+        body = data ? JSON.stringify(data) : undefined;
+      }
+      
+      console.log('Request Headers:', headers);
+      
+      return fetch(url, {
+        method: 'POST',
+        headers,
+        body
+      });
+    };
     
-    // Handle FormData differently - don't stringify it and don't set Content-Type
-    if (data instanceof FormData) {
-      body = data;
-      // Remove Content-Type header to let browser set it with boundary
-      delete headers['Content-Type'];
-      console.log('FormData detected, removed Content-Type header');
-    } else {
-      body = data ? JSON.stringify(data) : undefined;
-    }
-    
-    console.log('Request Headers:', headers);
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body
-    });
-
-    return this.handleResponse<T>(response);
+    const response = await makeRequest();
+    return this.handleResponse<T>(response, makeRequest);
   }
 
   async put<T = any>(endpoint: string, data?: any): Promise<T> {
@@ -141,13 +200,14 @@ class ApiClient {
     console.log('PUT Request:', url, data);
     console.log('Request Headers:', this.getHeaders());
     
-    const response = await fetch(url, {
+    const makeRequest = () => fetch(url, {
       method: 'PUT',
       headers: this.getHeaders(),
       body: data ? JSON.stringify(data) : undefined
     });
-
-    return this.handleResponse<T>(response);
+    
+    const response = await makeRequest();
+    return this.handleResponse<T>(response, makeRequest);
   }
 
   async patch<T = any>(endpoint: string, data?: any): Promise<T> {
@@ -157,13 +217,14 @@ class ApiClient {
     console.log('PATCH Request:', url, data);
     console.log('Request Headers:', this.getHeaders());
     
-    const response = await fetch(url, {
+    const makeRequest = () => fetch(url, {
       method: 'PATCH',
       headers: this.getHeaders(),
       body: data ? JSON.stringify(data) : undefined
     });
-
-    return this.handleResponse<T>(response);
+    
+    const response = await makeRequest();
+    return this.handleResponse<T>(response, makeRequest);
   }
 
   async delete<T = any>(endpoint: string): Promise<T> {
@@ -173,12 +234,13 @@ class ApiClient {
     console.log('DELETE Request:', url);
     console.log('Request Headers:', this.getHeaders());
     
-    const response = await fetch(url, {
+    const makeRequest = () => fetch(url, {
       method: 'DELETE',
       headers: this.getHeaders()
     });
-
-    return this.handleResponse<T>(response);
+    
+    const response = await makeRequest();
+    return this.handleResponse<T>(response, makeRequest);
   }
 }
 

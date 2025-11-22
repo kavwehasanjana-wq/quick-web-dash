@@ -243,7 +243,7 @@ const CreatePayment = () => {
   const handleSuccessClose = () => {
     setShowSuccess(false);
     setSuccessData(null);
-    navigate('/payments');
+    navigate('/system-payment');
   };
 
   const resetForm = () => {
@@ -261,7 +261,7 @@ const CreatePayment = () => {
 
   const handleCancel = () => {
     resetForm();
-    navigate('/payments');
+    navigate('/system-payment');
   };
 
   return (
@@ -270,7 +270,7 @@ const CreatePayment = () => {
         <div className="container mx-auto p-6 max-w-4xl">
           {/* Header */}
           <div className="flex items-center gap-4 mb-6">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/payments')}>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/system-payment')}>
               <FileText className="h-4 w-4 mr-2" />
               Back to Payments
             </Button>

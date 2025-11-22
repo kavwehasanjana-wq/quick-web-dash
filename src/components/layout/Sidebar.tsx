@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { extractPageFromUrl, buildSidebarUrl } from '@/utils/pageNavigation';
 import { AccessControl } from '@/utils/permissions';
 import {
   LayoutDashboard,
@@ -41,13 +43,16 @@ import surakshaLogoSidebar from '@/assets/suraksha-logo-sidebar.png';
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  currentPage: string;
-  onPageChange: (page: string) => void;
 }
 
-const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) => {
+const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const { user, selectedInstitute, selectedClass, selectedSubject, selectedChild, selectedOrganization, selectedTransport, logout, setSelectedInstitute, setSelectedClass, setSelectedSubject, setSelectedChild, setSelectedOrganization, setSelectedTransport } = useAuth();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Derive current page from URL
+  const currentPage = React.useMemo(() => extractPageFromUrl(location.pathname), [location.pathname]);
   
   // Broadcast collapse state to the app (for responsive grids)
   React.useEffect(() => {
@@ -112,6 +117,13 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
       // 1. Student without institute - only show basic options + payment
       if (!selectedInstitute) {
         return [
+          {
+            id: 'profile',
+            label: 'Profile',
+            icon: User,
+            permission: 'view-dashboard',
+            alwaysShow: true
+          },
           {
             id: 'dashboard',
             label: 'Select Institutes',
@@ -261,6 +273,13 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
       if (!selectedInstitute) {
         return [
           {
+            id: 'profile',
+            label: 'Profile',
+            icon: User,
+            permission: 'view-dashboard',
+            alwaysShow: true
+          },
+          {
             id: 'dashboard',
             label: 'Select Institutes',
             icon: LayoutDashboard,
@@ -337,13 +356,6 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
             alwaysShow: false
           },
           {
-            id: 'select-class',
-            label: 'Select Class',
-            icon: School,
-            permission: 'view-classes',
-            alwaysShow: false
-          },
-          {
             id: 'select-subject',
             label: 'Select Subject',
             icon: BookOpen,
@@ -355,6 +367,13 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
             label: 'Students',
             icon: GraduationCap,
             permission: 'view-students',
+            alwaysShow: false
+          },
+          {
+            id: 'parents',
+            label: 'Parents',
+            icon: Users,
+            permission: 'view-parents',
             alwaysShow: false
           },
         ];
@@ -371,13 +390,6 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
             alwaysShow: false
           },
           {
-            id: 'select-class',
-            label: 'Select Class',
-            icon: School,
-            permission: 'view-classes',
-            alwaysShow: false
-          },
-          {
             id: 'select-subject',
             label: 'Select Subject',
             icon: BookOpen,
@@ -389,6 +401,13 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
             label: 'Students',
             icon: GraduationCap,
             permission: 'view-students',
+            alwaysShow: false
+          },
+          {
+            id: 'parents',
+            label: 'Parents',
+            icon: Users,
+            permission: 'view-parents',
             alwaysShow: false
           },
           {
@@ -408,6 +427,13 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
     if (userRole === 'InstituteAdmin') {
       if (!selectedInstitute) {
         return [
+          {
+            id: 'profile',
+            label: 'Profile',
+            icon: User,
+            permission: 'view-dashboard',
+            alwaysShow: true
+          },
           {
             id: 'dashboard',
             label: 'Select Institutes',
@@ -512,13 +538,6 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
             alwaysShow: false
           },
           {
-            id: 'institute-organizations',
-            label: 'Organization',
-            icon: Building2,
-            permission: 'view-organizations',
-            alwaysShow: true
-          },
-          {
             id: 'students',
             label: 'Students',
             icon: GraduationCap,
@@ -526,10 +545,10 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
             alwaysShow: false
           },
           {
-            id: 'classes',
-            label: 'All Classes',
-            icon: School,
-            permission: 'view-classes',
+            id: 'parents',
+            label: 'Parents',
+            icon: Users,
+            permission: 'view-parents',
             alwaysShow: false
           },
           {
@@ -537,13 +556,6 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
             label: 'All Subjects',
             icon: BookOpen,
             permission: 'view-subjects',
-            alwaysShow: false
-          },
-          {
-            id: 'select-class',
-            label: 'Select Class',
-            icon: School,
-            permission: 'view-classes',
             alwaysShow: false
           },
           {
@@ -567,13 +579,6 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
             alwaysShow: false
           },
           {
-            id: 'institute-organizations',
-            label: 'Organization',
-            icon: Building2,
-            permission: 'view-organizations',
-            alwaysShow: true
-          },
-          {
             id: 'students',
             label: 'Students',
             icon: GraduationCap,
@@ -581,26 +586,13 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
             alwaysShow: false
           },
           {
-            id: 'classes',
-            label: 'All Classes',
-            icon: School,
-            permission: 'view-classes',
+            id: 'parents',
+            label: 'Parents',
+            icon: Users,
+            permission: 'view-parents',
             alwaysShow: false
           },
-          {
-            id: 'subjects',
-            label: 'All Subjects',
-            icon: BookOpen,
-            permission: 'view-subjects',
-            alwaysShow: false
-          },
-          {
-            id: 'select-class',
-            label: 'Select Class',
-            icon: School,
-            permission: 'view-classes',
-            alwaysShow: false
-          },
+          // Hide "All Subjects" when a subject is selected
           {
             id: 'select-subject',
             label: 'Select Subject',
@@ -763,22 +755,26 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
       }
 
       // For AttendanceMarker with institute selected - remove attendance sections
-      const baseItems = [
-        {
+      const baseItems = [];
+      
+      // Only show select-class at institute level (not when class is selected)
+      if (!selectedClass) {
+        baseItems.push({
           id: 'select-class',
           label: 'Select Class',
           icon: School,
           permission: 'view-classes',
           alwaysShow: false
-        },
-        {
-          id: 'select-subject',
-          label: 'Select Subject',
-          icon: BookOpen,
-          permission: 'view-subjects',
-          alwaysShow: false
-        }
-      ];
+        });
+      }
+      
+      baseItems.push({
+        id: 'select-subject',
+        label: 'Select Subject',
+        icon: BookOpen,
+        permission: 'view-subjects',
+        alwaysShow: false
+      });
       
       // Add Free Lectures if subject is selected
       if (selectedSubject) {
@@ -935,7 +931,7 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
           },
           {
             id: 'qr-attendance',
-            label: 'QR Attendance',
+            label: 'Mark Attendance',
             icon: QrCode,
             permission: 'mark-attendance',
             alwaysShow: false
@@ -962,7 +958,7 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
           },
           {
             id: 'qr-attendance',
-            label: 'QR Attendance',
+            label: 'Mark Attendance',
             icon: QrCode,
             permission: 'mark-attendance',
             alwaysShow: false
@@ -999,7 +995,7 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
           },
           {
             id: 'qr-attendance',
-            label: 'QR Attendance',
+            label: 'Mark Attendance',
             icon: QrCode,
             permission: 'mark-attendance',
             alwaysShow: false
@@ -1026,7 +1022,7 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
           },
           {
             id: 'qr-attendance',
-            label: 'QR Attendance',
+            label: 'Mark Attendance',
             icon: QrCode,
             permission: 'mark-attendance',
             alwaysShow: false
@@ -1060,7 +1056,7 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
       },
       {
         id: 'qr-attendance',
-        label: 'QR Attendance',
+        label: 'Mark Attendance',
         icon: QrCode,
         permission: 'mark-attendance',
         alwaysShow: userRole === 'AttendanceMarker' // Always show for AttendanceMarker
@@ -1327,7 +1323,8 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
 
   const getSmsItems = () => {
     const items: any[] = [];
-    if (userRole === 'InstituteAdmin' && selectedInstitute) {
+    // Only show SMS items at institute level (not when class is selected)
+    if (userRole === 'InstituteAdmin' && selectedInstitute && !selectedClass) {
       items.push({
         id: 'sms',
         label: 'SMS',
@@ -1347,8 +1344,8 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
   };
 
   const getSettingsItems = () => {
-    // Don't show settings before institute selection (except for organization context)
-    if (!selectedInstitute && !selectedOrganization && !selectedChild) {
+    // Always show settings if user is logged in
+    if (!user) {
       return [];
     }
 
@@ -1360,7 +1357,7 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
           label: 'Profile',
           icon: User,
           permission: 'view-profile',
-          alwaysShow: false
+          alwaysShow: true
         }
       ];
     }
@@ -1373,7 +1370,7 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
           label: 'Profile',
           icon: User,
           permission: 'view-profile',
-          alwaysShow: false
+          alwaysShow: true
         }
       ];
 
@@ -1399,7 +1396,7 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
           label: 'Profile',
           icon: User,
           permission: 'view-profile',
-          alwaysShow: false
+          alwaysShow: true
         }
       ];
 
@@ -1436,7 +1433,7 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
           label: 'Profile',
           icon: User,
           permission: 'view-profile',
-          alwaysShow: false
+          alwaysShow: true
         }
       ];
 
@@ -1473,7 +1470,7 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
           label: 'Profile',
           icon: User,
           permission: 'view-profile',
-          alwaysShow: false
+          alwaysShow: true
         }
       ];
 
@@ -1507,7 +1504,7 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
         label: 'Profile',
         icon: User,
         permission: 'view-profile',
-        alwaysShow: false
+        alwaysShow: true
       },
       ...(selectedInstitute ? [{
         id: 'institute-profile',
@@ -1562,32 +1559,37 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
   ].some(list => list.some(i => i.id === currentPage));
 
   if (!activeExists && currentPage) {
-    const toTitle = (s: string) => s.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-    const label = toTitle(currentPage);
-
-    let target = menuItemsDisplay as any[];
-    let icon: any = LayoutDashboard;
-    let allowPush = true;
-
-    // Institute-specific pages that require institute selection
-    const instituteSpecificPages = /^(classes|subjects|students|teachers|users|parents|institutes|daily-attendance|qr-attendance|live-lectures|grading|exams|homework|results|lectures|free-lectures|institute-details|institute-users|verify-image|select-class|select-subject|unverified-students)$/i;
+    // Don't auto-add sub-routes (pages with / in them) to sidebar
+    const isSubRoute = currentPage.includes('/');
     
-    // Don't show institute-specific pages in sidebar when no institute is selected
-    if (!selectedInstitute && instituteSpecificPages.test(currentPage)) {
-      allowPush = false;
-    }
+    if (!isSubRoute) {
+      const toTitle = (s: string) => s.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+      const label = toTitle(currentPage);
 
-    if (/payment/i.test(currentPage)) { target = paymentItemsDisplay; icon = CreditCard; }
-    else if (/sms/i.test(currentPage)) {
-      if (selectedInstitute) { target = smsItemsDisplay; icon = MessageSquare; }
-      else { allowPush = false; }
-    }
-    else if (/attendance/i.test(currentPage)) { target = attendanceItemsDisplay; icon = UserCheck; }
-    else if (/(lecture|homework|exam|result|grading)/i.test(currentPage)) { target = systemItemsDisplay; icon = Video; }
-    else if (/(profile|settings|appearance)/i.test(currentPage)) { target = settingsItemsDisplay; icon = Settings; }
+      let target = menuItemsDisplay as any[];
+      let icon: any = LayoutDashboard;
+      let allowPush = true;
 
-    if (allowPush) {
-      target.push({ id: currentPage, label, icon, permission: 'view-dashboard', alwaysShow: true });
+      // Institute-specific pages that require institute selection
+      const instituteSpecificPages = /^(classes|subjects|students|teachers|users|parents|institutes|daily-attendance|qr-attendance|live-lectures|grading|exams|homework|results|lectures|free-lectures|institute-details|institute-users|verify-image|select-class|select-subject|unverified-students)$/i;
+      
+      // Don't show institute-specific pages in sidebar when no institute is selected
+      if (!selectedInstitute && instituteSpecificPages.test(currentPage)) {
+        allowPush = false;
+      }
+
+      if (/payment/i.test(currentPage)) { target = paymentItemsDisplay; icon = CreditCard; }
+      else if (/sms/i.test(currentPage)) {
+        if (selectedInstitute) { target = smsItemsDisplay; icon = MessageSquare; }
+        else { allowPush = false; }
+      }
+      else if (/attendance/i.test(currentPage)) { target = attendanceItemsDisplay; icon = UserCheck; }
+      else if (/(lecture|homework|exam|result|grading)/i.test(currentPage)) { target = systemItemsDisplay; icon = Video; }
+      else if (/(profile|settings|appearance)/i.test(currentPage)) { target = settingsItemsDisplay; icon = Settings; }
+
+      if (allowPush) {
+        target.push({ id: currentPage, label, icon, permission: 'view-dashboard', alwaysShow: true });
+      }
     }
   }
 
@@ -1605,165 +1607,39 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
   const handleItemClick = (itemId: string) => {
     console.log('Sidebar item clicked:', itemId);
     
-    // Helper function for Router-agnostic navigation
-    const navigateToRoute = (route: string) => {
-      try {
-        window.history.pushState({}, '', route);
-        window.dispatchEvent(new PopStateEvent('popstate'));
-      } catch (e) {
-        window.location.assign(route);
-      }
+    // Build context-aware URL
+    const context = {
+      instituteId: selectedInstitute?.id,
+      classId: selectedClass?.id,
+      subjectId: selectedSubject?.id,
+      childId: selectedChild?.id,
+      organizationId: selectedOrganization?.id,
+      transportId: selectedTransport?.id
     };
     
-    // Handle System Payment click - navigate to payments page
-    if (itemId === 'system-payment') {
-      navigateToRoute('/payments');
-      onPageChange('payments');
-      onClose();
-      return;
-    }
-    
-    // Handle Institute Payments click
-    if (itemId === 'institute-payments') {
-      navigateToRoute('/institute-payments');
-      onPageChange('institute-payments');
-      onClose();
-      return;
-    }
-
-    // Handle Institute Organizations click
-    if (itemId === 'institute-organizations') {
-      navigateToRoute('/institute-organizations');
-      onPageChange('institute-organizations');
-      onClose();
-      return;
-    }
-    
-    // Handle Subject Payments click
-    if (itemId === 'subject-payments') {
-      navigateToRoute('/subject-payments');
-      onPageChange('subject-payments');
-      onClose();
-      return;
-    }
-    
-    // Handle Subject Submissions click (for Students only)
-    if (itemId === 'subject-submissions') {
-      navigateToRoute('/subject-submissions');
-      onPageChange('subject-submissions');
-      onClose();
-      return;
-    }
-    
-    // Handle My Submissions click (for Students only)
-    if (itemId === 'my-submissions') {
-      navigateToRoute('/my-submissions');
-      onPageChange('my-submissions');
-      onClose();
-      return;
-    }
-    
-    // Handle Subject Pay Submission click (for Students only)
-    if (itemId === 'subject-pay-submission') {
-      navigateToRoute('/subject-pay-submission');
-      onPageChange('subject-pay-submission');
-      onClose();
-      return;
-    }
-    
-    // Handle SMS click
-    if (itemId === 'sms') {
-      navigateToRoute('/sms');
-      onPageChange('sms');
-      onClose();
-      return;
-    }
-
-    // Handle SMS History click
-    if (itemId === 'sms-history') {
-      navigateToRoute('/sms-history');
-      onPageChange('sms-history');
-      onClose();
-      return;
-    }
-
-    // Handle QR Attendance click
-    if (itemId === 'qr-attendance') {
-      navigateToRoute('/qr-attendance');
-      onPageChange('qr-attendance');
-      onClose();
-      return;
-    }
-
-    // Handle Institute Mark Attendance click
-    if (itemId === 'institute-mark-attendance') {
-      navigateToRoute('/institute-mark-attendance');
-      onPageChange('institute-mark-attendance');
-      onClose();
-      return;
-    }
-
-    // Handle Daily Attendance click
-    if (itemId === 'daily-attendance') {
-      navigateToRoute('/daily-attendance');
-      onPageChange('daily-attendance');
-      onClose();
-      return;
-    }
-
-    // Handle My Children click
-    if (itemId === 'my-children') {
-      // Clear child selection and go back to children selector
-      setSelectedChild(null);
-      navigateToRoute('/my-children');
-      onPageChange('my-children');
-      onClose();
-      return;
-    }
-
-    // Handle child-results, child-attendance, child-transport clicks (keep child selected)
-    if (itemId === 'child-results' || itemId === 'child-attendance' || itemId === 'child-transport') {
-      onPageChange(itemId);
-      onClose();
-      return;
-    }
-
-    // Handle child-specific navigation clicks
-    if (itemId.startsWith('child/:childId/')) {
-      // Find the item to get its path
-      const childItem = childItemsDisplay.find(item => item.id === itemId);
-      if (childItem && (childItem as any).path) {
-        navigateToRoute((childItem as any).path);
-        onPageChange(itemId);
-        onClose();
-        return;
-      }
-    }
-    
-    // Handle Enroll Class click (for Students only)
-    if (itemId === 'enroll-class') {
-      navigateToRoute('/enroll-class');
-      onPageChange('enroll-class');
-      onClose();
-      return;
-    }
-    
-    // Handle Enroll Subject click (for Students only) 
-    if (itemId === 'enroll-subject') {
-      navigateToRoute('/enroll-subject');
-      onPageChange('enroll-subject');
-      onClose();
-      return;
-    }
-    
-    // Handle Organizations click when no institute is selected - external link
+    // Handle special cases
     if (itemId === 'organizations' && !selectedInstitute) {
       window.open('https://org.suraksha.lk/', '_blank');
       onClose();
       return;
     }
     
-    onPageChange(itemId);
+    // Handle my-children - clear child selection
+    if (itemId === 'my-children') {
+      setSelectedChild(null);
+      navigate('/my-children');
+      onClose();
+      return;
+    }
+    
+    // Build URL with context and preserve query params
+    const searchParams = new URLSearchParams(location.search);
+    const queryString = searchParams.toString();
+    const url = buildSidebarUrl(itemId, context);
+    const fullUrl = url + (queryString ? `?${queryString}` : '');
+    
+    console.log('🔗 [Sidebar] Navigating to:', fullUrl);
+    navigate(fullUrl);
     onClose();
   };
 
@@ -1773,27 +1649,27 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
   };
 
   const handleBackNavigation = () => {
+    const searchParams = new URLSearchParams(location.search);
+    const queryString = searchParams.toString() ? `?${searchParams.toString()}` : '';
+    
     if (selectedTransport) {
-      // Go back from transport attendance to transport list
       setSelectedTransport(null);
-      window.history.pushState({}, '', '/transport');
-      window.dispatchEvent(new PopStateEvent('popstate'));
-      onPageChange('transport');
+      navigate(`/transport${queryString}`);
     } else if (selectedOrganization) {
-      // Go back from organization level to organization selection
       setSelectedOrganization(null);
+      navigate(`/organizations${queryString}`);
     } else if (selectedChild) {
-      // Go back from child level to children selection
       setSelectedChild(null);
+      navigate(`/my-children${queryString}`);
     } else if (selectedSubject) {
-      // Go back from subject level to class level
       setSelectedSubject(null);
+      navigate(`/institute/${selectedInstitute?.id}/class/${selectedClass?.id}/dashboard${queryString}`);
     } else if (selectedClass) {
-      // Go back from class level to institute level
       setSelectedClass(null);
+      navigate(`/institute/${selectedInstitute?.id}/dashboard${queryString}`);
     } else if (selectedInstitute) {
-      // Go back from institute level to institute selection
       setSelectedInstitute(null);
+      navigate(`/dashboard${queryString}`);
     }
   };
 
@@ -1988,7 +1864,7 @@ const Sidebar = ({ isOpen, onClose, currentPage, onPageChange }: SidebarProps) =
                   <SidebarSection title="Attendance" items={attendanceItemsDisplay} />
                 )}
                 
-                {/* For AttendanceMarker role, only show QR Attendance when institute is selected */}
+                {/* For AttendanceMarker role, only show Mark Attendance when institute is selected */}
                 {userRole === 'AttendanceMarker' && selectedInstitute && (
                   <SidebarSection title="Attendance" items={attendanceItemsDisplay} />
                 )}

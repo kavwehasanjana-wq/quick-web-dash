@@ -40,7 +40,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [selectedTransport, setSelectedTransportState] = useState<{ id: string; vehicleNumber: string; bookhireId: string } | null>(null);
   const [selectedInstituteType, setSelectedInstituteType] = useState<string | null>(null);
   const [selectedClassGrade, setSelectedClassGrade] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Start with true to show loading on init
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Public variables for current IDs - no localStorage sync
   const [currentInstituteId, setCurrentInstituteId] = useState<string | null>(null);
@@ -49,6 +50,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [currentChildId, setCurrentChildId] = useState<string | null>(null);
   const [currentOrganizationId, setCurrentOrganizationId] = useState<string | null>(null);
   const [currentTransportId, setCurrentTransportId] = useState<string | null>(null);
+
+  // Listen for token refresh events from API clients
+  React.useEffect(() => {
+    const handleRefreshSuccess = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { user: refreshedUser } = customEvent.detail;
+      console.log('🔄 Token refreshed, updating AuthContext user data');
+      
+      // Update user state with refreshed data
+      if (refreshedUser && user) {
+        const updatedUser = {
+          ...user,
+          firstName: refreshedUser.firstName,
+          lastName: refreshedUser.lastName,
+          name: `${refreshedUser.firstName} ${refreshedUser.lastName}`,
+          email: refreshedUser.email,
+          imageUrl: refreshedUser.imageUrl,
+          userType: refreshedUser.userType,
+        };
+        setUser(updatedUser);
+        console.log('✅ AuthContext user updated after token refresh');
+      }
+    };
+    
+    const handleRefreshFailed = () => {
+      console.error('❌ Token refresh failed, logging out...');
+      if (user) {
+        logout();
+      }
+    };
+    
+    window.addEventListener('auth:refresh-success', handleRefreshSuccess);
+    window.addEventListener('auth:refresh-failed', handleRefreshFailed);
+    
+    return () => {
+      window.removeEventListener('auth:refresh-success', handleRefreshSuccess);
+      window.removeEventListener('auth:refresh-failed', handleRefreshFailed);
+    };
+  }, [user]);
 
   const fetchUserInstitutes = async (userId: string, forceRefresh = false): Promise<Institute[]> => {
     try {
@@ -109,9 +149,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log('Access token stored successfully');
       }
 
-      // Map user data without fetching institutes automatically
-      const mappedUser = mapUserData(data.user, []);
-      console.log('User mapped successfully:', mappedUser);
+      // Map user data and automatically fetch institutes
+      console.log('🏢 Fetching user institutes after login...');
+      const institutes = await fetchUserInstitutes(data.user.id, true);
+      const mappedUser = mapUserData(data.user, institutes);
+      console.log('✅ User logged in with', institutes.length, 'institutes');
       setUser(mappedUser);
     } catch (error) {
       console.error('Login error:', error);
@@ -319,6 +361,63 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // 🔐 CRITICAL: Auto-restore session on mount
+  React.useEffect(() => {
+    const initializeAuth = async () => {
+      console.log('🔐 ========================================');
+      console.log('🔐 INITIALIZING AUTHENTICATION...');
+      console.log('🔐 ========================================');
+      
+      const token = localStorage.getItem('access_token');
+      console.log('🔑 Token check:', {
+        tokenExists: !!token,
+        tokenLength: token?.length || 0,
+        tokenPreview: token ? `${token.substring(0, 20)}...` : 'none'
+      });
+      
+      if (!token) {
+        console.log('⚠️ No token found - user needs to login');
+        setIsLoading(false);
+        setIsInitialized(true);
+        return;
+      }
+      
+      try {
+        console.log('🔍 Token found - validating with backend...');
+        const userData = await validateToken();
+        console.log('📦 User data received:', {
+          id: userData.id,
+          email: userData.email,
+          role: userData.role
+        });
+        
+        // Automatically fetch institutes after token validation
+        console.log('🏢 Fetching user institutes after token validation...');
+        const institutes = await fetchUserInstitutes(userData.id, true);
+        const mappedUser = mapUserData(userData, institutes);
+        console.log('👤 User restored with', institutes.length, 'institutes');
+        setUser(mappedUser);
+        console.log('✅ ========================================');
+        console.log('✅ SESSION RESTORED SUCCESSFULLY!');
+        console.log('✅ ========================================');
+      } catch (error) {
+        console.error('❌ ========================================');
+        console.error('❌ SESSION RESTORATION FAILED!');
+        console.error('❌ Error:', error);
+        console.error('❌ ========================================');
+        // Clear invalid token
+        localStorage.removeItem('access_token');
+        console.log('🧹 Invalid token cleared from localStorage');
+      } finally {
+        setIsLoading(false);
+        setIsInitialized(true);
+        console.log('🏁 Auth initialization complete');
+      }
+    };
+    
+    initializeAuth();
+  }, []); // Run once on mount
+
   const value = {
     user,
     selectedInstitute,
@@ -347,8 +446,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     refreshUserData,
     validateUserToken,
     isAuthenticated: !!user,
-    isLoading
+    isLoading,
+    isInitialized
   };
+
+  // Show loading state during initialization
+  if (!isInitialized) {
+    return (
+      <AuthContext.Provider value={value}>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      </AuthContext.Provider>
+    );
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

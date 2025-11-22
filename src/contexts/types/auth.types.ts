@@ -145,6 +145,7 @@ export interface AuthContextType {
   validateUserToken?: () => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isInitialized: boolean;
 }
 
 export interface ApiResponse {

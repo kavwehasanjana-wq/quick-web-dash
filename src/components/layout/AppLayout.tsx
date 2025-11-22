@@ -55,8 +55,6 @@ const AppLayout = ({ children, currentPage: propCurrentPage, onPageChange }: App
         <Sidebar
           isOpen={isSidebarOpen}
           onClose={handleSidebarClose}
-          currentPage={currentPage}
-          onPageChange={handlePageChange}
         />
       </div>
       

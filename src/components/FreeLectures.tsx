@@ -1,95 +1,57 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAttendanceUrl } from '@/contexts/utils/auth.api';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Video, FileText, User, Calendar, ExternalLink, Download, ChevronDown, ChevronUp, Play } from 'lucide-react';
+import { AlertCircle, Video, User, Calendar, ChevronDown, ChevronUp, Play } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
 import VideoPreviewDialog from '@/components/VideoPreviewDialog';
-import { enhancedCachedClient } from '@/api/enhancedCachedClient';
-import { CACHE_TTL } from '@/config/cacheTTL';
-import { useInstituteRole } from '@/hooks/useInstituteRole';
 
-interface Document {
+interface Attachment {
   documentName: string;
   documentUrl: string;
-  uploadedAt: string;
-  _id: string;
 }
 
 interface Lecture {
-  _id: string;
-  id?: string;
-  subjectId: string;
-  grade: number;
+  id: string;
   title: string;
   description: string;
-  lessonNumber: number;
-  lectureNumber: number;
-  provider: string;
-  lectureLink: string;
-  meetingLink?: string;
-  coverImageUrl?: string | null;
-  documents: Document[];
+  subjectId: string;
+  grade: number;
+  videoUrl: string | null;
+  thumbnailUrl: string | null;
+  attachments: Attachment[] | null;
   isActive: boolean;
   createdBy: string;
-  updatedBy: string;
   createdAt: string;
   updatedAt: string;
-  status?: string;
-  instructorId?: string;
-  instructor?: string;
 }
 
-interface Lesson {
-  lessonNumber: number;
-  lessonName: string;
-  lectures: Lecture[];
-  isExpanded?: boolean;
-}
-
-// Helper function to extract YouTube video ID from URL
-const getYouTubeVideoId = (url: string): string | null => {
-  if (!url) return null;
-  
-  const regexes = [
-    /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/,
-    /(?:youtube\.com\/watch\?v=)([^"&?\/\s]{11})/,
-    /(?:youtu\.be\/)([^"&?\/\s]{11})/
+// Helper function to extract lesson number from title
+const extractLessonNumber = (title: string): number | null => {
+  const patterns = [
+    /lesson\s*(\d+)/i,
+    /l(\d+)/i,
+    /පාඩම\s*(\d+)/i,
+    /(\d+)\s*පාඩම/i
   ];
   
-  for (const regex of regexes) {
-    const match = url.match(regex);
-    if (match) return match[1];
+  for (const pattern of patterns) {
+    const match = title.match(pattern);
+    if (match) return parseInt(match[1], 10);
   }
   
   return null;
 };
 
-interface FreeLecturesResponse {
-  success: boolean;
-  message: string;
-  subjectInfo: {
-    subjectId: string;
-    grade: number;
-    totalLectures: number;
-    totalLessons: number;
-    activeLectures: number;
-  };
-  data: Lesson[];
-}
-
 const FreeLectures = () => {
-  const { selectedInstitute, selectedClass, selectedSubject, selectedClassGrade, user } = useAuth();
-  const [lectures, setLectures] = useState<Lesson[]>([]);
-  const [subjectInfo, setSubjectInfo] = useState<FreeLecturesResponse['subjectInfo'] | null>(null);
+  const { selectedInstitute, selectedClass, selectedSubject, selectedClassGrade } = useAuth();
+  const [lectures, setLectures] = useState<Lecture[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expandedLessons, setExpandedLessons] = useState<Record<string, boolean>>({});
   const [expandedLectures, setExpandedLectures] = useState<Record<string, boolean>>({});
   const [videoPreview, setVideoPreview] = useState<{ open: boolean; url: string; title: string }>({ 
     open: false, 
@@ -101,13 +63,36 @@ const FreeLectures = () => {
   const contextKey = `${selectedSubject?.id}-${selectedClassGrade}`;
   const [lastLoadedContext, setLastLoadedContext] = useState<string>('');
 
+  // Group lectures by topic (lecture title)
+  const lecturesByLesson = React.useMemo(() => {
+    const grouped = new Map<string, Lecture[]>();
+    const unassigned: Lecture[] = [];
+    
+    lectures.forEach(lecture => {
+      const topic = (lecture.title || '').trim() || 'Untitled Topic';
+      const existing = grouped.get(topic) || [];
+      grouped.set(topic, [...existing, lecture]);
+    });
+    
+    return { grouped, unassigned };
+  }, [lectures]);
+
+  // Get available topics (unique titles)
+  const availableLessons = React.useMemo(() => {
+    return Array.from(lecturesByLesson.grouped.keys()).sort((a, b) => a.localeCompare(b));
+  }, [lecturesByLesson]);
+  
+  // Calculate total lessons/topics count
+  const totalLessons = availableLessons.length;
+
   // Auto-load free lectures when subject is selected
   useEffect(() => {
     if (selectedSubject && (selectedClassGrade !== null && selectedClassGrade !== undefined) && contextKey !== lastLoadedContext) {
       setLastLoadedContext(contextKey);
-      fetchFreeLectures(false); // Auto-load from cache
+      fetchFreeLectures(false);
     }
   }, [contextKey]);
+
 
   const handleLoadLectures = () => {
     if (selectedSubject && (selectedClassGrade !== null && selectedClassGrade !== undefined)) {
@@ -122,40 +107,44 @@ const FreeLectures = () => {
     setError(null);
 
     try {
-      const effectiveRole = useInstituteRole();
+      const baseUrl = import.meta.env.VITE_LMS_BASE_URL || 'https://lms-923357517997.europe-west1.run.app';
+      const endpoint = `/api/structured-lectures/subject/${selectedSubject.id}/grade/${selectedClassGrade || selectedClass?.grade || 10}`;
       
-      // Use enhanced cached client
-      const params = {
-        page: '1',
-        limit: '50'
+      const token = localStorage.getItem('access_token');
+      
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
       };
-
-      const data: FreeLecturesResponse = await enhancedCachedClient.get(
-        `/api/structured-lectures/subject/${selectedSubject.id}/grade/${selectedClassGrade || selectedClass?.grade || 10}`,
-        params,
-        {
-          ttl: CACHE_TTL.FREE_LECTURES,
-          forceRefresh,
-          userId: user?.id,
-          role: effectiveRole,
-          subjectId: selectedSubject.id
-        }
-      );
       
-      if (data.success && data.data) {
-        // The API already returns data in the correct format, no transformation needed
-        setLectures(data.data.map(lesson => ({ ...lesson, isExpanded: false })));
-        setSubjectInfo(data.subjectInfo);
-      } else {
-        setError(data.message || 'Failed to load free lectures');
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
+      
+      const response = await fetch(`${baseUrl}${endpoint}`, {
+        method: 'GET',
+        headers
+      });
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          setLectures([]);
+          setError(null);
+          return;
+        }
+        if (response.status === 401) {
+          setError('Authentication required. Please log in again.');
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data: Lecture[] = await response.json();
+      setLectures(data);
     } catch (err: any) {
       console.error('Error fetching free lectures:', err);
       
-      // Handle 404 specifically - no lectures found for this subject
       if (err.message?.includes('404')) {
         setLectures([]);
-        setSubjectInfo(null);
         setError(null);
         return;
       }
@@ -166,22 +155,17 @@ const FreeLectures = () => {
     }
   };
 
-  const handleJoinLecture = (lectureLink: string, title: string) => {
-    setVideoPreview({ open: true, url: lectureLink, title });
+  const handleJoinLecture = (videoUrl: string, title: string) => {
+    if (videoUrl) {
+      setVideoPreview({ open: true, url: videoUrl, title });
+    }
   };
 
-  const handleDownloadDocument = (documentUrl: string, documentName: string) => {
-    window.open(documentUrl, '_blank');
-  };
-
-  const toggleLessonExpansion = (lessonNumber: number) => {
-    setLectures(prevLectures => 
-      prevLectures.map(lesson => 
-        lesson.lessonNumber === lessonNumber 
-          ? { ...lesson, isExpanded: !lesson.isExpanded }
-          : lesson
-      )
-    );
+  const toggleLessonExpansion = (lessonKey: string) => {
+    setExpandedLessons(prev => ({
+      ...prev,
+      [lessonKey]: !prev[lessonKey]
+    }));
   };
 
   const toggleLectureExpansion = (lectureId: string) => {
@@ -274,8 +258,8 @@ const FreeLectures = () => {
         </Card>
       </div>
 
-      {/* Subject Info Summary */}
-      {subjectInfo && (
+      {/* Subject Overview */}
+      {lectures.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -286,19 +270,19 @@ const FreeLectures = () => {
           <CardContent>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{subjectInfo.totalLectures}</div>
+                <div className="text-2xl font-bold text-primary">{lectures.length}</div>
                 <div className="text-sm text-muted-foreground">Total Lectures</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{subjectInfo.totalLessons}</div>
+                <div className="text-2xl font-bold text-primary">{totalLessons}</div>
                 <div className="text-sm text-muted-foreground">Total Lessons</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{subjectInfo.activeLectures}</div>
+                <div className="text-2xl font-bold text-primary">{lectures.filter(l => l.isActive).length}</div>
                 <div className="text-sm text-muted-foreground">Active Lectures</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{subjectInfo.grade}</div>
+                <div className="text-2xl font-bold text-primary">{selectedClassGrade}</div>
                 <div className="text-sm text-muted-foreground">Grade Level</div>
               </div>
             </div>
@@ -306,7 +290,7 @@ const FreeLectures = () => {
         </Card>
       )}
 
-      {/* Lessons and Lectures */}
+      {/* Lectures List */}
       {lectures.length === 0 ? (
         <Card>
           <CardContent className="py-8">
@@ -318,432 +302,269 @@ const FreeLectures = () => {
         </Card>
       ) : (
         <div className="space-y-4">
-          {lectures.map((lesson) => (
-            <Card key={lesson.lessonNumber} className="overflow-hidden">
-              <Collapsible 
-                open={lesson.isExpanded} 
-                onOpenChange={() => toggleLessonExpansion(lesson.lessonNumber)}
-              >
-                <CollapsibleTrigger asChild>
-                  <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline" className="shrink-0">
-                          Lesson {lesson.lessonNumber}
-                        </Badge>
-                        <div>
-                          <CardTitle className="text-left">{lesson.lessonName}</CardTitle>
-                          <CardDescription className="text-left">
-                            {lesson.lectures.length} lecture{lesson.lectures.length !== 1 ? 's' : ''} available
-                          </CardDescription>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary">
-                          {lesson.lectures.filter(l => l.isActive).length} Active
-                        </Badge>
-                        {lesson.isExpanded ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </div>
+          {/* Render grouped topics (lesson titles) */}
+          {availableLessons.map((lessonKey) => {
+            const lessonLectures = lecturesByLesson.grouped.get(lessonKey) || [];
+            const activeCount = lessonLectures.filter(l => l.isActive).length;
+            const isExpanded = expandedLessons[lessonKey];
+            
+            return (
+              <Card key={lessonKey}>
+                <button
+                  onClick={() => toggleLessonExpansion(lessonKey)}
+                  className="w-full px-6 py-4 flex items-center justify-between hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <Badge variant="outline" className="text-lg font-bold px-3 py-1">
+                      {lessonLectures.length}
+                    </Badge>
+                    <div className="text-left">
+                      <h3 className="font-bold text-lg">{lessonKey}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {activeCount} active lectures
+                      </p>
                     </div>
-                  </CardHeader>
-                </CollapsibleTrigger>
-                
-                <CollapsibleContent>
-                  <CardContent className="pt-0">
-                    <div className="space-y-6">
-                      {lesson.lectures.map((lecture, index) => {
-                        const youtubeId = getYouTubeVideoId(lecture.lectureLink || lecture.meetingLink || '');
-                        const isExpanded = expandedLectures[lecture._id];
-                        
-                        return (
-                          <div key={lecture._id} className="border rounded-lg overflow-hidden">
-                            {/* Cover Image */}
-                            {lecture.coverImageUrl && (
-                              <div className="relative w-full h-48 md:h-56 lg:h-48 bg-muted">
-                                <img
-                                  src={lecture.coverImageUrl}
-                                  alt={lecture.title}
-                                  className="w-full h-full object-cover"
-                                />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isExpanded ? (
+                      <ChevronUp className="h-5 w-5" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5" />
+                    )}
+                  </div>
+                </button>
+
+                {isExpanded && (
+                  <div className="border-t p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {lessonLectures.map((lecture, index) => (
+                        <Card key={lecture.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                          <div className="relative aspect-video bg-muted">
+                            {lecture.thumbnailUrl ? (
+                              <img 
+                                src={lecture.thumbnailUrl} 
+                                alt={lecture.title}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Video className="h-12 w-12 text-muted-foreground/50" />
                               </div>
                             )}
-                            
-                            {/* Mobile View (< 768px) */}
-                            <div className="md:hidden p-4 space-y-3">
-                              <div className="flex items-start gap-3">
-                                <Badge variant="outline" className="shrink-0 mt-1">
-                                  {index + 1}
-                                </Badge>
-                                <div className="flex-1 min-w-0">
-                                  <h4 className="font-semibold text-sm line-clamp-2">{lecture.title}</h4>
-                                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                                    <Calendar className="h-3 w-3" />
-                                    {format(new Date(lecture.createdAt), 'MMM dd, yyyy')}
+                            <Badge variant="outline" className="absolute top-2 left-2 bg-background/90 backdrop-blur">
+                              {index + 1}
+                            </Badge>
+                            <Badge 
+                              variant={lecture.isActive ? "default" : "secondary"} 
+                              className="absolute top-2 right-2 bg-background/90 backdrop-blur"
+                            >
+                              {lecture.isActive ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </div>
+                          <CardContent className="p-4 space-y-3">
+                            <h4 className="font-semibold text-lg mb-1 line-clamp-2">{lecture.title}</h4>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <User className="h-3 w-3" />
+                                {lecture.createdBy}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {lecture.createdAt ? format(new Date(lecture.createdAt), 'MMM dd, yyyy') : 'Jan 01, 1970'}
+                              </span>
+                            </div>
+
+                            {lecture.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-2">
+                                {lecture.description}
+                              </p>
+                            )}
+
+                            {expandedLectures[lecture.id] && (
+                              <div className="space-y-2 pt-2 border-t mt-2">
+                                {/* Full description */}
+                                {lecture.description && (
+                                  <p className="text-xs text-muted-foreground whitespace-pre-line">
+                                    {lecture.description}
+                                  </p>
+                                )}
+
+                                {/* Documents/Attachments */}
+                                {lecture.attachments && lecture.attachments.length > 0 && (
+                                  <div className="space-y-1">
+                                    {lecture.attachments.map((attachment, idx) => (
+                                      <a
+                                        key={idx}
+                                        href={attachment.documentUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 text-xs text-primary hover:underline"
+                                      >
+                                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                        </svg>
+                                        {attachment.documentName}
+                                      </a>
+                                    ))}
                                   </div>
-                                </div>
+                                )}
                               </div>
-                              
+                            )}
+
+                            <div className="flex gap-2 mt-2">
                               <Button
-                                onClick={() => handleJoinLecture(lecture.lectureLink || lecture.meetingLink || '', lecture.title)}
-                                disabled={!lecture.isActive}
-                                className="w-full"
+                                onClick={() => handleJoinLecture(lecture.videoUrl || '', lecture.title)}
+                                disabled={!lecture.isActive || !lecture.videoUrl}
+                                className="flex-1"
                                 size="sm"
                               >
                                 <Play className="h-4 w-4 mr-2" />
                                 Watch Lecture
                               </Button>
-
                               <Button
+                                type="button"
                                 variant="outline"
-                                onClick={() => toggleLectureExpansion(lecture._id)}
-                                className="w-full"
                                 size="sm"
+                                className="flex-1"
+                                onClick={() => toggleLectureExpansion(lecture.id)}
                               >
-                                {isExpanded ? (
-                                  <>
-                                    <ChevronUp className="h-4 w-4 mr-2" />
-                                    View Less
-                                  </>
-                                ) : (
-                                  <>
-                                    <ChevronDown className="h-4 w-4 mr-2" />
-                                    View More
-                                  </>
-                                )}
+                                {expandedLectures[lecture.id] ? 'Hide details' : 'View more'}
                               </Button>
-
-                              {/* Expanded Content on Mobile */}
-                              {isExpanded && (
-                                <div className="space-y-3 pt-2">
-                                  <p className="text-sm text-muted-foreground">{lecture.description}</p>
-                                  
-                                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                    <div className="flex items-center gap-1">
-                                      <User className="h-3 w-3" />
-                                      {lecture.provider}
-                                    </div>
-                                    <Badge variant={lecture.isActive ? "default" : "secondary"} className="text-xs">
-                                      {lecture.isActive ? 'Active' : 'Inactive'}
-                                    </Badge>
-                                    {lecture.status && (
-                                      <Badge variant="outline" className="text-xs">
-                                        {lecture.status}
-                                      </Badge>
-                                    )}
-                                  </div>
-
-                                  {/* YouTube Embed */}
-                                  {youtubeId && (
-                                    <>
-                                      <Separator />
-                                      <div className="space-y-2">
-                                        <h5 className="text-sm font-medium flex items-center gap-2">
-                                          <Play className="h-3 w-3" />
-                                          Lecture Video
-                                        </h5>
-                                        <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-                                          <iframe
-                                            className="absolute top-0 left-0 w-full h-full rounded-lg"
-                                            src={`https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1`}
-                                            title={lecture.title}
-                                            frameBorder="0"
-                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                            allowFullScreen
-                                          />
-                                        </div>
-                                      </div>
-                                    </>
-                                  )}
-
-                                  {/* Documents */}
-                                  {lecture.documents && lecture.documents.length > 0 && (
-                                    <>
-                                      <Separator />
-                                      <div className="space-y-2">
-                                        <h5 className="text-sm font-medium flex items-center gap-2">
-                                          <FileText className="h-3 w-3" />
-                                          Documents ({lecture.documents.length})
-                                        </h5>
-                                        <div className="grid gap-2">
-                                          {lecture.documents.map((doc) => (
-                                            <div
-                                              key={doc._id}
-                                              className="flex items-center justify-between p-2 border rounded bg-muted/50"
-                                            >
-                                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                                <FileText className="h-3 w-3 shrink-0" />
-                                                <span className="text-xs truncate">{doc.documentName}</span>
-                                              </div>
-                                              <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => handleDownloadDocument(doc.documentUrl, doc.documentName)}
-                                                className="shrink-0 ml-2"
-                                              >
-                                                View
-                                              </Button>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    </>
-                                  )}
-                                </div>
-                              )}
                             </div>
-
-                            {/* Tablet View (768px - 1023px) */}
-                            <div className="hidden md:block lg:hidden p-5 space-y-4">
-                              {/* Lecture Header */}
-                              <div className="flex flex-col gap-4">
-                                <div className="flex items-start justify-between gap-4">
-                                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                                    <Badge variant="outline" className="shrink-0">
-                                      {index + 1}
-                                    </Badge>
-                                    <h4 className="font-semibold text-base truncate">{lecture.title}</h4>
-                                  </div>
-                                  <Badge variant={lecture.isActive ? "default" : "secondary"} className="shrink-0">
-                                    {lecture.isActive ? 'Active' : 'Inactive'}
-                                  </Badge>
-                                </div>
-
-                                <p className="text-sm text-muted-foreground line-clamp-3">{lecture.description}</p>
-                                
-                                <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                                  <div className="flex items-center gap-1.5">
-                                    <User className="h-4 w-4" />
-                                    <span className="truncate">{lecture.provider}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <Calendar className="h-4 w-4" />
-                                    {format(new Date(lecture.createdAt), 'MMM dd, yyyy')}
-                                  </div>
-                                  {lecture.status && (
-                                    <Badge variant="outline">
-                                      {lecture.status}
-                                    </Badge>
-                                  )}
-                                </div>
-
-                                <div className="flex gap-3">
-                                  <Button
-                                    onClick={() => handleJoinLecture(lecture.lectureLink || lecture.meetingLink || '', lecture.title)}
-                                    disabled={!lecture.isActive}
-                                    className="flex-1"
-                                  >
-                                    <Play className="h-4 w-4 mr-2" />
-                                    Watch Lecture
-                                  </Button>
-                                  
-                                  <Button
-                                    variant="outline"
-                                    onClick={() => toggleLectureExpansion(lecture._id)}
-                                    className="flex-1"
-                                  >
-                                    {isExpanded ? (
-                                      <>
-                                        <ChevronUp className="h-4 w-4 mr-2" />
-                                        View Less
-                                      </>
-                                    ) : (
-                                      <>
-                                        <ChevronDown className="h-4 w-4 mr-2" />
-                                        View More
-                                      </>
-                                    )}
-                                  </Button>
-                                </div>
-                              </div>
-
-                              {/* Expanded Content on Tablet */}
-                              {isExpanded && (
-                                <>
-                                  {/* YouTube Embed */}
-                                  {youtubeId && (
-                                    <>
-                                      <Separator />
-                                      <div className="space-y-3">
-                                        <h5 className="font-medium flex items-center gap-2">
-                                          <Play className="h-4 w-4" />
-                                          Lecture Video
-                                        </h5>
-                                        <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-                                          <iframe
-                                            className="absolute top-0 left-0 w-full h-full rounded-lg"
-                                            src={`https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1`}
-                                            title={lecture.title}
-                                            frameBorder="0"
-                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                            allowFullScreen
-                                          />
-                                        </div>
-                                      </div>
-                                    </>
-                                  )}
-
-                                  {/* Documents */}
-                                  {lecture.documents && lecture.documents.length > 0 && (
-                                    <>
-                                      <Separator />
-                                      <div className="space-y-3">
-                                        <h5 className="font-medium flex items-center gap-2">
-                                          <FileText className="h-4 w-4" />
-                                          Documents ({lecture.documents.length})
-                                        </h5>
-                                        <div className="grid grid-cols-1 gap-2">
-                                          {lecture.documents.map((doc) => (
-                                            <div
-                                              key={doc._id}
-                                              className="flex items-center justify-between p-3 border rounded bg-muted/50"
-                                            >
-                                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                                <FileText className="h-4 w-4 shrink-0" />
-                                                <div className="min-w-0 flex-1">
-                                                  <span className="text-sm truncate block">{doc.documentName}</span>
-                                                  <span className="text-xs text-muted-foreground">
-                                                    {format(new Date(doc.uploadedAt), 'MMM dd, yyyy')}
-                                                  </span>
-                                                </div>
-                                              </div>
-                                              <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => handleDownloadDocument(doc.documentUrl, doc.documentName)}
-                                                className="shrink-0 ml-3"
-                                              >
-                                                <Download className="h-4 w-4 mr-1" />
-                                                View
-                                              </Button>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    </>
-                                  )}
-                                </>
-                              )}
-                            </div>
-
-                            {/* Desktop View (>= 1024px) */}
-                            <div className="hidden lg:block p-4 space-y-4">
-                              {/* Lecture Header */}
-                              <div className="flex items-start justify-between">
-                                <div className="space-y-2 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <Badge variant="outline">
-                                      {index + 1}
-                                    </Badge>
-                                    <h4 className="font-semibold">{lecture.title}</h4>
-                                  </div>
-                                  <p className="text-sm text-muted-foreground">{lecture.description}</p>
-                                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                                    <div className="flex items-center gap-1">
-                                      <User className="h-4 w-4" />
-                                      {lecture.provider}
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                      <Calendar className="h-4 w-4" />
-                                      {format(new Date(lecture.createdAt), 'MMM dd, yyyy')}
-                                    </div>
-                                    <Badge variant={lecture.isActive ? "default" : "secondary"}>
-                                      {lecture.isActive ? 'Active' : 'Inactive'}
-                                    </Badge>
-                                    {lecture.status && (
-                                      <Badge variant="outline">
-                                        {lecture.status}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </div>
-                                <Button
-                                  onClick={() => handleJoinLecture(lecture.lectureLink || lecture.meetingLink || '', lecture.title)}
-                                  disabled={!lecture.isActive}
-                                  className="shrink-0 ml-4"
-                                >
-                                  <Play className="h-4 w-4 mr-2" />
-                                  Watch Lecture
-                                </Button>
-                              </div>
-
-                              {/* YouTube Embed */}
-                              {youtubeId && (
-                                <>
-                                  <Separator />
-                                  <div className="space-y-2">
-                                    <h5 className="font-medium flex items-center gap-2">
-                                      <Play className="h-4 w-4" />
-                                      Lecture Video
-                                    </h5>
-                                    <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-                                      <iframe
-                                        className="absolute top-0 left-0 w-full h-full rounded-lg"
-                                        src={`https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1`}
-                                        title={lecture.title}
-                                        frameBorder="0"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        allowFullScreen
-                                      />
-                                    </div>
-                                  </div>
-                                </>
-                              )}
-
-                              {/* Documents */}
-                              {lecture.documents && lecture.documents.length > 0 && (
-                                <>
-                                  <Separator />
-                                  <div className="space-y-2">
-                                    <h5 className="font-medium flex items-center gap-2">
-                                      <FileText className="h-4 w-4" />
-                                      Documents ({lecture.documents.length})
-                                    </h5>
-                                    <div className="grid gap-2">
-                                      {lecture.documents.map((doc) => (
-                                        <div
-                                          key={doc._id}
-                                          className="flex items-center justify-between p-2 border rounded bg-muted/50"
-                                        >
-                                          <div className="flex items-center gap-2">
-                                            <FileText className="h-4 w-4" />
-                                            <span className="text-sm">{doc.documentName}</span>
-                                            <span className="text-xs text-muted-foreground">
-                                              • {format(new Date(doc.uploadedAt), 'MMM dd, yyyy')}
-                                            </span>
-                                          </div>
-                                           <Button
-                                             variant="outline"
-                                             size="sm"
-                                             onClick={() => handleDownloadDocument(doc.documentUrl, doc.documentName)}
-                                           >
-                                             View
-                                           </Button>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
+                          </CardContent>
+                        </Card>
+                      ))}
                     </div>
-                  </CardContent>
-                </CollapsibleContent>
-              </Collapsible>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+          
+          {/* Render unassigned lectures */}
+          {lecturesByLesson.unassigned.length > 0 && (
+            <Card>
+              <div className="px-6 py-4 border-b">
+                <div className="flex items-center gap-4">
+                  <Badge variant="outline" className="text-sm">
+                    Other Lectures
+                  </Badge>
+                  <div>
+                    <h3 className="font-semibold">General Lectures</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {lecturesByLesson.unassigned.length} lectures available
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {lecturesByLesson.unassigned.map((lecture, index) => (
+                    <Card key={lecture.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                      <div className="relative aspect-video bg-muted">
+                        {lecture.thumbnailUrl ? (
+                          <img 
+                            src={lecture.thumbnailUrl} 
+                            alt={lecture.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Video className="h-12 w-12 text-muted-foreground/50" />
+                          </div>
+                        )}
+                        <Badge variant="outline" className="absolute top-2 left-2 bg-background/90 backdrop-blur">
+                          {index + 1}
+                        </Badge>
+                        <Badge 
+                          variant={lecture.isActive ? "default" : "secondary"} 
+                          className="absolute top-2 right-2 bg-background/90 backdrop-blur"
+                        >
+                          {lecture.isActive ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </div>
+                      <CardContent className="p-4 space-y-3">
+                        <h4 className="font-semibold text-lg mb-1 line-clamp-2">{lecture.title}</h4>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {lecture.createdBy}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {lecture.createdAt ? format(new Date(lecture.createdAt), 'MMM dd, yyyy') : 'Jan 01, 1970'}
+                          </span>
+                        </div>
+                        
+                        {lecture.description && (
+                          <p className="text-xs text-muted-foreground line-clamp-2">
+                            {lecture.description}
+                          </p>
+                        )}
+                        
+                        {expandedLectures[lecture.id] && (
+                          <div className="space-y-2 pt-2 border-t mt-2">
+                            {lecture.description && (
+                              <p className="text-xs text-muted-foreground whitespace-pre-line">
+                                {lecture.description}
+                              </p>
+                            )}
+                            {lecture.attachments && lecture.attachments.length > 0 && (
+                              <div className="space-y-1">
+                                {lecture.attachments.map((attachment, idx) => (
+                                  <a
+                                    key={idx}
+                                    href={attachment.documentUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 text-xs text-primary hover:underline"
+                                  >
+                                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                    {attachment.documentName}
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        <div className="flex gap-2 mt-2">
+                          <Button
+                            onClick={() => handleJoinLecture(lecture.videoUrl || '', lecture.title)}
+                            disabled={!lecture.isActive || !lecture.videoUrl}
+                            className="flex-1"
+                            size="sm"
+                          >
+                            <Play className="h-4 w-4 mr-2" />
+                            Watch Lecture
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => toggleLectureExpansion(lecture.id)}
+                          >
+                            {expandedLectures[lecture.id] ? 'Hide details' : 'View more'}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
             </Card>
-          ))}
+          )}
         </div>
       )}
 
       <VideoPreviewDialog
         open={videoPreview.open}
-        onOpenChange={(open) => setVideoPreview({ ...videoPreview, open })}
+        onOpenChange={(open) => {
+          if (!open) setVideoPreview({ open: false, url: '', title: '' });
+        }}
         url={videoPreview.url}
         title={videoPreview.title}
       />

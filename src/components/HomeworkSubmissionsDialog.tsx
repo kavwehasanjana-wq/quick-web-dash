@@ -13,6 +13,7 @@ import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { AccessControl, UserRole } from '@/utils/permissions';
 import { homeworkSubmissionsApi, type HomeworkSubmission } from '@/api/homeworkSubmissions.api';
 import { FileText, Calendar, User, ExternalLink, RefreshCw, Lock } from 'lucide-react';
+import { PDFViewer } from '@/components/ui/pdf-viewer';
 
 interface HomeworkSubmissionsDialogProps {
   homework: any;
@@ -26,6 +27,9 @@ const HomeworkSubmissionsDialog = ({ homework, isOpen, onClose }: HomeworkSubmis
   const userRole = useInstituteRole();
   const [submissions, setSubmissions] = useState<HomeworkSubmission[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [pdfModalOpen, setPdfModalOpen] = useState(false);
+  const [selectedPdfUrl, setSelectedPdfUrl] = useState('');
+  const [selectedPdfTitle, setSelectedPdfTitle] = useState('');
 
   const loadSubmissions = async () => {
     if (!homework?.id) return;
@@ -194,7 +198,11 @@ const HomeworkSubmissionsDialog = ({ homework, isOpen, onClose }: HomeworkSubmis
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => window.open(submission.fileUrl, '_blank')}
+                        onClick={() => {
+                          setSelectedPdfUrl(submission.fileUrl || '');
+                          setSelectedPdfTitle('Student Submission');
+                          setPdfModalOpen(true);
+                        }}
                       >
                         <ExternalLink className="h-3 w-3 mr-1" />
                         View File
@@ -208,7 +216,11 @@ const HomeworkSubmissionsDialog = ({ homework, isOpen, onClose }: HomeworkSubmis
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => window.open(submission.teacherCorrectionFileUrl, '_blank')}
+                        onClick={() => {
+                          setSelectedPdfUrl(submission.teacherCorrectionFileUrl || '');
+                          setSelectedPdfTitle('Teacher Correction');
+                          setPdfModalOpen(true);
+                        }}
                       >
                         <ExternalLink className="h-3 w-3 mr-1" />
                         View Correction
@@ -228,6 +240,18 @@ const HomeworkSubmissionsDialog = ({ homework, isOpen, onClose }: HomeworkSubmis
           )}
         </div>
       </DialogContent>
+      
+      {/* PDF Viewer Modal */}
+      <Dialog open={pdfModalOpen} onOpenChange={setPdfModalOpen}>
+        <DialogContent className="max-w-5xl h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>{selectedPdfTitle}</DialogTitle>
+          </DialogHeader>
+          <div className="w-full h-[calc(90vh-80px)]">
+            {selectedPdfUrl && <PDFViewer url={selectedPdfUrl} title={selectedPdfTitle} />}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };

@@ -127,9 +127,10 @@ export const verifyAndPublish = async (relativePath: string): Promise<void> => {
 };
 
 // Auto-detect folder based on file type and context
-export const detectFolder = (file: File, context?: 'homework' | 'payment' | 'correction' | 'profile' | 'institute' | 'subject' | 'student' | 'id-document'): string => {
+export const detectFolder = (file: File, context?: 'homework' | 'payment' | 'correction' | 'profile' | 'institute' | 'subject' | 'student' | 'id-document' | 'institute-user'): string => {
   const mimeType = file.type;
   const isImage = mimeType.startsWith('image/');
+  const isPdf = mimeType === 'application/pdf';
   
   if (context === 'homework') return 'homework-files';
   if (context === 'correction') return 'correction-files';
@@ -139,9 +140,11 @@ export const detectFolder = (file: File, context?: 'homework' | 'payment' | 'cor
   if (context === 'institute') return 'institute-images';
   if (context === 'subject') return 'subject-images';
   if (context === 'student') return 'student-images';
+  if (context === 'institute-user') return 'institute-user-images';
   
   // Default fallback based on file type
   if (isImage) return 'profile-images';
+  if (isPdf) return 'homework-files';
   return 'homework-files';
 };
 

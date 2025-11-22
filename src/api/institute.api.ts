@@ -49,6 +49,27 @@ export interface Subject {
   code: string;
 }
 
+export interface TeacherInfo {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  imageUrl?: string;
+  phoneNumber?: string;
+}
+
+export interface ClassSubject {
+  instituteId: string;
+  classId: string;
+  subjectId: string;
+  teacherId?: string;
+  isActive: boolean;
+  enrollmentEnabled: boolean;
+  enrollmentKey?: string;
+  subject: Subject;
+  teacher?: TeacherInfo | null;
+}
+
 export interface Teacher {
   id: string;
   firstName: string;
@@ -272,6 +293,24 @@ class InstituteApi {
       classId,
       role: params?.role
     });
+  }
+
+  // Assign teacher to subject
+  async assignTeacherToSubject(instituteId: string, classId: string, subjectId: string, teacherId: string): Promise<{ success: boolean; message: string; data: any }> {
+    return enhancedCachedClient.patch(
+      `/institutes/${instituteId}/classes/${classId}/subjects/${subjectId}/assign-teacher`,
+      { teacherId },
+      { instituteId, classId, subjectId }
+    );
+  }
+
+  // Unassign teacher from subject
+  async unassignTeacherFromSubject(instituteId: string, classId: string, subjectId: string): Promise<{ success: boolean; message: string; data: any }> {
+    return enhancedCachedClient.patch(
+      `/institutes/${instituteId}/classes/${classId}/subjects/${subjectId}/unassign-teacher`,
+      {},
+      { instituteId, classId, subjectId }
+    );
   }
 
   // Enhanced method to check if data is already cached

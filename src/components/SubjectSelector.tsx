@@ -12,6 +12,7 @@ import { useApiRequest } from '@/hooks/useApiRequest';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { enhancedCachedClient } from '@/api/enhancedCachedClient';
 import { CACHE_TTL } from '@/config/cacheTTL';
+import { useAppNavigation } from '@/hooks/useAppNavigation';
 interface Subject {
   id: string;
   name: string;
@@ -68,6 +69,7 @@ const SubjectSelector = () => {
     currentClassId
   } = useAuth();
   const instituteRole = useInstituteRole();
+  const { navigateToPage } = useAppNavigation();
   const {
     toast
   } = useToast();
@@ -299,10 +301,14 @@ const SubjectSelector = () => {
       instituteType: subject.instituteType,
       imgUrl: subject.imgUrl
     });
+    
     toast({
       title: "Subject Selected",
       description: `Selected ${subject.name} (${subject.code})`
     });
+    
+    // Auto-navigate to dashboard after selection
+    navigateToPage('dashboard');
   };
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages && newPage !== currentPage) {

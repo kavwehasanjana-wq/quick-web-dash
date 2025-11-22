@@ -8,7 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, RefreshCw, GraduationCap, Image, Edit, Filter, Search, X, QrCode } from 'lucide-react';
+import { Plus, RefreshCw, GraduationCap, Image, Edit, Filter, Search, X, QrCode, UserPlus, UserMinus } from 'lucide-react';
+import { TeacherSelectorDialog } from '@/components/dialogs/TeacherSelectorDialog';
+import { instituteClassesApi } from '@/api/instituteClasses.api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { getBaseUrl } from '@/contexts/utils/auth.api';
@@ -19,6 +21,16 @@ import { UserRole } from '@/contexts/types/auth.types';
 import { useTableData } from '@/hooks/useTableData';
 import { enhancedCachedClient } from '@/api/enhancedCachedClient';
 import { CACHE_TTL } from '@/config/cacheTTL';
+
+interface TeacherInfo {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  imageUrl?: string;
+  phoneNumber?: string;
+  userType: string;
+}
 
 interface ClassData {
   id: string;
@@ -42,6 +54,7 @@ interface ClassData {
   createdAt: string;
   updatedAt: string;
   imageUrl?: string;
+  classTeacher?: TeacherInfo | null;
 }
 
 interface ApiResponse {
@@ -79,6 +92,10 @@ const Classes = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGrade, setSelectedGrade] = useState<string>('');
+  
+  // Teacher assignment state
+  const [isTeacherSelectorOpen, setIsTeacherSelectorOpen] = useState(false);
+  const [selectedClassForTeacher, setSelectedClassForTeacher] = useState<string>('');
 
   // Auto-load classes when institute is selected
   useEffect(() => {
@@ -237,6 +254,48 @@ const Classes = () => {
     setPage(0);
   };
 
+  const handleAssignTeacher = (classId: string) => {
+    setSelectedClassForTeacher(classId);
+    setIsTeacherSelectorOpen(true);
+  };
+
+  const handleUnassignTeacher = async (classId: string) => {
+    try {
+      await instituteClassesApi.unassignTeacher(classId);
+      toast({
+        title: "Success",
+        description: "Teacher unassigned successfully"
+      });
+      fetchClasses(true);
+    } catch (error) {
+      console.error('Error unassigning teacher:', error);
+      toast({
+        title: "Error",
+        description: "Failed to unassign teacher",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleTeacherSelect = async (teacherId: string) => {
+    try {
+      await instituteClassesApi.assignTeacher(selectedClassForTeacher, teacherId);
+      toast({
+        title: "Success",
+        description: "Teacher assigned successfully"
+      });
+      fetchClasses(true);
+    } catch (error) {
+      console.error('Error assigning teacher:', error);
+      toast({
+        title: "Error",
+        description: "Failed to assign teacher",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
   const handleViewCode = async (classId: string) => {
     setLoadingCode(true);
     try {
@@ -328,18 +387,36 @@ const Classes = () => {
       )
     },
     {
-      key: 'capacity',
-      header: 'Capacity',
-      render: (value: number) => (
-        <div className="flex items-center gap-1">
-          <GraduationCap className="h-4 w-4" />
-          {value}
-        </div>
-      )
-    },
-    {
       key: 'academicYear',
       header: 'Academic Year'
+    },
+    {
+      key: 'classTeacher',
+      header: 'Class Teacher',
+      render: (value: TeacherInfo | null, row: ClassData) => (
+        <div className="min-w-[200px]">
+          {value ? (
+            <div className="flex items-center gap-2">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={value.imageUrl} alt={`${value.firstName} ${value.lastName}`} />
+                <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
+                  {value.firstName[0]}{value.lastName[0]}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium truncate">
+                  {value.firstName} {value.lastName}
+                </div>
+                <div className="text-xs text-muted-foreground truncate">
+                  {value.email}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <span className="text-sm text-muted-foreground">No teacher assigned</span>
+          )}
+        </div>
+      )
     },
     {
       key: 'isActive',
@@ -355,6 +432,29 @@ const Classes = () => {
       header: 'Actions',
       render: (value: any, row: ClassData) => (
         <div className="flex items-center gap-2">
+          {row.classTeacher ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleUnassignTeacher(row.id)}
+              className="h-8 px-3"
+              title="Remove teacher"
+            >
+              <UserMinus className="h-4 w-4 mr-1" />
+              Remove
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleAssignTeacher(row.id)}
+              className="h-8 px-3"
+              title="Assign teacher"
+            >
+              <UserPlus className="h-4 w-4 mr-1" />
+              Assign
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -362,7 +462,7 @@ const Classes = () => {
             className="h-8 px-3"
           >
             <QrCode className="h-4 w-4 mr-1" />
-            View Code
+            Code
           </Button>
           <Button
             variant="outline"
@@ -435,6 +535,18 @@ const Classes = () => {
               )}
             </DialogContent>
           </Dialog>
+
+          {/* Teacher Selector Dialog */}
+          <TeacherSelectorDialog
+            isOpen={isTeacherSelectorOpen}
+            onClose={() => {
+              setIsTeacherSelectorOpen(false);
+              setSelectedClassForTeacher('');
+            }}
+            onSelect={handleTeacherSelect}
+            title="Assign Class Teacher"
+            description="Select a teacher to assign as the class teacher"
+          />
 
           {/* View Enrollment Code Dialog */}
           <Dialog open={isViewCodeDialogOpen} onOpenChange={setIsViewCodeDialogOpen}>

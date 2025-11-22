@@ -20,7 +20,9 @@ import { Occupation, formatOccupation } from '@/types/occupation.types';
 const Parents = () => {
   const {
     user,
-    selectedInstitute
+    selectedInstitute,
+    selectedClass,
+    selectedSubject
   } = useAuth();
   const {
     toast
@@ -36,6 +38,10 @@ const Parents = () => {
 
   // Filter states
   const [selectedOccupation, setSelectedOccupation] = useState<string>('');
+  const [selectedWorkplace, setSelectedWorkplace] = useState<string>('');
+  const [enrolledAfter, setEnrolledAfter] = useState<string>('');
+  const [sortBy, setSortBy] = useState<string>('name');
+  const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('ASC');
   const [filters, setFilters] = useState({
     instituteId: '',
     name: '',
@@ -43,22 +49,45 @@ const Parents = () => {
     address: ''
   });
   const userRole = useInstituteRole();
-  const canViewParents = userRole === 'InstituteAdmin';
+  const canViewParents = userRole === 'InstituteAdmin' || userRole === 'Teacher';
   const canCreateParents = userRole === 'InstituteAdmin';
+
+  // Build dynamic endpoint based on selection context
+  const getEndpoint = () => {
+    if (!selectedInstitute) return '';
+    
+    let endpoint = `/institute-users/institute/${selectedInstitute.id}/users/PARENT`;
+    
+    // Add class context if class is selected
+    if (selectedClass) {
+      endpoint += `/class/${selectedClass.id}`;
+      
+      // Add subject context if subject is selected
+      if (selectedSubject) {
+        endpoint += `/subject/${selectedSubject.id}`;
+      }
+    }
+    
+    return endpoint;
+  };
 
   // Use the useTableData hook for better data management and pagination
   const tableData = useTableData({
-    endpoint: selectedInstitute ? `/institute-users/institute/${selectedInstitute.id}/users/PARENT` : '',
+    endpoint: getEndpoint(),
     defaultParams: {
       parent: 'true',
-      ...(selectedOccupation && { occupation: selectedOccupation })
+      ...(selectedOccupation && { occupation: selectedOccupation }),
+      ...(selectedWorkplace && { workplace: selectedWorkplace }),
+      ...(enrolledAfter && { enrolledAfter }),
+      ...(sortBy && { sortBy }),
+      ...(sortOrder && { sortOrder })
     },
     autoLoad: true,
     pagination: {
       defaultLimit: 50,
       availableLimits: [25, 50, 100]
     },
-    dependencies: [selectedOccupation]
+    dependencies: [selectedOccupation, selectedWorkplace, enrolledAfter, sortBy, sortOrder, selectedClass?.id, selectedSubject?.id]
   });
 
   // Table columns configuration
@@ -168,6 +197,10 @@ const Parents = () => {
       address: ''
     });
     setSelectedOccupation('');
+    setSelectedWorkplace('');
+    setEnrolledAfter('');
+    setSortBy('name');
+    setSortOrder('ASC');
     setSearchTerm('');
   };
 
@@ -177,7 +210,7 @@ const Parents = () => {
         <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
         <h3 className="text-lg font-semibold mb-2">Access Denied</h3>
         <p className="text-muted-foreground">
-          You don't have permission to view parents. Only Institute Admins can access this section.
+          You don't have permission to view parents. Only Institute Admins and Teachers can access this section.
         </p>
       </div>;
   }
@@ -201,7 +234,11 @@ const Parents = () => {
             Institute Parents
           </h1>
           <div className="text-sm md:text-base text-muted-foreground">
-            <p>Institute: <span className="font-medium">{selectedInstitute.name}</span></p>
+            <p>
+              Institute: <span className="font-medium">{selectedInstitute.name}</span>
+              {selectedClass && <> • Class: <span className="font-medium">{selectedClass.name}</span></>}
+              {selectedSubject && <> • Subject: <span className="font-medium">{selectedSubject.name}</span></>}
+            </p>
           </div>
         </div>
         
@@ -295,6 +332,53 @@ const Parents = () => {
                     ...prev,
                     address: e.target.value
                   }))} />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Workplace</label>
+                    <Input 
+                      placeholder="Filter by workplace..." 
+                      value={selectedWorkplace} 
+                      onChange={e => setSelectedWorkplace(e.target.value)} 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Enrolled After</label>
+                    <Input 
+                      type="date"
+                      placeholder="Filter by enrollment date..." 
+                      value={enrolledAfter} 
+                      onChange={e => setEnrolledAfter(e.target.value)} 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Sort By</label>
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Sort by..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover">
+                        <SelectItem value="name">Name</SelectItem>
+                        <SelectItem value="occupation">Occupation</SelectItem>
+                        <SelectItem value="workplace">Workplace</SelectItem>
+                        <SelectItem value="dateOfBirth">Date of Birth</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Sort Order</label>
+                    <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as 'ASC' | 'DESC')}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Sort order..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover">
+                        <SelectItem value="ASC">Ascending</SelectItem>
+                        <SelectItem value="DESC">Descending</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </CardContent>

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
+import { useAppNavigation } from '@/hooks/useAppNavigation';
 import { Building, Users, CheckCircle, RefreshCw, MapPin, Mail, Phone, Youtube, Facebook, Globe } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cachedApiClient } from '@/api/cachedClient';
@@ -60,6 +61,7 @@ const InstituteSelector = ({
   const [isLoading, setIsLoading] = useState(false);
   const [expandedInstituteId, setExpandedInstituteId] = useState<string | null>(null);
   const userRole = useInstituteRole();
+  const { navigateToPage } = useAppNavigation();
   // Sidebar collapse awareness for grid columns
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(
     typeof document !== 'undefined' && document.documentElement.classList.contains('sidebar-collapsed')
@@ -204,6 +206,11 @@ const InstituteSelector = ({
       title: "Institute Selected",
       description: `Selected institute: ${selectedInstitute.name}`
     });
+
+    // After selecting an institute, go directly to class selection for non-parent roles
+    if (userRole && userRole !== 'Parent') {
+      navigateToPage('select-class');
+    }
   };
   return <div className="space-y-6">
       <div className="text-center mb-16">

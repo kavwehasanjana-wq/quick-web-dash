@@ -5,11 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { Video, Calendar, Clock, Users, MapPin, ExternalLink, Plus, Edit } from 'lucide-react';
+import { Video, Calendar, Clock, Users, MapPin, ExternalLink, Plus, Edit, Trash2, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import CreateInstituteLectureForm from '@/components/forms/CreateInstituteLectureForm';
 import UpdateInstituteLectureForm from '@/components/forms/UpdateInstituteLectureForm';
+import DeleteLectureConfirmDialog from '@/components/forms/DeleteLectureConfirmDialog';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 
 const InstituteLectures = () => {
@@ -21,9 +22,14 @@ const InstituteLectures = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
+  const [lectureToDelete, setLectureToDelete] = useState<Lecture | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showRecordingDialog, setShowRecordingDialog] = useState(false);
+  const [recordingLecture, setRecordingLecture] = useState<Lecture | null>(null);
 
-  const fetchLectures = async (pageNum: number = 1) => {
+  const fetchLectures = async (pageNum: number = 1, forceRefresh: boolean = false) => {
     if (!selectedInstitute?.id) {
       toast.error('Please select an institute first');
       return;
@@ -37,7 +43,7 @@ const InstituteLectures = () => {
         limit: 10,
         userId: user?.id,
         role: effectiveRole
-      });
+      }, forceRefresh);
 
       console.log('Institute lectures response:', response);
       
@@ -98,7 +104,8 @@ const InstituteLectures = () => {
 
   const handleViewRecording = (lecture: Lecture) => {
     if (lecture.recordingUrl) {
-      window.open(lecture.recordingUrl, '_blank');
+      setRecordingLecture(lecture);
+      setShowRecordingDialog(true);
     } else {
       toast.info('Recording not available');
     }
@@ -118,6 +125,41 @@ const InstituteLectures = () => {
   const handleUpdateClick = (lecture: Lecture) => {
     setSelectedLecture(lecture);
     setShowUpdateDialog(true);
+  };
+
+  const handleDeleteClick = (lecture: Lecture) => {
+    setLectureToDelete(lecture);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!lectureToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await lectureApi.deleteInstituteLecturePermanent(
+        lectureToDelete.id,
+        { instituteId: selectedInstitute?.id }
+      );
+
+      toast.success('Lecture Deleted', {
+        description: `${lectureToDelete.title} has been permanently deleted.`,
+      });
+
+      // Immediately remove from UI (optimistic update)
+      setLectures(prevLectures => prevLectures.filter(l => l.id !== lectureToDelete.id));
+      
+      // Close dialog and reset state
+      setShowDeleteDialog(false);
+      setLectureToDelete(null);
+    } catch (error: any) {
+      console.error('Error deleting lecture:', error);
+      toast.error('Delete Failed', {
+        description: error.response?.data?.message || 'Failed to delete lecture. Please try again.',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const isInstituteAdmin = effectiveRole === 'InstituteAdmin';
@@ -171,7 +213,7 @@ const InstituteLectures = () => {
               </DialogContent>
             </Dialog>
           )}
-          <Button onClick={() => fetchLectures(page)} disabled={loading}>
+          <Button onClick={() => fetchLectures(page, true)} disabled={loading}>
             {loading ? 'Loading...' : 'Refresh Lectures'}
           </Button>
         </div>
@@ -252,20 +294,31 @@ const InstituteLectures = () => {
                         onClick={() => handleViewRecording(lecture)}
                         className="gap-2"
                       >
-                        <Video className="h-4 w-4" />
+                        <Play className="h-4 w-4" />
                         View Recording
                       </Button>
                     )}
                     {isInstituteAdmin && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleUpdateClick(lecture)}
-                        className="gap-2"
-                      >
-                        <Edit className="h-4 w-4" />
-                        Update
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleUpdateClick(lecture)}
+                          className="gap-2"
+                        >
+                          <Edit className="h-4 w-4" />
+                          Update
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDeleteClick(lecture)}
+                          className="gap-2"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </Button>
+                      </>
                     )}
                   </div>
                 </CardContent>
@@ -314,6 +367,42 @@ const InstituteLectures = () => {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteLectureConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        lectureTitle={lectureToDelete?.title || ''}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+      />
+
+      {/* Recording Video Dialog */}
+      <Dialog open={showRecordingDialog} onOpenChange={setShowRecordingDialog}>
+        <DialogContent className="max-w-5xl max-h-[90vh] p-0">
+          <div className="relative bg-black rounded-lg overflow-hidden">
+            {recordingLecture && (
+              <>
+                <div className="aspect-video w-full">
+                  <iframe
+                    src={recordingLecture.recordingUrl || ''}
+                    className="w-full h-full"
+                    allow="autoplay; fullscreen; picture-in-picture"
+                    allowFullScreen
+                    title={recordingLecture.title}
+                  />
+                </div>
+                <div className="absolute top-4 left-4 right-4 bg-black/70 backdrop-blur-sm rounded-lg p-4">
+                  <h3 className="text-white font-semibold text-lg">{recordingLecture.title}</h3>
+                  {recordingLecture.description && (
+                    <p className="text-gray-300 text-sm mt-1">{recordingLecture.description}</p>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

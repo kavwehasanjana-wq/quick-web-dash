@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth, type UserRole } from '@/contexts/AuthContext';
 import { AccessControl } from '@/utils/permissions';
@@ -13,7 +14,7 @@ import { enhancedCachedClient } from '@/api/enhancedCachedClient';
 import { apiClient } from '@/api/client'; // For POST operations
 import { CACHE_TTL } from '@/config/cacheTTL';
 import { useToast } from '@/hooks/use-toast';
-import { User, Mail, Phone, MapPin, Calendar, Shield, Edit, Save, X, Lock, Download, FileText, CreditCard, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Shield, Edit, Save, X, Lock, Download, FileText, CreditCard, Eye, EyeOff, Camera } from 'lucide-react';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 interface UserData {
   id: string;
@@ -210,184 +211,312 @@ const Profile = () => {
   // Use the imageUrl from API response
   const currentImageUrl = userData?.imageUrl || '';
   const userTypeDisplay = userData?.userType || user?.userType || 'USER';
+  
+  const getUserInitials = () => {
+    if (!user) return 'U';
+    return `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() || 'U';
+  };
+  
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">
+    return (
+      <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>;
+      </div>
+    );
   }
-  return <div className="min-h-screen bg-gradient-to-br from-background to-background/80 p-4 md:p-6 lg:p-8">
-      <div className="max-w-6xl mx-auto space-y-8">
-        {/* Header Section */}
-        <div className="text-center space-y-4">
-          <div className="relative inline-block">
-            <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
-            <ProfileImageUpload currentImageUrl={currentImageUrl} onImageUpdate={handleImageUpdate} />
-          </div>
-          <div>
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent mb-2">
-              {formData.name || "Welcome"}
-            </h1>
-            <p className="text-muted-foreground text-lg">
-              {userTypeDisplay} • Member since {formData.joinDate}
-            </p>
-          </div>
-          <div className="flex items-center justify-center gap-4">
-            <Badge variant="secondary" className="text-sm">
-              <Shield className="h-3 w-3 mr-1" />
-              {userTypeDisplay}
-            </Badge>
-            <div className="flex gap-2">
-              {!isEditing ? <>
-                  <Button variant="outline" size="sm" onClick={loadUserData} disabled={loading}>
-                    Load Data
-                  </Button>
-                  
-                </> : <>
-                  <Button variant="outline" size="sm" onClick={handleCancel}>
-                    <X className="h-4 w-4 mr-1" />
-                    Cancel
-                  </Button>
-                  <Button size="sm" onClick={handleSave}>
-                    <Save className="h-4 w-4 mr-1" />
-                    Save Changes
-                  </Button>
-                </>}
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/10 p-4 md:p-6 lg:p-8">
+      <div className="max-w-5xl mx-auto space-y-8">
+        {/* Header Section with Modern Design */}
+        <div className="relative">
+          {/* Decorative Background Elements */}
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-3xl blur-3xl -z-10" />
+          
+          <div className="relative bg-gradient-to-br from-card/80 to-card/50 backdrop-blur-xl rounded-3xl border border-border/50 shadow-2xl overflow-hidden">
+            {/* Gradient Overlay */}
+            <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-primary/5 to-transparent" />
+            
+            <div className="relative p-8 md:p-12">
+              <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
+                {/* Profile Image with Edit Button Overlay */}
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-purple-500/30 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="relative">
+                    <Avatar className="h-32 w-32 md:h-40 md:w-40 ring-4 ring-background shadow-xl">
+                      <AvatarImage src={currentImageUrl || ''} alt="Profile" />
+                      <AvatarFallback className="text-3xl font-semibold bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
+                        {getUserInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                    {/* Edit Button Overlay */}
+                    <Button
+                      size="sm"
+                      className="absolute bottom-2 right-2 h-10 w-10 rounded-full shadow-lg bg-primary hover:bg-primary/90 transition-all duration-300"
+                      onClick={() => document.querySelector<HTMLButtonElement>('[aria-label="change-photo"]')?.click()}
+                    >
+                      <Camera className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {/* Hidden ProfileImageUpload */}
+                  <div className="hidden">
+                    <ProfileImageUpload 
+                      currentImageUrl={currentImageUrl} 
+                      onImageUpdate={handleImageUpdate} 
+                    />
+                  </div>
+                </div>
+
+                {/* User Info */}
+                <div className="flex-1 text-center md:text-left space-y-4">
+                  <div>
+                    <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text mb-2">
+                      {formData.name || "Welcome"}
+                    </h1>
+                    <p className="text-muted-foreground text-base md:text-lg flex items-center justify-center md:justify-start gap-2">
+                      <Badge variant="secondary" className="text-sm">
+                        <Shield className="h-3 w-3 mr-1" />
+                        {userTypeDisplay}
+                      </Badge>
+                      <span>•</span>
+                      <span>Member since {formData.joinDate}</span>
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 pt-2">
+                    {formData.email && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
+                        <Mail className="h-4 w-4" />
+                        <span className="hidden sm:inline">{formData.email}</span>
+                      </div>
+                    )}
+                    {formData.phone && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
+                        <Phone className="h-4 w-4" />
+                        <span>{formData.phone}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 pt-2">
+                    {!isEditing ? (
+                      <>
+                        <Button variant="outline" size="sm" onClick={loadUserData} disabled={loading}>
+                          Load Data
+                        </Button>
+                        <Button size="sm" onClick={() => setIsEditing(true)} className="gap-2">
+                          <Edit className="h-4 w-4" />
+                          Edit Profile
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button variant="outline" size="sm" onClick={handleCancel} className="gap-2">
+                          <X className="h-4 w-4" />
+                          Cancel
+                        </Button>
+                        <Button size="sm" onClick={handleSave} className="gap-2">
+                          <Save className="h-4 w-4" />
+                          Save Changes
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Main Content - Centered */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Personal Information - Centered */}
-          <div className="lg:col-start-3 lg:col-span-8 space-y-6">
-            <Tabs value={activeProfileTab} onValueChange={setActiveProfileTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-3 h-auto p-1 bg-muted/50">
-                <TabsTrigger 
-                  value="details" 
-                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-all"
-                >
-                  <span className="hidden sm:inline">Details</span>
-                  <span className="sm:hidden">De</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="change-password" 
-                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-all"
-                >
-                  <span className="hidden sm:inline">Change Password</span>
-                  <span className="sm:hidden">Change Pa</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="user-id" 
-                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-all"
-                >
-                  <span className="hidden sm:inline">User ID</span>
-                  <span className="sm:hidden">Us</span>
-                </TabsTrigger>
-              </TabsList>
+        {/* Main Content */}
+        <div className="space-y-6">
+          <Tabs value={activeProfileTab} onValueChange={setActiveProfileTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-3 h-auto p-1.5 bg-gradient-to-r from-muted/50 to-muted/30 backdrop-blur-sm rounded-xl border border-border/50">
+              <TabsTrigger 
+                value="details" 
+                className="data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:text-primary py-3 px-4 text-sm font-medium transition-all rounded-lg"
+              >
+                <User className="h-4 w-4 mr-2 inline" />
+                <span className="hidden sm:inline">Details</span>
+                <span className="sm:hidden">Info</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="change-password" 
+                className="data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:text-primary py-3 px-4 text-sm font-medium transition-all rounded-lg"
+              >
+                <Lock className="h-4 w-4 mr-2 inline" />
+                <span className="hidden sm:inline">Security</span>
+                <span className="sm:hidden">Sec</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="user-id" 
+                className="data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:text-primary py-3 px-4 text-sm font-medium transition-all rounded-lg"
+              >
+                <CreditCard className="h-4 w-4 mr-2 inline" />
+                <span className="hidden sm:inline">ID Card</span>
+                <span className="sm:hidden">ID</span>
+              </TabsTrigger>
+            </TabsList>
               
               <TabsContent value="details" className="space-y-6">
                 {/* Basic Information Card */}
-                <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-xl">
-                      <User className="h-5 w-5 text-primary" />
-                      Basic Information
-                    </CardTitle>
-                    <CardDescription>
-                      Your fundamental personal details
-                    </CardDescription>
+                <Card className="border-0 shadow-xl bg-gradient-to-br from-card via-card/95 to-card/90 backdrop-blur-xl overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-3xl -z-10" />
+                  <CardHeader className="pb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/15 to-primary/5">
+                        <User className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-2xl">User Information</CardTitle>
+                        <CardDescription className="text-base">
+                          Enter the required information below to register
+                        </CardDescription>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="name" className="text-sm font-medium">Full Name</Label>
-                        {isEditing ? <Input id="name" value={formData.name} onChange={e => setFormData({
-                        ...formData,
-                        name: e.target.value
-                      })} className="transition-all duration-200 focus:ring-2 focus:ring-primary/20" /> : <div className="p-3 rounded-md bg-muted/50 border">
+                      <div className="space-y-2.5">
+                        <Label htmlFor="name" className="text-sm font-semibold">Full Name</Label>
+                        {isEditing ? (
+                          <div className="relative">
+                            <Input 
+                              id="name" 
+                              value={formData.name} 
+                              onChange={e => setFormData({...formData, name: e.target.value})} 
+                              className="h-12 text-base border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200" 
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-12 px-4 rounded-xl bg-gradient-to-r from-muted/70 to-muted/40 border border-border/50 flex items-center">
                             <p className="font-medium">{formData.name}</p>
-                          </div>}
+                          </div>
+                        )}
                       </div>
                       
-                      <div className="space-y-2">
-                        <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
-                        {isEditing ? <Input id="email" type="email" value={formData.email} onChange={e => setFormData({
-                        ...formData,
-                        email: e.target.value
-                      })} className="transition-all duration-200 focus:ring-2 focus:ring-primary/20" /> : <div className="p-3 rounded-md bg-muted/50 border flex items-center gap-2">
-                            <Mail className="h-4 w-4 text-muted-foreground" />
-                            <p className="font-medium">{formData.email}</p>
-                          </div>}
+                      <div className="space-y-2.5">
+                        <Label htmlFor="email" className="text-sm font-semibold">Email address</Label>
+                        {isEditing ? (
+                          <div className="relative">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                            <Input 
+                              id="email" 
+                              type="email" 
+                              value={formData.email} 
+                              onChange={e => setFormData({...formData, email: e.target.value})} 
+                              className="h-12 text-base pl-11 border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200" 
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-12 px-4 rounded-xl bg-gradient-to-r from-muted/70 to-muted/40 border border-border/50 flex items-center gap-3">
+                            <Mail className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                            <p className="font-medium truncate">{formData.email}</p>
+                          </div>
+                        )}
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="phone" className="text-sm font-medium">Phone Number</Label>
-                         {isEditing ? <Input id="phone" value={formData.phone} onChange={e => setFormData({
-                        ...formData,
-                        phone: e.target.value
-                      })} placeholder="+1 (555) 123-4567" className="transition-all duration-200 focus:ring-2 focus:ring-primary/20" /> : <div className="p-3 rounded-md bg-muted/50 border flex items-center gap-2">
-                             <Phone className="h-4 w-4 text-muted-foreground" />
-                             <p className="font-medium">{formData.phone || 'No phone number added'}</p>
-                           </div>}
+                      <div className="space-y-2.5">
+                        <Label htmlFor="phone" className="text-sm font-semibold">Phone Number</Label>
+                        {isEditing ? (
+                          <div className="relative">
+                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                            <Input 
+                              id="phone" 
+                              value={formData.phone} 
+                              onChange={e => setFormData({...formData, phone: e.target.value})} 
+                              placeholder="+1 (555) 123-4567" 
+                              className="h-12 text-base pl-11 border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200" 
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-12 px-4 rounded-xl bg-gradient-to-r from-muted/70 to-muted/40 border border-border/50 flex items-center gap-3">
+                            <Phone className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                            <p className="font-medium">{formData.phone || 'No phone number added'}</p>
+                          </div>
+                        )}
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="dateOfBirth" className="text-sm font-medium">Date of Birth</Label>
-                        {isEditing ? <Input id="dateOfBirth" type="date" value={formData.dateOfBirth} onChange={e => setFormData({
-                        ...formData,
-                        dateOfBirth: e.target.value
-                      })} className="transition-all duration-200 focus:ring-2 focus:ring-primary/20" /> : <div className="p-3 rounded-md bg-muted/50 border flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                            <p className="font-medium">{formData.dateOfBirth}</p>
-                          </div>}
+                      <div className="space-y-2.5">
+                        <Label htmlFor="dateOfBirth" className="text-sm font-semibold">Date of Birth</Label>
+                        {isEditing ? (
+                          <Input 
+                            id="dateOfBirth" 
+                            type="date" 
+                            value={formData.dateOfBirth} 
+                            onChange={e => setFormData({...formData, dateOfBirth: e.target.value})} 
+                            className="h-12 text-base border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200" 
+                          />
+                        ) : (
+                          <div className="h-12 px-4 rounded-xl bg-gradient-to-r from-muted/70 to-muted/40 border border-border/50 flex items-center gap-3">
+                            <Calendar className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                            <p className="font-medium">{formData.dateOfBirth || 'Not set'}</p>
+                          </div>
+                        )}
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="gender" className="text-sm font-medium">Gender</Label>
-                        {isEditing ? <Input id="gender" value={formData.gender} onChange={e => setFormData({
-                        ...formData,
-                        gender: e.target.value
-                      })} className="transition-all duration-200 focus:ring-2 focus:ring-primary/20" /> : <div className="p-3 rounded-md bg-muted/50 border">
-                            <p className="font-medium">{formData.gender}</p>
-                          </div>}
+                      <div className="space-y-2.5">
+                        <Label htmlFor="gender" className="text-sm font-semibold">Gender</Label>
+                        {isEditing ? (
+                          <Input 
+                            id="gender" 
+                            value={formData.gender} 
+                            onChange={e => setFormData({...formData, gender: e.target.value})} 
+                            className="h-12 text-base border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200" 
+                          />
+                        ) : (
+                          <div className="h-12 px-4 rounded-xl bg-gradient-to-r from-muted/70 to-muted/40 border border-border/50 flex items-center">
+                            <p className="font-medium">{formData.gender || 'Not specified'}</p>
+                          </div>
+                        )}
                       </div>
 
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Join Date</Label>
-                        <div className="p-3 rounded-md bg-muted/50 border flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <p className="font-medium">{formData.joinDate}</p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">User Type</Label>
-                        <div className="p-3 rounded-md bg-muted/50 border flex items-center gap-2">
-                          <Shield className="h-4 w-4 text-muted-foreground" />
-                          <p className="font-medium">{userData?.userType || 'N/A'}</p>
+                      <div className="space-y-2.5">
+                        <Label className="text-sm font-semibold">User Type</Label>
+                        <div className="h-12 px-4 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 flex items-center gap-3">
+                          <Shield className="h-5 w-5 text-primary flex-shrink-0" />
+                          <p className="font-semibold text-primary">{userData?.userType || 'N/A'}</p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="address" className="text-sm font-medium">Address</Label>
-                      {isEditing ? <Input id="address" value={formData.address} onChange={e => setFormData({
-                      ...formData,
-                      address: e.target.value
-                    })} className="transition-all duration-200 focus:ring-2 focus:ring-primary/20" /> : <div className="p-3 rounded-md bg-muted/50 border flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <p className="font-medium">{formData.address}</p>
-                        </div>}
+                    <div className="space-y-2.5">
+                      <Label htmlFor="address" className="text-sm font-semibold">Address</Label>
+                      {isEditing ? (
+                        <div className="relative">
+                          <MapPin className="absolute left-3 top-4 h-5 w-5 text-muted-foreground" />
+                          <Textarea 
+                            id="address" 
+                            value={formData.address} 
+                            onChange={e => setFormData({...formData, address: e.target.value})} 
+                            className="min-h-[80px] text-base pl-11 border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200" 
+                            rows={3}
+                          />
+                        </div>
+                      ) : (
+                        <div className="min-h-[80px] px-4 py-3 rounded-xl bg-gradient-to-r from-muted/70 to-muted/40 border border-border/50 flex gap-3">
+                          <MapPin className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                          <p className="font-medium leading-relaxed">{formData.address}</p>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="bio" className="text-sm font-medium">Biography</Label>
-                      {isEditing ? <Textarea id="bio" rows={4} value={formData.bio} onChange={e => setFormData({
-                      ...formData,
-                      bio: e.target.value
-                    })} className="transition-all duration-200 focus:ring-2 focus:ring-primary/20" placeholder="Tell us about yourself..." /> : <div className="p-4 rounded-md bg-muted/50 border">
+                    <div className="space-y-2.5">
+                      <Label htmlFor="bio" className="text-sm font-semibold">Biography</Label>
+                      {isEditing ? (
+                        <Textarea 
+                          id="bio" 
+                          rows={4} 
+                          value={formData.bio} 
+                          onChange={e => setFormData({...formData, bio: e.target.value})} 
+                          className="text-base border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200" 
+                          placeholder="Tell us about yourself..." 
+                        />
+                      ) : (
+                        <div className="p-4 rounded-xl bg-gradient-to-r from-muted/70 to-muted/40 border border-border/50">
                           <p className="text-sm leading-relaxed">{formData.bio}</p>
-                        </div>}
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -575,6 +704,6 @@ const Profile = () => {
           </div>
         </div>
       </div>
-    </div>;
+    );
 };
 export default Profile;

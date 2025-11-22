@@ -108,21 +108,77 @@ export interface ParentChildrenResponse {
   children: ChildData[];
 }
 
+export interface ParentFilterParams {
+  page?: number;
+  limit?: number;
+  occupation?: string;
+  workplace?: string;
+  enrolledAfter?: string;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC';
+}
+
 export const parentsApi = {
   create: async (data: ParentCreateData): Promise<Parent> => {
     const response = await apiClient.post('/parents', data);
     return response.data;
   },
   
-  getInstituteParents: async (instituteId: string, params?: { page?: number; limit?: number }): Promise<InstituteParentsResponse> => {
+  getInstituteParents: async (instituteId: string, params?: ParentFilterParams): Promise<InstituteParentsResponse> => {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.occupation) queryParams.append('occupation', params.occupation);
+    if (params?.workplace) queryParams.append('workplace', params.workplace);
+    if (params?.enrolledAfter) queryParams.append('enrolledAfter', params.enrolledAfter);
+    if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
     
     const url = `/institute-users/institute/${instituteId}/users/PARENT${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
     const response = await apiClient.get(url);
     console.log('Raw response from API client:', response);
     // Return the response directly since apiClient.handleResponse already parses the JSON
+    return response;
+  },
+
+  getClassParents: async (
+    instituteId: string, 
+    classId: string, 
+    params?: ParentFilterParams
+  ): Promise<InstituteParentsResponse> => {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.occupation) queryParams.append('occupation', params.occupation);
+    if (params?.workplace) queryParams.append('workplace', params.workplace);
+    if (params?.enrolledAfter) queryParams.append('enrolledAfter', params.enrolledAfter);
+    if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+    
+    const url = `/institute-users/institute/${instituteId}/users/PARENT/class/${classId}${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    const response = await apiClient.get(url);
+    console.log('Class parents raw response from API client:', response);
+    return response;
+  },
+
+  getSubjectParents: async (
+    instituteId: string, 
+    classId: string, 
+    subjectId: string,
+    params?: ParentFilterParams
+  ): Promise<InstituteParentsResponse> => {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.occupation) queryParams.append('occupation', params.occupation);
+    if (params?.workplace) queryParams.append('workplace', params.workplace);
+    if (params?.enrolledAfter) queryParams.append('enrolledAfter', params.enrolledAfter);
+    if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+    
+    const url = `/institute-users/institute/${instituteId}/users/PARENT/class/${classId}/subject/${subjectId}${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    const response = await apiClient.get(url);
+    console.log('Subject parents raw response from API client:', response);
     return response;
   },
 

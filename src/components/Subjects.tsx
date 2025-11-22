@@ -6,15 +6,27 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 
-import { RefreshCw, Filter, Eye, Edit, Trash2, Plus } from 'lucide-react';
+import { RefreshCw, Filter, Eye, Edit, Trash2, Plus, UserPlus, UserMinus } from 'lucide-react';
 import { useAuth, type UserRole } from '@/contexts/AuthContext';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { AccessControl } from '@/utils/permissions';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import CreateSubjectForm from '@/components/forms/CreateSubjectForm';
 import AssignSubjectToClassForm from '@/components/forms/AssignSubjectToClassForm';
 import { useTableData } from '@/hooks/useTableData';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { TeacherSelectorDialog } from '@/components/dialogs/TeacherSelectorDialog';
+import { instituteApi } from '@/api/institute.api';
+interface TeacherInfo {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  imageUrl?: string;
+}
+
 interface SubjectData {
   id: string;
   code: string;
@@ -29,6 +41,11 @@ interface SubjectData {
   imgUrl: string | null;
   createdAt: string;
   updatedAt: string;
+  teacherId?: string;
+  teacher?: TeacherInfo | null;
+  instituteId?: string;
+  classId?: string;
+  subjectId?: string;
 }
 const Subjects = () => {
   const {
@@ -54,26 +71,44 @@ const Subjects = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const userRole = useInstituteRole();
 
-  // Enhanced pagination with useTableData hook - DISABLE AUTO-LOADING
+  // Teacher assignment state
+  const [isTeacherSelectorOpen, setIsTeacherSelectorOpen] = useState(false);
+  const [selectedSubjectForTeacher, setSelectedSubjectForTeacher] = useState<{
+    subjectId: string;
+    instituteId: string;
+    classId: string;
+  } | null>(null);
+  const [isAssigningTeacher, setIsAssigningTeacher] = useState(false);
+  const [isUnassigningTeacher, setIsUnassigningTeacher] = useState(false);
+  const [showUnassignConfirm, setShowUnassignConfirm] = useState(false);
+  const [subjectToUnassign, setSubjectToUnassign] = useState<SubjectData | null>(null);
+
+  // Enhanced pagination with useTableData hook - fetch from correct endpoint
+  const isClassLevel = !!currentClassId;
+  const endpoint = isClassLevel && currentInstituteId && currentClassId
+    ? `/institutes/${currentInstituteId}/classes/${currentClassId}/subjects`
+    : '/subjects/all';
+
   const tableData = useTableData<SubjectData>({
-    endpoint: '/subjects',
-    defaultParams: {
+    endpoint,
+    defaultParams: isClassLevel ? {} : {
       ...(selectedInstituteType && {
         instituteType: selectedInstituteType
       })
     },
     cacheOptions: {
-      ttl: 15, // Cache for 15 minutes
+      ttl: 15,
       userId: user?.id,
       role: userRole || 'User',
-      instituteId: currentInstituteId || undefined
+      instituteId: currentInstituteId || undefined,
+      classId: currentClassId || undefined
     },
-    dependencies: [], // Remove dependencies to prevent auto-reloading
+    dependencies: [currentInstituteId, currentClassId], // Reload when context changes
     pagination: {
       defaultLimit: 50,
       availableLimits: [25, 50, 100]
     },
-    autoLoad: true, // Enable auto-loading from cache // DISABLE AUTO-LOADING
+    autoLoad: true,
   });
   const {
     state: {
@@ -83,6 +118,17 @@ const Subjects = () => {
     pagination,
     actions
   } = tableData;
+  
+  // Transform nested API response to flattened structure for table
+  const transformedData = subjectsData.map((item: any) => ({
+    ...item.subject,
+    teacher: item.teacher,
+    teacherId: item.teacherId,
+    instituteId: item.instituteId,
+    classId: item.classId,
+    subjectId: item.subjectId || item.subject?.id
+  }));
+  
   const dataLoaded = subjectsData.length > 0;
   const isInstituteAdmin = userRole === 'InstituteAdmin';
   const canEdit = AccessControl.hasPermission(userRole, 'edit-subject') && !isInstituteAdmin;
@@ -119,6 +165,94 @@ const Subjects = () => {
     return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
   };
 
+  const handleAssignTeacher = (subject: SubjectData) => {
+    if (!currentInstituteId || !currentClassId) {
+      toast({
+        title: "Error",
+        description: "Please select a class first to assign teachers to subjects",
+        variant: "destructive"
+      });
+      return;
+    }
+    setSelectedSubjectForTeacher({
+      subjectId: subject.subjectId || subject.id,
+      instituteId: subject.instituteId || currentInstituteId,
+      classId: subject.classId || currentClassId
+    });
+    setIsTeacherSelectorOpen(true);
+  };
+
+  const handleUnassignTeacher = (subject: SubjectData) => {
+    if (!currentInstituteId || !currentClassId) {
+      toast({
+        title: "Error",
+        description: "Please select a class first to manage subject teachers",
+        variant: "destructive"
+      });
+      return;
+    }
+    setSubjectToUnassign(subject);
+    setShowUnassignConfirm(true);
+  };
+
+  const confirmUnassignTeacher = async () => {
+    if (!subjectToUnassign || isUnassigningTeacher) return;
+
+    try {
+      setIsUnassigningTeacher(true);
+      await instituteApi.unassignTeacherFromSubject(
+        subjectToUnassign.instituteId || currentInstituteId!,
+        subjectToUnassign.classId || currentClassId!,
+        subjectToUnassign.subjectId || subjectToUnassign.id
+      );
+      toast({
+        title: "Success",
+        description: "Teacher unassigned successfully"
+      });
+      setShowUnassignConfirm(false);
+      setSubjectToUnassign(null);
+      actions.refresh();
+    } catch (error) {
+      console.error('Error unassigning teacher:', error);
+      toast({
+        title: "Error",
+        description: "Failed to unassign teacher",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUnassigningTeacher(false);
+    }
+  };
+
+  const handleTeacherSelect = async (teacherId: string) => {
+    if (!selectedSubjectForTeacher || isAssigningTeacher) return;
+
+    try {
+      setIsAssigningTeacher(true);
+      await instituteApi.assignTeacherToSubject(
+        selectedSubjectForTeacher.instituteId,
+        selectedSubjectForTeacher.classId,
+        selectedSubjectForTeacher.subjectId,
+        teacherId
+      );
+      toast({
+        title: "Success",
+        description: "Teacher assigned successfully"
+      });
+      actions.refresh();
+    } catch (error) {
+      console.error('Error assigning teacher:', error);
+      toast({
+        title: "Error",
+        description: "Failed to assign teacher",
+        variant: "destructive"
+      });
+      throw error;
+    } finally {
+      setIsAssigningTeacher(false);
+    }
+  };
+
   const subjectsColumns = [{
     id: 'imgUrl',
     key: 'imgUrl',
@@ -138,29 +272,94 @@ const Subjects = () => {
     header: 'Code'
   }, {
     key: 'name',
-    header: 'Name'
+    header: 'Name',
+    format: (value: string | null) => value || <span className="text-muted-foreground italic">No name</span>
   }, {
     key: 'description',
-    header: 'Description'
+    header: 'Description',
+    format: (value: string | null) => value || <span className="text-muted-foreground italic">No description</span>
   }, {
     key: 'category',
-    header: 'Category'
+    header: 'Category',
+    format: (value: string | null) => value || <span className="text-muted-foreground italic">N/A</span>
   }, {
     key: 'creditHours',
-    header: 'Credit Hours'
+    header: 'Credit Hours',
+    format: (value: number | null) => value !== null && value !== undefined ? value : <span className="text-muted-foreground italic">N/A</span>
   }, {
     key: 'subjectType',
-    header: 'Type'
+    header: 'Type',
+    format: (value: string | null) => value || <span className="text-muted-foreground italic">N/A</span>
   }, {
-    key: 'basketCategory',
-    header: 'Basket'
+    key: 'teacher',
+    header: 'Teacher',
+    format: (value: TeacherInfo | null, row: SubjectData) => (
+      <div className="min-w-[180px]">
+        {isClassLevel ? (
+          value ? (
+            <div className="flex items-center gap-2">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={value.imageUrl} alt={value.firstName ? `${value.firstName} ${value.lastName}` : 'Teacher'} />
+                <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
+                  {value.firstName?.[0] || 'T'}{value.lastName?.[0] || 'R'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium truncate">
+                  {value.firstName} {value.lastName}
+                </div>
+                <div className="text-xs text-muted-foreground truncate">
+                  {value.email}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <span className="text-sm text-muted-foreground">No teacher</span>
+          )
+        ) : (
+          <span className="text-sm text-muted-foreground italic">Select a class to view</span>
+        )}
+      </div>
+    )
   }, {
     key: 'isActive',
     header: 'Status',
     render: (value: boolean) => <Badge variant={value ? 'default' : 'secondary'}>
           {value ? 'Active' : 'Inactive'}
         </Badge>
-  }];
+  }, ...(isInstituteAdmin && isClassLevel ? [{
+    key: 'teacherActions',
+    header: 'Teacher Actions',
+    format: (value: any, row: SubjectData) => (
+      <div className="flex items-center gap-2">
+        {row.teacher ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleUnassignTeacher(row)}
+            disabled={isUnassigningTeacher || isAssigningTeacher}
+            className="h-8 px-3"
+            title="Remove teacher"
+          >
+            <UserMinus className="h-4 w-4 mr-1" />
+            Remove
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleAssignTeacher(row)}
+            disabled={isUnassigningTeacher || isAssigningTeacher}
+            className="h-8 px-3"
+            title="Assign teacher"
+          >
+            <UserPlus className="h-4 w-4 mr-1" />
+            Assign
+          </Button>
+        )}
+      </div>
+    )
+  }] : [])];
   const handleCreateSubject = async (subjectData: any) => {
     if (!currentInstituteId) {
       toast({
@@ -252,29 +451,15 @@ const Subjects = () => {
     variant: 'destructive' as const
   }] : [])];
   return <div className="space-y-6">
-      {!dataLoaded ? <div className="text-center py-12">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            {getContextTitle()}
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Click the button below to load subjects data
-          </p>
-          <Button onClick={handleLoadData} disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
-            {isLoading ? <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Loading Data...
-              </> : <>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Load Data
-              </>}
-          </Button>
-        </div> : <>
           <div className="text-center sm:text-left flex-1">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
               {getContextTitle()}
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              Manage academic subjects, curriculum planning, and subject assignments
+              {isClassLevel 
+                ? "Manage class subjects, assign teachers, and configure subject settings"
+                : "Manage academic subjects and curriculum planning. Select a class to assign teachers."
+              }
             </p>
           </div>
 
@@ -285,25 +470,25 @@ const Subjects = () => {
                 <span className="hidden sm:inline">Filters</span>
               </Button>
               
+              <Button variant="outline" size="sm" onClick={() => actions.refresh()} disabled={isLoading} className="flex items-center gap-2">
+                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
+              </Button>
+              
               {canCreate && <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2" size="sm">
                    <Plus className="h-4 w-4" />
                    <span className="hidden sm:inline">Create Subject</span>
                    <span className="sm:hidden">Create</span>
                  </Button>}
                 
-                {(userRole === 'InstituteAdmin' || (canAssignSubjects && dataLoaded && subjectsData.length > 0)) && (
+                {(userRole === 'InstituteAdmin' || canAssignSubjects) && (
                   <Button onClick={() => setIsAssignDialogOpen(true)} style={{ backgroundColor: '#06923E' }} className="hover:opacity-90 text-white flex items-center gap-2" size="sm">
                     <Plus className="h-4 w-4" />
                     <span className="hidden sm:inline">Assign Subject</span>
                     <span className="sm:hidden">Assign</span>
                   </Button>
-                )}
+                 )}
             </div>
-            
-            <Button onClick={handleLoadData} disabled={isLoading} variant="outline" size="sm">
-              <RefreshCw className={`h-4 w-4 sm:mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">{isLoading ? 'Refreshing...' : 'Refresh Data'}</span>
-            </Button>
           </div>
 
           {showFilters && <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border mb-6">
@@ -353,7 +538,7 @@ const Subjects = () => {
           <div className="w-full overflow-x-auto">
             <MUITable
               title="Subjects"
-              data={subjectsData || []}
+              data={transformedData || []}
               columns={subjectsColumns.map(col => ({
                 id: col.key,
                 label: col.header,
@@ -373,7 +558,6 @@ const Subjects = () => {
               allowDelete={!isInstituteAdmin && canDelete}
             />
           </div>
-        </>}
 
       {/* Create Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -413,6 +597,44 @@ const Subjects = () => {
         }} onCancel={() => setIsAssignDialogOpen(false)} />
         </DialogContent>
       </Dialog>
+
+      {/* Teacher Selector Dialog */}
+      <TeacherSelectorDialog
+        isOpen={isTeacherSelectorOpen}
+        onClose={() => {
+          if (!isAssigningTeacher) {
+            setIsTeacherSelectorOpen(false);
+            setSelectedSubjectForTeacher(null);
+          }
+        }}
+        onSelect={handleTeacherSelect}
+        title="Assign Subject Teacher"
+        description="Select a teacher to assign to this subject"
+      />
+
+      {/* Unassign Teacher Confirmation Dialog */}
+      <AlertDialog open={showUnassignConfirm} onOpenChange={(open) => !isUnassigningTeacher && setShowUnassignConfirm(open)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Teacher Assignment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove <strong>{subjectToUnassign?.teacher?.firstName} {subjectToUnassign?.teacher?.lastName}</strong> from teaching <strong>{subjectToUnassign?.name}</strong>?
+              <br /><br />
+              This will unassign the teacher from this subject but will not delete any related data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isUnassigningTeacher}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmUnassignTeacher}
+              disabled={isUnassigningTeacher}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isUnassigningTeacher ? 'Removing...' : 'Remove Teacher'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>;
 };
 export default Subjects;

@@ -203,7 +203,7 @@ const Payments = () => {
   };
 
   const handleNewPayment = () => {
-    navigate('/payments/create');
+    navigate('/system-payments/create');
   };
 
 

@@ -181,6 +181,48 @@ const SubjectPaymentSubmissions = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(50);
 
+  const loadSubmissions = async (currentPage: number = 1, limit: number = 50, forceRefresh = false) => {
+    if (!selectedInstitute || !selectedClass || !selectedSubject) return;
+    setLoading(true);
+    try {
+      const result = await enhancedCachedClient.get(
+        `/institute-class-subject-payment-submissions/institute/${selectedInstitute.id}/class/${selectedClass.id}/subject/${selectedSubject.id}/my-submissions?page=${currentPage}&limit=${limit}`,
+        {},
+        {
+          ttl: CACHE_TTL.PAYMENT_SUBMISSIONS,
+          forceRefresh,
+          userId: user?.id,
+          role: instituteRole,
+          instituteId: selectedInstitute.id,
+          classId: selectedClass.id,
+          subjectId: selectedSubject.id
+        }
+      );
+      
+      setSubmissionsData(result);
+      toast({
+        title: "Success",
+        description: `Loaded ${result.data.length} payment submissions`
+      });
+    } catch (error) {
+      console.error('Failed to load submissions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load payment submissions",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Auto-load submissions when context changes (uses cache if available)
+  useEffect(() => {
+    if (selectedInstitute && selectedClass && selectedSubject) {
+      loadSubmissions(1, rowsPerPage, false); // Load from cache
+    }
+  }, [selectedInstitute?.id, selectedClass?.id, selectedSubject?.id]);
+
   // Check if user is logged in
   if (!user) {
     return <AppLayout>
@@ -223,6 +265,7 @@ const SubjectPaymentSubmissions = () => {
         </div>
       </AppLayout>;
   }
+  
   if (!selectedClass || !selectedSubject) {
     return <AppLayout>
         <div className="text-center py-12">
@@ -238,47 +281,6 @@ const SubjectPaymentSubmissions = () => {
         </div>
       </AppLayout>;
   }
-  const loadSubmissions = async (currentPage: number = 1, limit: number = 50, forceRefresh = false) => {
-    if (!selectedInstitute || !selectedClass || !selectedSubject) return;
-    setLoading(true);
-    try {
-      const result = await enhancedCachedClient.get(
-        `/institute-class-subject-payment-submissions/institute/${selectedInstitute.id}/class/${selectedClass.id}/subject/${selectedSubject.id}/my-submissions?page=${currentPage}&limit=${limit}`,
-        {},
-        {
-          ttl: CACHE_TTL.PAYMENT_SUBMISSIONS,
-          forceRefresh,
-          userId: user?.id,
-          role: instituteRole,
-          instituteId: selectedInstitute.id,
-          classId: selectedClass.id,
-          subjectId: selectedSubject.id
-        }
-      );
-      
-      setSubmissionsData(result);
-      toast({
-        title: "Success",
-        description: `Loaded ${result.data.length} payment submissions`
-      });
-    } catch (error) {
-      console.error('Failed to load submissions:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load payment submissions",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Auto-load submissions when context changes (uses cache if available)
-  useEffect(() => {
-    if (selectedInstitute && selectedClass && selectedSubject) {
-      loadSubmissions(1, rowsPerPage, false); // Load from cache
-    }
-  }, [selectedInstitute?.id, selectedClass?.id, selectedSubject?.id]);
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);

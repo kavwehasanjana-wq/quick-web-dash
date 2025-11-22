@@ -40,6 +40,7 @@ const OrganizationMembers = ({ organizationId, userRole }: OrganizationMembersPr
   const [showTransferPresidencyDialog, setShowTransferPresidencyDialog] = useState(false);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -88,9 +89,10 @@ const OrganizationMembers = ({ organizationId, userRole }: OrganizationMembersPr
   };
 
   const handleRemoveConfirm = async () => {
-    if (!selectedMember) return;
+    if (!selectedMember || isRemoving) return;
     
     try {
+      setIsRemoving(true);
       await organizationSpecificApi.removeUserFromOrganization(organizationId, {
         userId: selectedMember.userId
       });
@@ -110,6 +112,8 @@ const OrganizationMembers = ({ organizationId, userRole }: OrganizationMembersPr
         description: "Failed to remove member from organization",
         variant: "destructive",
       });
+    } finally {
+      setIsRemoving(false);
     }
   };
 
@@ -305,7 +309,7 @@ const OrganizationMembers = ({ organizationId, userRole }: OrganizationMembersPr
       )}
 
       {/* Remove Member Confirmation Dialog */}
-      <AlertDialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
+      <AlertDialog open={showRemoveDialog} onOpenChange={(open) => !isRemoving && setShowRemoveDialog(open)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Member</AlertDialogTitle>
@@ -315,12 +319,13 @@ const OrganizationMembers = ({ organizationId, userRole }: OrganizationMembersPr
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isRemoving}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRemoveConfirm}
+              disabled={isRemoving}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Remove Member
+              {isRemoving ? 'Removing...' : 'Remove Member'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
