@@ -411,24 +411,22 @@ const FreeLectures = () => {
                               </div>
                             )}
 
-                            <div className="flex gap-2 mt-2">
-                              <Button
-                                onClick={() => handleJoinLecture(lecture.videoUrl || '', lecture.title)}
-                                disabled={!lecture.isActive || !lecture.videoUrl}
-                                className="flex-1"
-                                size="sm"
-                              >
-                                <Play className="h-4 w-4 mr-2" />
-                                Watch Lecture
-                              </Button>
+                            <div className="flex flex-col gap-2 mt-2">
                               <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="flex-1"
                                 onClick={() => toggleLectureExpansion(lecture.id)}
                               >
                                 {expandedLectures[lecture.id] ? 'Hide details' : 'View more'}
+                              </Button>
+                              <Button
+                                onClick={() => handleJoinLecture(lecture.videoUrl || '', lecture.title)}
+                                disabled={!lecture.isActive || !lecture.videoUrl}
+                                size="sm"
+                              >
+                                <Play className="h-4 w-4 mr-2" />
+                                Watch Lecture
                               </Button>
                             </div>
                           </CardContent>
