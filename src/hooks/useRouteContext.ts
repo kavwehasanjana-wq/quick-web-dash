@@ -53,17 +53,28 @@ export const useRouteContext = () => {
     }
 
     // STEP 2: ASYNC class selection (non-blocking background load)
+    // Immediately set a lightweight placeholder so sidebar/navigation update without waiting for API
     if (urlClassId && urlInstituteId && (!selectedClass || selectedClass.id?.toString() !== urlClassId)) {
+      // Instant placeholder based only on URL id (will be refined once API returns)
+      setSelectedClass({
+        id: urlClassId,
+        name: selectedClass?.name || `Class ${urlClassId}`,
+        code: selectedClass?.code || '',
+        description: selectedClass?.description || '',
+        grade: selectedClass?.grade ?? 0,
+        specialty: selectedClass?.specialty || ''
+      });
+
       cachedApiClient.get(`/institutes/${urlInstituteId}/classes/${urlClassId}`)
         .then(classData => {
           if (classData) {
             setSelectedClass({
-              id: classData.id || classData.classId,
-              name: classData.name || classData.className,
+              id: classData.id || classData.classId || urlClassId,
+              name: classData.name || classData.className || selectedClass?.name || `Class ${urlClassId}`,
               code: classData.code || '',
               description: classData.description || '',
-              grade: classData.grade,
-              specialty: classData.specialty || classData.section || ''
+              grade: classData.grade ?? selectedClass?.grade ?? 0,
+              specialty: classData.specialty || classData.section || selectedClass?.specialty || ''
             });
             if (!urlSubjectId) setSelectedSubject(null);
           }
