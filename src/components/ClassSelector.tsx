@@ -449,11 +449,6 @@ const ClassSelector = () => {
       grade: 0,
       specialty: classData.specialty || 'General'
     });
-    toast({
-      title: "Class Selected",
-      description: `Selected ${classData.name} (${classData.code})`
-    });
-
     const shouldNavigateToSubject =
       effectiveRole === 'AttendanceMarker' ||
       effectiveRole === 'Teacher' ||
@@ -462,9 +457,7 @@ const ClassSelector = () => {
 
     if (shouldNavigateToSubject) {
       console.log(`${effectiveRole} detected - auto-navigating to select subject`);
-      setTimeout(() => {
-        navigateToPage('select-subject');
-      }, 800); // Small delay to show the toast
+      navigateToPage('select-subject');
     }
 
     // Explicitly log that no further API calls should happen
