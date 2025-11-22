@@ -228,34 +228,27 @@ const FreeLectures = () => {
       {/* Header */}
       <div className="space-y-4">
         <div className="space-y-2">
-          <h1 className="text-2xl md:text-3xl font-bold">Free Lectures</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            {selectedInstitute?.name} • {selectedClass?.name} • {selectedSubject.name}
-          </p>
+          <h1 className="text-2xl md:text-3xl font-bold">
+            Lectures ({selectedInstitute?.name} → {selectedClass?.name} → {selectedSubject.name})
+          </h1>
         </div>
         
-        {/* Load Lectures Button */}
-        <Card className="bg-primary/5 border-primary/20">
-          <CardContent className="p-4 flex justify-center">
-            <Button 
-              onClick={handleLoadLectures}
-              disabled={loading}
-              size="sm"
-            >
-              {loading ? (
-                <>
-                  <Video className="h-4 w-4 mr-2 animate-pulse" />
-                  Loading Lectures...
-                </>
-              ) : (
-                <>
-                  <Video className="h-4 w-4 mr-2" />
-                  Load Free Lectures
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Load Lectures Button - Only show if no data loaded */}
+        {lectures.length === 0 && !loading && (
+          <Card className="bg-primary/5 border-primary/20">
+            <CardContent className="p-4 flex flex-col items-center gap-2">
+              <p className="text-sm text-muted-foreground">Click the button below to load lectures data</p>
+              <Button 
+                onClick={handleLoadLectures}
+                disabled={loading}
+                size="sm"
+              >
+                <Video className="h-4 w-4 mr-2" />
+                Load Data
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Subject Overview */}
@@ -391,19 +384,27 @@ const FreeLectures = () => {
 
                                 {/* Documents/Attachments */}
                                 {lecture.attachments && lecture.attachments.length > 0 && (
-                                  <div className="space-y-1">
+                                  <div className="space-y-2">
+                                    <h5 className="text-sm font-semibold text-foreground">Documents</h5>
                                     {lecture.attachments.map((attachment, idx) => (
                                       <a
                                         key={idx}
                                         href={attachment.documentUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="flex items-center gap-2 text-xs text-primary hover:underline"
+                                        className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent transition-colors group"
                                       >
-                                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                        </svg>
-                                        {attachment.documentName}
+                                        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                                          <svg className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                          </svg>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                                            {attachment.documentName}
+                                          </p>
+                                          <p className="text-xs text-muted-foreground">Click to open</p>
+                                        </div>
                                       </a>
                                     ))}
                                   </div>
