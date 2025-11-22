@@ -328,7 +328,7 @@ const Exams = ({
             {getTitle()}
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            {getLoadButtonMessage()}
+            Click the button below to load exams data
           </p>
           <Button onClick={() => handleLoadData(false)} disabled={isLoading || !shouldShowLoadButton()} className="bg-blue-600 hover:bg-blue-700">
             {isLoading ? <>
