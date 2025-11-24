@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { type UserRole } from '@/contexts/AuthContext';
-import { Eye, EyeOff, GraduationCap, Wifi, WifiOff, Settings, Mail, Key, UserCheck, RotateCcw, UserPlus } from 'lucide-react';
+import { Eye, EyeOff, GraduationCap, Wifi, WifiOff, Settings, Mail, Key, UserCheck, RotateCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getBaseUrl, getBaseUrl2 } from '@/contexts/utils/auth.api';
 import surakshaLogo from '@/assets/suraksha-logo.png';
@@ -634,31 +634,6 @@ const Login = ({
             <CardContent className="pt-12 px-8 pb-12">
             {/* Regular Login Form */}
             {loginStep === 'login' && <form onSubmit={handleLogin} className="space-y-6">
-                {/* First Time Login / Sign Up Button - Shown at top */}
-                {useApiLogin && (
-                  <div className="space-y-3 pb-4">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={startFirstLogin} 
-                      className="w-full h-11 border-2 hover:bg-primary/5 hover:border-primary transition-all"
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      First Time Login / Sign Up
-                    </Button>
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t border-border" />
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-background px-2 text-muted-foreground">
-                          Or login with existing account
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* Role Selection - Only show for mock login */}
                 {!useApiLogin && <div className="space-y-2">
                     <Label htmlFor="role">Role</Label>
@@ -716,42 +691,34 @@ const Login = ({
                 <Button type="submit" className="w-full h-11" disabled={isLoading}>
                   {isLoading ? 'Signing in...' : 'Sign in'}
                 </Button>
+
+                {/* First Time Login Link */}
+                {useApiLogin && <div className="text-center">
+                    <span className="text-sm text-muted-foreground">Don't have an account? </span>
+                    <Button type="button" variant="link" onClick={startFirstLogin} className="text-sm text-primary hover:text-primary/80 p-0 h-auto">
+                      Sign up
+                    </Button>
+                  </div>}
               </form>}
 
             {/* First Login Email Form */}
-            {loginStep === 'first-login-email' && <form onSubmit={handleFirstLoginAPIFlow} className="space-y-6">
-                <div className="space-y-5">
-                  <div className="text-center space-y-2">
-                    <h2 className="text-2xl font-bold text-foreground">Create Your Account</h2>
-                    <p className="text-sm text-muted-foreground">Get started by entering your email</p>
-                  </div>
-
+            {loginStep === 'first-login-email' && <form onSubmit={handleFirstLoginAPIFlow} className="space-y-4">
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="firstLoginEmail" className="text-sm font-medium">Email Address</Label>
-                    <Input 
-                      id="firstLoginEmail" 
-                      type="email" 
-                      placeholder="Enter your email address" 
-                      value={email} 
-                      onChange={e => setEmail(e.target.value)} 
-                      required 
-                      className="h-11"
-                    />
+                    <Label htmlFor="firstLoginEmail">Email Address</Label>
+                    <Input id="firstLoginEmail" type="email" placeholder="Enter your email address" value={email} onChange={e => setEmail(e.target.value)} required />
                   </div>
 
-                  <div className="text-sm text-muted-foreground bg-primary/10 p-4 rounded-lg border border-primary/20">
-                    <div className="flex items-start gap-2">
-                      <Mail className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
-                      <p>We'll send a 6-digit verification code to your email address to help you set up your password.</p>
-                    </div>
+                  <div className="text-sm text-muted-foreground bg-primary/10 p-3 rounded-lg">
+                    We'll send a 6-digit verification code to your email address to help you set up your password.
                   </div>
 
                   {error && <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
                       {error}
                     </div>}
 
-                  <Button type="submit" className="w-full h-11" disabled={isLoading}>
-                    {isLoading ? 'Sending Code...' : 'Sign Up'}
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? 'Sending Code...' : 'Send Verification Code'}
                   </Button>
 
                   <Button type="button" variant="ghost" onClick={resetToLogin} className="w-full">
@@ -761,28 +728,23 @@ const Login = ({
               </form>}
 
             {/* First Login OTP Verification */}
-            {loginStep === 'first-login-otp' && <form onSubmit={handleFirstLoginAPIFlow} className="space-y-6">
-                <div className="space-y-5">
-                  <div className="text-center space-y-2">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
-                      <Key className="h-6 w-6 text-primary" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-foreground">Verify Your Email</h2>
+            {loginStep === 'first-login-otp' && <form onSubmit={handleFirstLoginAPIFlow} className="space-y-4">
+                <div className="space-y-4">
+                  <div className="text-center">
                     <p className="text-sm text-muted-foreground">
-                      We sent a 6-digit code to <br />
-                      <strong className="text-foreground">{email}</strong>
+                      We sent a 6-digit code to <strong>{email}</strong>
                     </p>
                   </div>
                   
-                  <div className="flex justify-center py-2">
+                  <div className="flex justify-center">
                     <InputOTP maxLength={6} value={otp} onChange={setOtp}>
                       <InputOTPGroup>
-                        <InputOTPSlot index={0} className="h-12 w-12 text-lg" />
-                        <InputOTPSlot index={1} className="h-12 w-12 text-lg" />
-                        <InputOTPSlot index={2} className="h-12 w-12 text-lg" />
-                        <InputOTPSlot index={3} className="h-12 w-12 text-lg" />
-                        <InputOTPSlot index={4} className="h-12 w-12 text-lg" />
-                        <InputOTPSlot index={5} className="h-12 w-12 text-lg" />
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
                       </InputOTPGroup>
                     </InputOTP>
                   </div>
@@ -791,27 +753,16 @@ const Login = ({
                       {error}
                     </div>}
 
-                  <Button type="submit" className="w-full h-11" disabled={isLoading || otp.length !== 6}>
-                    {isLoading ? 'Verifying...' : 'Continue Sign Up'}
+                  <Button type="submit" className="w-full" disabled={isLoading || otp.length !== 6}>
+                    {isLoading ? 'Verifying...' : 'Verify Code'}
                   </Button>
 
                   <div className="text-center">
-                    {otpTimer > 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        Resend code in <span className="font-semibold text-primary">{otpTimer}s</span>
-                      </p>
-                    ) : (
-                      <Button 
-                        type="button" 
-                        variant="link" 
-                        onClick={resendFirstLoginOTP} 
-                        disabled={isLoading}
-                        className="text-primary"
-                      >
-                        <RotateCcw className="h-3 w-3 mr-2" />
+                    {otpTimer > 0 ? <p className="text-sm text-muted-foreground">
+                        Resend code in {otpTimer}s
+                      </p> : <Button type="button" variant="ghost" onClick={resendFirstLoginOTP} disabled={isLoading}>
                         Resend Code
-                      </Button>
-                    )}
+                      </Button>}
                   </div>
 
                   <Button type="button" variant="ghost" onClick={resetToLogin} className="w-full">
@@ -821,28 +772,12 @@ const Login = ({
               </form>}
 
             {/* First Login Password Setup */}
-            {loginStep === 'first-login-password' && <form onSubmit={handleFirstLoginAPIFlow} className="space-y-6">
-                <div className="space-y-5">
-                  <div className="text-center space-y-2">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
-                      <UserCheck className="h-6 w-6 text-primary" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-foreground">Set Your Password</h2>
-                    <p className="text-sm text-muted-foreground">Create a secure password for your account</p>
-                  </div>
-
+            {loginStep === 'first-login-password' && <form onSubmit={handleFirstLoginAPIFlow} className="space-y-4">
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="newFirstPassword" className="text-sm font-medium">New Password</Label>
+                    <Label htmlFor="newFirstPassword">New Password</Label>
                     <div className="relative">
-                      <Input 
-                        id="newFirstPassword" 
-                        type={showNewPassword ? 'text' : 'password'} 
-                        placeholder="Enter your new password" 
-                        value={newPassword} 
-                        onChange={e => setNewPassword(e.target.value)} 
-                        required 
-                        className="h-11"
-                      />
+                      <Input id="newFirstPassword" type={showNewPassword ? 'text' : 'password'} placeholder="Enter your new password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required />
                       <Button type="button" variant="ghost" size="sm" className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent" onClick={() => setShowNewPassword(!showNewPassword)}>
                         {showNewPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
                       </Button>
@@ -850,46 +785,25 @@ const Login = ({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="confirmFirstPassword" className="text-sm font-medium">Confirm Password</Label>
+                    <Label htmlFor="confirmFirstPassword">Confirm Password</Label>
                     <div className="relative">
-                      <Input 
-                        id="confirmFirstPassword" 
-                        type={showConfirmPassword ? 'text' : 'password'} 
-                        placeholder="Confirm your new password" 
-                        value={confirmPassword} 
-                        onChange={e => setConfirmPassword(e.target.value)} 
-                        required 
-                        className="h-11"
-                      />
+                      <Input id="confirmFirstPassword" type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm your new password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
                       <Button type="button" variant="ghost" size="sm" className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
                         {showConfirmPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
                       </Button>
                     </div>
                   </div>
 
-                  <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg space-y-1">
-                    <p className="font-semibold text-foreground mb-2">Password Requirements:</p>
-                    <ul className="space-y-1.5">
-                      <li className="flex items-center gap-2">
-                        <span className="w-1 h-1 rounded-full bg-muted-foreground"></span>
-                        Minimum 8 characters
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <span className="w-1 h-1 rounded-full bg-muted-foreground"></span>
-                        At least one uppercase letter (A-Z)
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <span className="w-1 h-1 rounded-full bg-muted-foreground"></span>
-                        At least one lowercase letter (a-z)
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <span className="w-1 h-1 rounded-full bg-muted-foreground"></span>
-                        At least one number (0-9)
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <span className="w-1 h-1 rounded-full bg-muted-foreground"></span>
-                        At least one special character (@$!%*?&)
-                      </li>
+                  
+
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p><strong>Password Requirements:</strong></p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>Minimum 8 characters</li>
+                      <li>At least one uppercase letter (A-Z)</li>
+                      <li>At least one lowercase letter (a-z)</li>
+                      <li>At least one number (0-9)</li>
+                      <li>At least one special character (@$!%*?&)</li>
                     </ul>
                   </div>
 
@@ -897,8 +811,8 @@ const Login = ({
                       {error}
                     </div>}
 
-                  <Button type="submit" className="w-full h-11" disabled={isLoading || !newPassword || !confirmPassword}>
-                    {isLoading ? 'Creating Account...' : 'Complete Sign Up'}
+                  <Button type="submit" className="w-full" disabled={isLoading || !newPassword || !confirmPassword}>
+                    {isLoading ? 'Setting Password...' : 'Set Password'}
                   </Button>
 
                   <Button type="button" variant="ghost" onClick={resetToLogin} className="w-full">
