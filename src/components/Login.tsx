@@ -750,7 +750,7 @@ const Login = ({
                     </div>}
 
                   <Button type="submit" className="w-full h-11" disabled={isLoading}>
-                    {isLoading ? 'Sending Code...' : 'Continue'}
+                    {isLoading ? 'Sending Code...' : 'Sign Up'}
                   </Button>
 
                   <Button type="button" variant="ghost" onClick={resetToLogin} className="w-full">
@@ -791,7 +791,7 @@ const Login = ({
                     </div>}
 
                   <Button type="submit" className="w-full h-11" disabled={isLoading || otp.length !== 6}>
-                    {isLoading ? 'Verifying...' : 'Verify & Continue'}
+                    {isLoading ? 'Verifying...' : 'Continue Sign Up'}
                   </Button>
 
                   <div className="text-center">
