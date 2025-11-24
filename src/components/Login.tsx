@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { type UserRole } from '@/contexts/AuthContext';
-import { Eye, EyeOff, GraduationCap, Wifi, WifiOff, Settings, Mail, Key, UserCheck, RotateCcw } from 'lucide-react';
+import { Eye, EyeOff, GraduationCap, Wifi, WifiOff, Settings, Mail, Key, UserCheck, RotateCcw, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getBaseUrl, getBaseUrl2 } from '@/contexts/utils/auth.api';
 import surakshaLogo from '@/assets/suraksha-logo.png';
@@ -634,6 +634,31 @@ const Login = ({
             <CardContent className="pt-12 px-8 pb-12">
             {/* Regular Login Form */}
             {loginStep === 'login' && <form onSubmit={handleLogin} className="space-y-6">
+                {/* First Time Login / Sign Up Button - Shown at top */}
+                {useApiLogin && (
+                  <div className="space-y-3 pb-4">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={startFirstLogin} 
+                      className="w-full h-11 border-2 hover:bg-primary/5 hover:border-primary transition-all"
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      First Time Login / Sign Up
+                    </Button>
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t border-border" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">
+                          Or login with existing account
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Role Selection - Only show for mock login */}
                 {!useApiLogin && <div className="space-y-2">
                     <Label htmlFor="role">Role</Label>
@@ -691,30 +716,6 @@ const Login = ({
                 <Button type="submit" className="w-full h-11" disabled={isLoading}>
                   {isLoading ? 'Signing in...' : 'Sign in'}
                 </Button>
-
-                {/* Create Account Button */}
-                {useApiLogin && (
-                  <div className="space-y-3">
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t border-border" />
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-background px-2 text-muted-foreground">
-                          Or
-                        </span>
-                      </div>
-                    </div>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={startFirstLogin} 
-                      className="w-full h-11 border-2 hover:bg-primary/5 hover:border-primary transition-all"
-                    >
-                      Create Account
-                    </Button>
-                  </div>
-                )}
               </form>}
 
             {/* First Login Email Form */}
