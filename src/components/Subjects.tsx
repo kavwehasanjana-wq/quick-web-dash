@@ -155,7 +155,7 @@ const Subjects = () => {
     actions.refresh();
   };
   const getBaseUrl = () => {
-    return import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+    return import.meta.env.VITE_LMS_BASE_URL || 'http://localhost:8080';
   };
 
   const resolveImageUrl = (url?: string | null) => {

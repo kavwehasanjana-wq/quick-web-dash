@@ -186,8 +186,8 @@ export default function SMSHistory() {
       });
       return;
     }
-    // Open the slip - adjust this URL based on your backend
-    const baseUrl = localStorage.getItem('api_base_url') || 'http://localhost:3000';
+    // Open the slip - use configured backend URL
+    const baseUrl = import.meta.env.VITE_LMS_BASE_URL || 'http://localhost:8080';
     const slipUrl = `${baseUrl}/sms/payment-slip/${filename}`;
     window.open(slipUrl, '_blank');
   };

@@ -38,7 +38,7 @@ class ApiClient {
 
   private getHeaders(): Record<string, string> {
     const headers = getApiHeaders();
-    
+
     // Add organization-specific token if using baseUrl2
     if (this.useBaseUrl2) {
       const orgToken = localStorage.getItem('org_access_token');
@@ -73,7 +73,7 @@ class ApiClient {
         console.log('✅ Token refreshed successfully');
       } catch (error) {
         console.error('❌ Token refresh failed:', error);
-        
+
         // Clear all auth data
         localStorage.removeItem('access_token');
         localStorage.removeItem('user_data');
@@ -82,11 +82,11 @@ class ApiClient {
         if (this.useBaseUrl2) {
           localStorage.removeItem('org_access_token');
         }
-        
+
         // Redirect to login page
         console.log('🚪 Redirecting to login page...');
         window.location.href = '/login';
-        
+
         throw error;
       } finally {
         this.isRefreshing = false;
@@ -102,44 +102,111 @@ class ApiClient {
     }
   }
 
-  private async handleResponse<T>(response: Response, retryFn?: () => Promise<Response>): Promise<T> {
+  private async handleResponse<T>(
+    response: Response,
+    retryFn?: () => Promise<Response>,
+    retryCount = 0
+  ): Promise<T> {
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({
-        message: `HTTP Error: ${response.status}`,
-        statusCode: response.status,
-        error: response.statusText
-      }));
-      
-      console.error('API Error:', errorData);
-      
+      let errorData: ApiError;
+
+      try {
+        errorData = await response.json();
+      } catch {
+        // If response is not JSON, create a generic error
+        errorData = {
+          message: this.getErrorMessage(response.status),
+          statusCode: response.status,
+          error: response.statusText || 'Unknown Error'
+        };
+      }
+
+      console.error('API Error:', {
+        status: response.status,
+        url: response.url,
+        error: errorData
+      });
+
       // Handle 401 - Try to refresh token
       if (response.status === 401 && retryFn) {
         const refreshed = await this.handle401Error();
-        
+
         if (refreshed) {
           console.log('🔁 Retrying request with new token...');
           const retryResponse = await retryFn();
           return this.handleResponse<T>(retryResponse); // Recursive call without retry to avoid infinite loop
         }
-        
-        throw new Error('Authentication failed');
+
+        throw new Error('Authentication failed. Please login again.');
       }
-      
-      throw new Error(errorData.message || `HTTP Error: ${response.status}`);
+
+      // Handle network errors with retry (503, 504, network timeout)
+      if (this.isRetryableError(response.status) && retryCount < 3 && retryFn) {
+        const delay = this.getRetryDelay(retryCount);
+        console.log(`⏳ Retrying request in ${delay}ms (attempt ${retryCount + 1}/3)...`);
+
+        await this.sleep(delay);
+        const retryResponse = await retryFn();
+        return this.handleResponse<T>(retryResponse, retryFn, retryCount + 1);
+      }
+
+      throw new Error(errorData.message || this.getErrorMessage(response.status));
     }
 
     const contentType = response.headers.get('Content-Type');
     if (contentType && contentType.includes('application/json')) {
       return await response.json();
     }
-    
+
     return {} as T;
+  }
+
+  /**
+   * Get user-friendly error message based on status code
+   */
+  private getErrorMessage(status: number): string {
+    const messages: Record<number, string> = {
+      400: 'Invalid request. Please check your input.',
+      401: 'Authentication required. Please login.',
+      403: 'You do not have permission to access this resource.',
+      404: 'The requested resource was not found.',
+      409: 'Conflict. The resource already exists.',
+      422: 'Validation failed. Please check your input.',
+      429: 'Too many requests. Please try again later.',
+      500: 'Server error. Please try again later.',
+      502: 'Bad gateway. Please try again later.',
+      503: 'Service unavailable. Please try again later.',
+      504: 'Request timeout. Please try again later.',
+    };
+
+    return messages[status] || `Request failed with status ${status}`;
+  }
+
+  /**
+   * Check if error is retryable (network errors, server errors)
+   */
+  private isRetryableError(status: number): boolean {
+    return status === 503 || status === 504 || status === 502 || status === 0;
+  }
+
+  /**
+   * Calculate retry delay with exponential backoff
+   */
+  private getRetryDelay(retryCount: number): number {
+    return Math.min(1000 * Math.pow(2, retryCount), 10000); // Max 10 seconds
+  }
+
+  /**
+   * Sleep utility for retry delays
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   async get<T = any>(endpoint: string, params?: Record<string, any>): Promise<T> {
     const baseUrl = this.getCurrentBaseUrl();
     const url = new URL(`${baseUrl}${endpoint}`);
-    
+
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
@@ -150,12 +217,13 @@ class ApiClient {
 
     console.log('GET Request:', url.toString());
     console.log('Request Headers:', this.getHeaders());
-    
+
     const makeRequest = () => fetch(url.toString(), {
       method: 'GET',
-      headers: this.getHeaders()
+      headers: this.getHeaders(),
+      credentials: 'include' // Send cookies (refresh token)
     });
-    
+
     const response = await makeRequest();
     return this.handleResponse<T>(response, makeRequest);
   }
@@ -163,13 +231,13 @@ class ApiClient {
   async post<T = any>(endpoint: string, data?: any): Promise<T> {
     const baseUrl = this.getCurrentBaseUrl();
     const url = `${baseUrl}${endpoint}`;
-    
+
     console.log('POST Request:', url, data);
-    
+
     const makeRequest = () => {
       const headers = this.getHeaders();
       let body: any;
-      
+
       // Handle FormData differently - don't stringify it and don't set Content-Type
       if (data instanceof FormData) {
         body = data;
@@ -179,16 +247,17 @@ class ApiClient {
       } else {
         body = data ? JSON.stringify(data) : undefined;
       }
-      
+
       console.log('Request Headers:', headers);
-      
+
       return fetch(url, {
         method: 'POST',
         headers,
-        body
+        body,
+        credentials: 'include' // Send cookies (refresh token)
       });
     };
-    
+
     const response = await makeRequest();
     return this.handleResponse<T>(response, makeRequest);
   }
@@ -196,16 +265,17 @@ class ApiClient {
   async put<T = any>(endpoint: string, data?: any): Promise<T> {
     const baseUrl = this.getCurrentBaseUrl();
     const url = `${baseUrl}${endpoint}`;
-    
+
     console.log('PUT Request:', url, data);
     console.log('Request Headers:', this.getHeaders());
-    
+
     const makeRequest = () => fetch(url, {
       method: 'PUT',
       headers: this.getHeaders(),
-      body: data ? JSON.stringify(data) : undefined
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: 'include' // Send cookies (refresh token)
     });
-    
+
     const response = await makeRequest();
     return this.handleResponse<T>(response, makeRequest);
   }
@@ -213,16 +283,17 @@ class ApiClient {
   async patch<T = any>(endpoint: string, data?: any): Promise<T> {
     const baseUrl = this.getCurrentBaseUrl();
     const url = `${baseUrl}${endpoint}`;
-    
+
     console.log('PATCH Request:', url, data);
     console.log('Request Headers:', this.getHeaders());
-    
+
     const makeRequest = () => fetch(url, {
       method: 'PATCH',
       headers: this.getHeaders(),
-      body: data ? JSON.stringify(data) : undefined
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: 'include' // Send cookies (refresh token)
     });
-    
+
     const response = await makeRequest();
     return this.handleResponse<T>(response, makeRequest);
   }
@@ -230,15 +301,16 @@ class ApiClient {
   async delete<T = any>(endpoint: string): Promise<T> {
     const baseUrl = this.getCurrentBaseUrl();
     const url = `${baseUrl}${endpoint}`;
-    
+
     console.log('DELETE Request:', url);
     console.log('Request Headers:', this.getHeaders());
-    
+
     const makeRequest = () => fetch(url, {
       method: 'DELETE',
-      headers: this.getHeaders()
+      headers: this.getHeaders(),
+      credentials: 'include' // Send cookies (refresh token)
     });
-    
+
     const response = await makeRequest();
     return this.handleResponse<T>(response, makeRequest);
   }

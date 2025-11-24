@@ -166,7 +166,8 @@ class AttendanceApiClient {
     try {
       const response = await fetch(url.toString(), {
         method: 'GET',
-        headers: this.getHeaders()
+        headers: this.getHeaders(),
+        credentials: 'include' // CRITICAL: Send httpOnly refresh token cookie
       });
 
       console.log('Attendance API Response Status:', response.status);
@@ -208,7 +209,8 @@ class AttendanceApiClient {
             console.log('🔁 Retrying attendance request with new token...');
             const retryResponse = await fetch(url.toString(), {
               method: 'GET',
-              headers: this.getHeaders()
+              headers: this.getHeaders(),
+              credentials: 'include' // CRITICAL: Send httpOnly refresh token cookie
             });
             
             if (!retryResponse.ok) {
@@ -298,7 +300,8 @@ class AttendanceApiClient {
           ...this.getHeaders(),
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        credentials: 'include' // CRITICAL: Send httpOnly refresh token cookie
       });
 
       console.log('Attendance POST Response Status:', response.status);
@@ -325,14 +328,15 @@ class AttendanceApiClient {
           const refreshed = await this.handle401Error();
           
           if (refreshed) {
-            console.log('🔁 Retrying attendance POST request with new token...');
+            console.log('🔁 Retrying attendance POST with new token...');
             const retryResponse = await fetch(url, {
               method: 'POST',
               headers: {
                 ...this.getHeaders(),
                 'Content-Type': 'application/json'
               },
-              body: JSON.stringify(body)
+              body: JSON.stringify(body),
+              credentials: 'include' // CRITICAL: Send httpOnly refresh token cookie
             });
             
             if (!retryResponse.ok) {

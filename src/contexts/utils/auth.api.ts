@@ -2,7 +2,7 @@
 import { LoginCredentials, ApiResponse, User } from '../types/auth.types';
 
 export const getBaseUrl = (): string => {
-  return 'https://lms-923357517997.europe-west1.run.app';
+  return import.meta.env.VITE_LMS_BASE_URL || 'https://lms-923357517997.europe-west1.run.app';
 };
 
 export const getBaseUrl2 = (): string => {
@@ -10,17 +10,17 @@ export const getBaseUrl2 = (): string => {
   if (storedUrl) {
     return storedUrl;
   }
-  
+
   const envUrl = import.meta.env.VITE_API_BASE_URL_2;
   if (envUrl) {
     return envUrl;
   }
-  
+
   return '';
 };
 
 export const getAttendanceUrl = (): string => {
-  return 'https://laas-backend-02-923357517997.europe-west1.run.app';
+  return import.meta.env.VITE_ATTENDANCE_BASE_URL || 'https://laas-backend-02-923357517997.europe-west1.run.app';
 };
 
 export const getApiHeaders = (): Record<string, string> => {
@@ -29,7 +29,7 @@ export const getApiHeaders = (): Record<string, string> => {
   };
 
   const token = localStorage.getItem('access_token');
-  
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -39,9 +39,9 @@ export const getApiHeaders = (): Record<string, string> => {
 
 export const loginUser = async (credentials: LoginCredentials): Promise<ApiResponse> => {
   const baseUrl = getBaseUrl();
-  
+
   console.log('🔐 Login attempt:', { email: credentials.email });
-  
+
   const response = await fetch(`${baseUrl}/v2/auth/login`, {
     method: 'POST',
     headers: {
@@ -57,21 +57,21 @@ export const loginUser = async (credentials: LoginCredentials): Promise<ApiRespo
   }
 
   const data = await response.json();
-  
+
   // Store access token and user data in localStorage
   if (data.access_token) {
     localStorage.setItem('access_token', data.access_token);
     console.log('✅ Access token stored');
   }
-  
+
   if (data.user) {
     localStorage.setItem('user_data', JSON.stringify(data.user));
     console.log('✅ User data stored');
   }
-  
+
   // Refresh token is automatically stored in httpOnly cookie by server
   console.log('✅ Login successful, refresh token in cookie');
-  
+
   return data;
 };
 
@@ -80,9 +80,9 @@ export const loginUser = async (credentials: LoginCredentials): Promise<ApiRespo
  */
 export const refreshAccessToken = async (): Promise<User> => {
   const baseUrl = getBaseUrl();
-  
+
   console.log('🔄 Refreshing access token...');
-  
+
   const response = await fetch(`${baseUrl}/auth/refresh`, {
     method: 'POST',
     credentials: 'include', // CRITICAL: Send refresh token cookie
@@ -96,31 +96,31 @@ export const refreshAccessToken = async (): Promise<User> => {
     // Clear all auth data
     localStorage.removeItem('access_token');
     localStorage.removeItem('user_data');
-    
+
     // Dispatch auth failure event
     window.dispatchEvent(new CustomEvent('auth:refresh-failed'));
-    
+
     throw new Error('Token refresh failed');
   }
 
   const data = await response.json();
-  
+
   // Store new access token and user data
   if (data.access_token) {
     localStorage.setItem('access_token', data.access_token);
     console.log('✅ New access token stored');
   }
-  
+
   if (data.user) {
     localStorage.setItem('user_data', JSON.stringify(data.user));
     console.log('✅ User data updated');
   }
-  
+
   // Dispatch custom event to notify AuthContext
   window.dispatchEvent(new CustomEvent('auth:refresh-success', {
     detail: { user: data.user }
   }));
-  
+
   return data.user;
 };
 
@@ -180,16 +180,19 @@ export const validateToken = async (): Promise<User> => {
       throw new Error(`Token validation failed: ${response.status}`);
     }
 
-    const userData = await response.json();
-    
+    const responseData = await response.json();
+
+    // Handle both wrapped ({ success, data }) and unwrapped responses
+    const userData = responseData.data || responseData;
+
     // Cache user data
     localStorage.setItem('user_data', JSON.stringify(userData));
-    
+
     console.log('✅ User data fetched and cached:', {
       userId: userData.id,
       email: userData.email
     });
-    
+
     return userData;
   } catch (error) {
     console.error('❌ Token validation error:', error);
@@ -201,9 +204,9 @@ export const validateToken = async (): Promise<User> => {
 
 export const logoutUser = async (): Promise<void> => {
   const baseUrl = getBaseUrl();
-  
+
   console.log('🚪 Logging out...');
-  
+
   try {
     // Call logout endpoint to revoke refresh token
     await fetch(`${baseUrl}/auth/logout`, {
@@ -217,20 +220,20 @@ export const logoutUser = async (): Promise<void> => {
   } catch (error) {
     console.warn('⚠️ Logout endpoint call failed:', error);
   }
-  
+
   // Clear all auth-related data from localStorage
   localStorage.removeItem('access_token');
   localStorage.removeItem('user_data');
   localStorage.removeItem('token');
   localStorage.removeItem('authToken');
   localStorage.removeItem('org_access_token');
-  
+
   // Clear context selections
   localStorage.removeItem('selectedInstitute');
   localStorage.removeItem('selectedClass');
   localStorage.removeItem('selectedSubject');
   localStorage.removeItem('selectedChild');
   localStorage.removeItem('selectedOrganization');
-  
+
   console.log('✅ All auth data cleared from localStorage');
 };

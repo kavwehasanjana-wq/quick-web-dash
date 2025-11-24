@@ -273,7 +273,8 @@ class EnhancedCachedApiClient {
     try {
       const response = await fetch(url.toString(), {
         method: 'GET',
-        headers: this.getHeaders()
+        headers: this.getHeaders(),
+        credentials: 'include' // CRITICAL: Send httpOnly refresh token cookie
       });
 
       if (!response.ok) {
@@ -289,7 +290,8 @@ class EnhancedCachedApiClient {
             console.log('🔁 Retrying request with new token...');
             const retryResponse = await fetch(url.toString(), {
               method: 'GET',
-              headers: this.getHeaders()
+              headers: this.getHeaders(),
+              credentials: 'include' // CRITICAL: Send httpOnly refresh token cookie
             });
             
             if (!retryResponse.ok) {
@@ -363,7 +365,8 @@ class EnhancedCachedApiClient {
     const response = await fetch(url, {
       method: 'POST',
       headers: this.getHeaders(),
-      body: data ? JSON.stringify(data) : undefined
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: 'include' // CRITICAL: Send httpOnly refresh token cookie
     });
 
     if (!response.ok) {
@@ -378,6 +381,7 @@ class EnhancedCachedApiClient {
           // Retry the request with new token
           console.log('🔁 Retrying POST request with new token...');
           const retryResponse = await fetch(url, {
+            credentials: 'include',
             method: 'POST',
             headers: this.getHeaders(),
             body: data ? JSON.stringify(data) : undefined
@@ -432,7 +436,8 @@ class EnhancedCachedApiClient {
     const response = await fetch(url, {
       method: 'PUT',
       headers: this.getHeaders(),
-      body: data ? JSON.stringify(data) : undefined
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: 'include' // CRITICAL: Send httpOnly refresh token cookie
     });
 
     if (!response.ok) {
@@ -446,6 +451,7 @@ class EnhancedCachedApiClient {
         if (refreshed) {
           console.log('🔁 Retrying PUT request with new token...');
           const retryResponse = await fetch(url, {
+            credentials: 'include',
             method: 'PUT',
             headers: this.getHeaders(),
             body: data ? JSON.stringify(data) : undefined
@@ -500,7 +506,8 @@ class EnhancedCachedApiClient {
     const response = await fetch(url, {
       method: 'PATCH',
       headers: this.getHeaders(),
-      body: data ? JSON.stringify(data) : undefined
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: 'include' // CRITICAL: Send httpOnly refresh token cookie
     });
 
     if (!response.ok) {
@@ -514,6 +521,7 @@ class EnhancedCachedApiClient {
         if (refreshed) {
           console.log('🔁 Retrying PATCH request with new token...');
           const retryResponse = await fetch(url, {
+            credentials: 'include',
             method: 'PATCH',
             headers: this.getHeaders(),
             body: data ? JSON.stringify(data) : undefined
@@ -567,7 +575,8 @@ class EnhancedCachedApiClient {
     
     const response = await fetch(url, {
       method: 'DELETE',
-      headers: this.getHeaders()
+      headers: this.getHeaders(),
+      credentials: 'include' // CRITICAL: Send httpOnly refresh token cookie
     });
 
     if (!response.ok) {
@@ -581,6 +590,7 @@ class EnhancedCachedApiClient {
         if (refreshed) {
           console.log('🔁 Retrying DELETE request with new token...');
           const retryResponse = await fetch(url, {
+            credentials: 'include',
             method: 'DELETE',
             headers: this.getHeaders()
           });

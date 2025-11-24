@@ -163,13 +163,13 @@ const Settings = () => {
   };
 
   const handleQuickSetPort3000 = () => {
-    const url = 'http://localhost:3000';
+    const url = 'http://localhost:8080';
     setApiBaseUrl(url);
     localStorage.setItem('baseUrl', url);
     
     toast({
       title: "Quick Setup",
-      description: "API base URL set to localhost:3000",
+      description: "API base URL set to localhost:8080",
     });
   };
 
