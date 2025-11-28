@@ -435,8 +435,7 @@ const CreateComprehensiveUserForm = ({
         await uploadToSignedUrl(
           signedUrlData.uploadUrl,
           imageFile,
-          imageFile.type,
-          signedUrlData.maxFileSize || imageFile.size
+          signedUrlData.fields
         );
         
         profileImageRelativePath = signedUrlData.relativePath;
@@ -457,8 +456,7 @@ const CreateComprehensiveUserForm = ({
         await uploadToSignedUrl(
           signedUrlData.uploadUrl,
           idFile,
-          idFile.type,
-          signedUrlData.maxFileSize || idFile.size
+          signedUrlData.fields
         );
         
         idDocumentRelativePath = signedUrlData.relativePath;

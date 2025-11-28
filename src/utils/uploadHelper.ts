@@ -6,7 +6,7 @@ export interface SignedUrlResponse {
   uploadUrl: string;
   publicUrl: string;
   relativePath: string;
-  expiresAt: string;
+  fields: Record<string, string>;
   instructions: {
     step1: string;
     step2: string;
@@ -129,34 +129,42 @@ export class FileUploader {
   }
 
   /**
-   * Upload file to cloud storage using signed URL
+   * Upload file to cloud storage using signed URL (AWS S3 POST)
    */
   private async uploadToCloud(
     file: File, 
     uploadUrl: string, 
-    contentType: string
+    fields: Record<string, string>
   ): Promise<void> {
+    const formData = new FormData();
+    
+    // IMPORTANT: Add all fields from backend BEFORE the file
+    Object.keys(fields).forEach(key => {
+      formData.append(key, fields[key]);
+    });
+    
+    // Add file LAST
+    formData.append('file', file);
+
     const response = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': contentType,
-        'x-goog-content-length-range': `0,${file.size}`
-      },
-      body: file
+      method: 'POST',
+      body: formData
+      // DO NOT set Content-Type header - browser handles it automatically
     });
 
     if (!response.ok) {
-      throw new Error(`Upload failed with status ${response.status}`);
+      const errorText = await response.text().catch(() => 'Unknown error');
+      throw new Error(`S3 upload failed: ${errorText || response.statusText}`);
     }
   }
 
   /**
-   * Upload file to cloud storage with progress tracking
+   * Upload file to cloud storage with progress tracking (AWS S3 POST)
    */
   private uploadToCloudWithProgress(
     file: File,
     uploadUrl: string,
-    contentType: string,
+    fields: Record<string, string>,
     onProgress?: (progress: UploadProgress) => void
   ): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -185,10 +193,19 @@ export class FileUploader {
         reject(new Error('Upload failed'));
       });
 
-      xhr.open('PUT', uploadUrl);
-      xhr.setRequestHeader('Content-Type', contentType);
-      xhr.setRequestHeader('x-goog-content-length-range', `0,${file.size}`);
-      xhr.send(file);
+      const formData = new FormData();
+      
+      // Add all fields first
+      Object.keys(fields).forEach(key => {
+        formData.append(key, fields[key]);
+      });
+      
+      // Add file last
+      formData.append('file', file);
+
+      xhr.open('POST', uploadUrl);
+      // DO NOT set Content-Type - browser handles it for FormData
+      xhr.send(formData);
     });
   }
 
@@ -238,9 +255,6 @@ export class FileUploader {
 
       const signedUrlData = await this.getSignedUrl(file, folder);
 
-      // Ensure we use the same content type for upload as was used for signing
-      const contentType = file.type || 'application/octet-stream';
-
       // Step 2: Upload to cloud storage
       onProgress?.({
         stage: 'uploading',
@@ -252,11 +266,11 @@ export class FileUploader {
         await this.uploadToCloudWithProgress(
           file,
           signedUrlData.uploadUrl,
-          contentType,
+          signedUrlData.fields,
           onProgress
         );
       } else {
-        await this.uploadToCloud(file, signedUrlData.uploadUrl, contentType);
+        await this.uploadToCloud(file, signedUrlData.uploadUrl, signedUrlData.fields);
       }
 
       // Step 3: Verify and publish

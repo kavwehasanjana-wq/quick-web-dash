@@ -10,7 +10,7 @@ import ReactCrop, {
   makeAspectCrop,
 } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import { getSignedUrl, uploadToSignedUrl } from '@/utils/imageUploadHelper';
+import { getSignedUrl, uploadToSignedUrl, verifyAndPublish } from '@/utils/imageUploadHelper';
 
 interface ImageCropUploadProps {
   currentImageUrl?: string | null;
@@ -177,11 +177,13 @@ const ImageCropUpload: React.FC<ImageCropUploadProps> = ({
       await uploadToSignedUrl(
         signedUrlData.uploadUrl,
         croppedImageBlob,
-        'image/png',
-        signedUrlData.maxFileSize || croppedImageBlob.size
+        signedUrlData.fields
       );
 
-      // Step 3: Return relative path (backend will handle making it public)
+      // Step 3: Verify and publish
+      await verifyAndPublish(signedUrlData.relativePath);
+
+      // Step 4: Return relative path
       onImageUpdate(signedUrlData.relativePath);
       
       toast({
