@@ -167,8 +167,7 @@ const SubjectImageUpload: React.FC<SubjectImageUploadProps> = ({ value, onChange
       await uploadToSignedUrl(
         signedUrlData.uploadUrl,
         croppedImageBlob,
-        'image/png',
-        signedUrlData.maxFileSize || croppedImageBlob.size
+        signedUrlData.fields
       );
 
       // Step 3: Verify and publish

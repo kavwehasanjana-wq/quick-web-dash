@@ -14,12 +14,15 @@ export type UploadFolder =
 interface SignedUrlResponse {
   success: boolean;
   message: string;
-  data: {
-    uploadUrl: string;
-    relativePath: string;
-    expiresAt: string | null;
-    maxFileSize: number;
-    contentType: string;
+  uploadUrl: string;
+  publicUrl: string;
+  relativePath: string;
+  fields: Record<string, string>;
+  instructions?: {
+    step1: string;
+    step2: string;
+    step3: string;
+    step4: string;
   };
 }
 
@@ -72,21 +75,18 @@ export async function uploadWithSignedUrl(
     onProgress?.('Getting upload URL...', 10);
     
     const contentType = file.type || 'application/octet-stream';
-    const requestBody = {
+    const params = new URLSearchParams({
       folder,
       fileName: file.name,
       contentType,
-      fileSize: file.size,
-      expiresIn: 600
-    };
+      fileSize: file.size.toString()
+    });
 
-    const signedUrlResponse = await fetch(`${baseUrl}/upload/generate-signed-url`, {
-      method: 'POST',
+    const signedUrlResponse = await fetch(`${baseUrl}/upload/get-signed-url?${params}`, {
+      method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestBody)
+        'Authorization': `Bearer ${token}`
+      }
     });
 
     if (!signedUrlResponse.ok) {
@@ -95,22 +95,46 @@ export async function uploadWithSignedUrl(
     }
 
     const signedUrlData: SignedUrlResponse = await signedUrlResponse.json();
-    const { uploadUrl, relativePath, maxFileSize } = signedUrlData.data;
+    const { uploadUrl, relativePath, fields } = signedUrlData;
 
-    // Step 2: Upload file to signed URL
+    // Step 2: Upload file to S3 using POST with FormData
     onProgress?.('Uploading file...', 50);
 
+    const formData = new FormData();
+    
+    // IMPORTANT: Add all fields from backend BEFORE the file
+    Object.keys(fields).forEach(key => {
+      formData.append(key, fields[key]);
+    });
+    
+    // Add file LAST
+    formData.append('file', file);
+
     const uploadResponse = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': contentType,
-        'x-goog-content-length-range': `0,${maxFileSize}`
-      },
-      body: file
+      method: 'POST',
+      body: formData
+      // DO NOT set Content-Type header - browser handles it automatically
     });
 
     if (!uploadResponse.ok) {
-      throw new Error(`Upload failed with status ${uploadResponse.status}`);
+      const errorText = await uploadResponse.text();
+      throw new Error(`Upload failed: ${errorText || uploadResponse.statusText}`);
+    }
+
+    // Step 3: Verify and publish
+    onProgress?.('Verifying upload...', 80);
+
+    const verifyResponse = await fetch(`${baseUrl}/upload/verify-and-publish`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ relativePath })
+    });
+
+    if (!verifyResponse.ok) {
+      throw new Error('Failed to verify upload');
     }
 
     onProgress?.('Upload complete!', 100);

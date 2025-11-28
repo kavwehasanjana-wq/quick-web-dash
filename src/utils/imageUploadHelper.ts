@@ -6,8 +6,13 @@ export interface SignedUrlResponse {
   uploadUrl: string;
   publicUrl: string;
   relativePath: string;
-  expiresAt: string | null;
-  maxFileSize?: number;
+  fields: Record<string, string>;
+  instructions?: {
+    step1: string;
+    step2: string;
+    step3: string;
+    step4: string;
+  };
 }
 
 export const getSignedUrl = async (
@@ -21,31 +26,22 @@ export const getSignedUrl = async (
     folder,
     fileName,
     contentType,
-    fileSize: fileSize.toString(),
-    expiresIn: '600'
+    fileSize: fileSize.toString()
   });
 
   console.log('📤 Requesting signed URL:', {
-    url: `${getBaseUrl()}/upload/generate-signed-url?${params}`,
+    url: `${getBaseUrl()}/upload/get-signed-url?${params}`,
     folder,
     fileName,
     contentType,
     fileSize
   });
 
-  const response = await fetch(`${getBaseUrl()}/upload/generate-signed-url?${params}`, {
-    method: 'POST',
+  const response = await fetch(`${getBaseUrl()}/upload/get-signed-url?${params}`, {
+    method: 'GET',
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      folder,
-      fileName,
-      contentType,
-      fileSize,
-      expiresIn: 600
-    })
+      'Authorization': `Bearer ${token}`
+    }
   });
 
   if (!response.ok) {
@@ -60,41 +56,47 @@ export const getSignedUrl = async (
 
   const result = await response.json();
   console.log('✅ Signed URL response:', result);
-  return result.data;
+  return result;
 };
 
 export const uploadToSignedUrl = async (
   uploadUrl: string,
   file: Blob,
-  contentType: string,
-  maxFileSize: number
+  fields: Record<string, string>
 ): Promise<void> => {
-  console.log('📤 Uploading to signed URL:', { contentType, size: file.size, maxFileSize });
+  console.log('📤 Uploading to S3:', { size: file.size });
   
   try {
+    const formData = new FormData();
+    
+    // IMPORTANT: Add all fields from backend BEFORE the file
+    Object.keys(fields).forEach(key => {
+      formData.append(key, fields[key]);
+    });
+    
+    // Add file LAST
+    formData.append('file', file);
+
     const response = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': contentType,
-        'x-goog-content-length-range': `0,${maxFileSize}`
-      },
-      body: file,
+      method: 'POST',
+      body: formData
+      // DO NOT set Content-Type header - browser handles it automatically
     });
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unknown error');
-      console.error('❌ Upload error:', {
+      console.error('❌ S3 upload error:', {
         status: response.status,
         error: errorText
       });
-      throw new Error(`Upload failed with status ${response.status}. Please contact support.`);
+      throw new Error(`S3 upload failed: ${errorText || response.statusText}`);
     }
     
-    console.log('✅ File uploaded successfully');
+    console.log('✅ File uploaded successfully to S3');
   } catch (error) {
     console.error('❌ Upload failed:', error);
     if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-      throw new Error('Unable to upload file. This may be due to server configuration (CORS). Please contact your system administrator.');
+      throw new Error('Unable to upload file. This may be due to CORS configuration. Please contact support.');
     }
     throw error;
   }
@@ -148,7 +150,7 @@ export const detectFolder = (file: File, context?: 'homework' | 'payment' | 'cor
   return 'homework-files';
 };
 
-// Complete upload workflow: get signed URL → upload → return relativePath
+// Complete upload workflow: get signed URL → upload → verify → return relativePath
 export const uploadFileSimple = async (
   file: File,
   folder: string,
@@ -156,15 +158,19 @@ export const uploadFileSimple = async (
 ): Promise<string> => {
   try {
     // Step 1: Get signed URL
-    onProgress?.('Getting upload URL...', 0);
+    onProgress?.('Getting upload URL...', 10);
     const contentType = file.type || 'application/octet-stream';
     const signedUrlData = await getSignedUrl(folder, file.name, contentType, file.size);
     
-    // Step 2: Upload to signed URL
+    // Step 2: Upload to S3 with FormData
     onProgress?.('Uploading file...', 50);
-    await uploadToSignedUrl(signedUrlData.uploadUrl, file, contentType, signedUrlData.maxFileSize || file.size);
+    await uploadToSignedUrl(signedUrlData.uploadUrl, file, signedUrlData.fields);
     
-    // Step 3: Return relativePath
+    // Step 3: Verify and publish
+    onProgress?.('Verifying upload...', 80);
+    await verifyAndPublish(signedUrlData.relativePath);
+    
+    // Step 4: Return relativePath
     onProgress?.('Upload complete!', 100);
     return signedUrlData.relativePath;
   } catch (error) {
