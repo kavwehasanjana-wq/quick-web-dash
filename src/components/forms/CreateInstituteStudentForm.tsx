@@ -129,23 +129,30 @@ const CreateInstituteStudentForm: React.FC<CreateInstituteStudentFormProps> = ({
       };
       const newStudent = await studentsApi.create(studentData);
       
-      // If image is selected, upload it
+      // If image is selected, upload it using signed URL
       if (selectedImage && newStudent.userId) {
         try {
-          const token = localStorage.getItem('access_token');
-          const imageFormData = new FormData();
-          imageFormData.append('image', selectedImage);
+          const { uploadWithSignedUrl } = await import('@/utils/signedUploadHelper');
           
-          const imageResponse = await fetch(`${getBaseUrl()}/students/${newStudent.userId}/upload-image`, {
+          // Step 1: Upload to S3 using signed URL
+          const relativePath = await uploadWithSignedUrl(
+            selectedImage,
+            'student-images'
+          );
+          
+          // Step 2: Update student with relativePath
+          const token = localStorage.getItem('access_token');
+          const imageResponse = await fetch(`${getBaseUrl()}/students/${newStudent.userId}/image-url`, {
             method: 'PATCH',
             headers: {
-              'Authorization': `Bearer ${token}`
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
             },
-            body: imageFormData
+            body: JSON.stringify({ imageUrl: relativePath })
           });
           
           if (!imageResponse.ok) {
-            console.error('Failed to upload student image');
+            console.error('Failed to update student image URL');
             toast({
               title: "Warning",
               description: "Student created but image upload failed",

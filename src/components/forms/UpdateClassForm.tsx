@@ -136,21 +136,29 @@ const UpdateClassForm: React.FC<UpdateClassFormProps> = ({ classData, onSubmit, 
 
       let updatedClass = detailsRes?.class || detailsRes as any;
 
-      // Optional: upload image if selected
+      // Optional: upload image if selected using signed URL
       if (selectedImage) {
         console.log('Uploading image:', selectedImage.name);
-        const formData = new FormData();
-        formData.append('image', selectedImage);
-
-        const imageRes = await fetch(`${baseUrl}/institute-classes/${classData.id}/upload-image`, {
+        
+        const { uploadWithSignedUrl } = await import('@/utils/signedUploadHelper');
+        
+        // Step 1: Upload to S3 using signed URL
+        const relativePath = await uploadWithSignedUrl(
+          selectedImage,
+          'institute-images'
+        );
+        
+        // Step 2: Update class with relativePath
+        const imageRes = await fetch(`${baseUrl}/institute-classes/${classData.id}/image-url`, {
           method: 'PATCH',
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           },
-          body: formData
+          body: JSON.stringify({ imageUrl: relativePath })
         });
 
-        console.log('Image upload status:', imageRes.status);
+        console.log('Image URL update status:', imageRes.status);
         if (!imageRes.ok) {
           const imgErr = await imageRes.json().catch(() => ({}));
           console.error('Server error (image):', imgErr);
@@ -158,7 +166,6 @@ const UpdateClassForm: React.FC<UpdateClassFormProps> = ({ classData, onSubmit, 
         }
 
         const imageResult = await imageRes.json();
-        // Try to use returned class if available, otherwise keep details result
         updatedClass = imageResult?.class || imageResult || updatedClass;
       }
 

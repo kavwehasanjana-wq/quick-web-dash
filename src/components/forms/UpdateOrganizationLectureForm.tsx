@@ -68,31 +68,44 @@ const UpdateOrganizationLectureForm = ({ lecture, onClose, onSuccess }: UpdateOr
         throw new Error('Organization base URL not configured');
       }
 
-      // Build multipart form data
-      const fd = new FormData();
-      fd.append('title', formData.title);
-      fd.append('description', formData.description);
-      if (formData.content) fd.append('content', formData.content);
-      fd.append('venue', formData.venue);
-      fd.append('mode', formData.mode);
-      if (formData.timeStart) fd.append('timeStart', new Date(formData.timeStart).toISOString());
-      if (formData.timeEnd) fd.append('timeEnd', new Date(formData.timeEnd).toISOString());
-      if (formData.liveLink) fd.append('liveLink', formData.liveLink);
-      if (formData.liveMode) fd.append('liveMode', formData.liveMode);
-      if (formData.recordingUrl) fd.append('recordingUrl', formData.recordingUrl);
-      fd.append('isPublic', String(formData.isPublic));
+      // Step 1: Upload documents using signed URL
+      const documentPaths: string[] = [];
+      if (documents.length > 0) {
+        const { uploadWithSignedUrl } = await import('@/utils/signedUploadHelper');
+        
+        for (const file of documents) {
+          const relativePath = await uploadWithSignedUrl(
+            file,
+            'homework-files' // or appropriate folder
+          );
+          documentPaths.push(relativePath);
+        }
+      }
 
-      // Append multiple documents
-      documents.forEach((file) => {
-        fd.append('documents', file, file.name);
-      });
+      // Step 2: Build lecture update data
+      const updateData: any = {
+        title: formData.title,
+        description: formData.description,
+        venue: formData.venue,
+        mode: formData.mode,
+        isPublic: formData.isPublic
+      };
+      
+      if (formData.content) updateData.content = formData.content;
+      if (formData.timeStart) updateData.timeStart = new Date(formData.timeStart).toISOString();
+      if (formData.timeEnd) updateData.timeEnd = new Date(formData.timeEnd).toISOString();
+      if (formData.liveLink) updateData.liveLink = formData.liveLink;
+      if (formData.liveMode) updateData.liveMode = formData.liveMode;
+      if (formData.recordingUrl) updateData.recordingUrl = formData.recordingUrl;
+      if (documentPaths.length > 0) updateData.documentUrls = documentPaths;
 
-      const response = await fetch(`${baseUrl2}/organization/api/v1/lectures/${lecture.lectureId}/with-documents`, {
+      const response = await fetch(`${baseUrl2}/organization/api/v1/lectures/${lecture.lectureId}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('org_access_token')}`
+          'Authorization': `Bearer ${localStorage.getItem('org_access_token')}`,
+          'Content-Type': 'application/json'
         },
-        body: fd,
+        body: JSON.stringify(updateData),
       });
 
       if (!response.ok) {
