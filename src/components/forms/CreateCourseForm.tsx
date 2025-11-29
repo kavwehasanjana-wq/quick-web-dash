@@ -88,25 +88,40 @@ const CreateCourseForm = ({ onSuccess, onCancel }: CreateCourseFormProps) => {
         throw new Error('Organization base URL not configured');
       }
 
-      // Create FormData for multipart/form-data request
-      const formData = new FormData();
-      formData.append('organizationId', data.organizationId);
-      formData.append('title', data.title);
-      formData.append('description', data.description);
-      if (data.introVideoUrl) {
-        formData.append('introVideoUrl', data.introVideoUrl);
-      }
-      formData.append('isPublic', data.isPublic.toString());
+      let imageRelativePath: string | undefined;
+      
+      // Step 1: Upload image if selected using signed URL
       if (selectedImage) {
-        formData.append('image', selectedImage);
+        const { uploadWithSignedUrl } = await import('@/utils/signedUploadHelper');
+        imageRelativePath = await uploadWithSignedUrl(
+          selectedImage,
+          'institute-images'
+        );
       }
 
-      const response = await fetch(`${baseUrl2}/organization/api/v1/causes/with-image`, {
+      // Step 2: Create course with image relativePath
+      const courseData: any = {
+        organizationId: data.organizationId,
+        title: data.title,
+        description: data.description,
+        isPublic: data.isPublic
+      };
+      
+      if (data.introVideoUrl) {
+        courseData.introVideoUrl = data.introVideoUrl;
+      }
+      
+      if (imageRelativePath) {
+        courseData.imageUrl = imageRelativePath;
+      }
+
+      const response = await fetch(`${baseUrl2}/organization/api/v1/causes`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('org_access_token')}`
+          'Authorization': `Bearer ${localStorage.getItem('org_access_token')}`,
+          'Content-Type': 'application/json'
         },
-        body: formData,
+        body: JSON.stringify(courseData),
       });
 
       if (!response.ok) {

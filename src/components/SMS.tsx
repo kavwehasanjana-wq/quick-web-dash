@@ -224,15 +224,25 @@ const SMS = () => {
     }
     try {
       setSubmitting(true);
-      const formData = new FormData();
-      formData.append('requestedCredits', paymentForm.requestedCredits);
-      formData.append('paymentAmount', paymentForm.paymentAmount);
-      formData.append('paymentMethod', paymentForm.paymentMethod);
-      formData.append('paymentReference', paymentForm.paymentReference);
-      formData.append('submissionNotes', paymentForm.submissionNotes);
-      formData.append('paymentSlip', paymentForm.paymentSlip);
+      
+      // Step 1: Upload payment slip using signed URL
+      const { uploadWithSignedUrl } = await import('@/utils/signedUploadHelper');
+      const paymentSlipPath = await uploadWithSignedUrl(
+        paymentForm.paymentSlip,
+        'payment-receipts'
+      );
+      
+      // Step 2: Submit payment with relativePath
+      const paymentData = {
+        requestedCredits: paymentForm.requestedCredits,
+        paymentAmount: paymentForm.paymentAmount,
+        paymentMethod: paymentForm.paymentMethod,
+        paymentReference: paymentForm.paymentReference,
+        submissionNotes: paymentForm.submissionNotes,
+        paymentSlipUrl: paymentSlipPath
+      };
 
-      const response: any = await apiClient.post(`/sms/payment/submit?instituteId=${currentInstituteId}`, formData);
+      const response: any = await apiClient.post(`/sms/payment/submit?instituteId=${currentInstituteId}`, paymentData);
 
       toast({ title: 'Success', description: response?.message || 'Payment submission created successfully.' });
       setNewPaymentOpen(false);
