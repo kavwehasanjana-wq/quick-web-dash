@@ -97,28 +97,44 @@ export async function uploadWithSignedUrl(
     const signedUrlData: SignedUrlResponse = await signedUrlResponse.json();
     const { uploadUrl, relativePath, fields } = signedUrlData;
 
-    // Step 2: Upload file to S3 using POST with FormData
+    // Step 2: Upload file - handle both AWS S3 (with fields) and GCS (without fields)
     onProgress?.('Uploading file...', 50);
 
-    const formData = new FormData();
-    
-    // IMPORTANT: Add all fields from backend BEFORE the file
-    Object.keys(fields).forEach(key => {
-      formData.append(key, fields[key]);
-    });
-    
-    // Add file LAST
-    formData.append('file', file);
+    if (fields && Object.keys(fields).length > 0) {
+      // AWS S3 POST with FormData
+      const formData = new FormData();
+      
+      // Add all fields from backend BEFORE the file
+      Object.keys(fields).forEach(key => {
+        formData.append(key, fields[key]);
+      });
+      
+      // Add file LAST
+      formData.append('file', file);
 
-    const uploadResponse = await fetch(uploadUrl, {
-      method: 'POST',
-      body: formData
-      // DO NOT set Content-Type header - browser handles it automatically
-    });
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'POST',
+        body: formData
+      });
 
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text();
-      throw new Error(`Upload failed: ${errorText || uploadResponse.statusText}`);
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        throw new Error(`Upload failed: ${errorText || uploadResponse.statusText}`);
+      }
+    } else {
+      // GCS PUT with direct file upload (legacy)
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': contentType
+        },
+        body: file
+      });
+
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        throw new Error(`Upload failed: ${errorText || uploadResponse.statusText}`);
+      }
     }
 
     // Step 3: Verify and publish

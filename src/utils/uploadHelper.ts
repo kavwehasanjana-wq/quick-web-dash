@@ -134,27 +134,43 @@ export class FileUploader {
   private async uploadToCloud(
     file: File, 
     uploadUrl: string, 
-    fields: Record<string, string>
+    fields?: Record<string, string>
   ): Promise<void> {
-    const formData = new FormData();
-    
-    // IMPORTANT: Add all fields from backend BEFORE the file
-    Object.keys(fields).forEach(key => {
-      formData.append(key, fields[key]);
-    });
-    
-    // Add file LAST
-    formData.append('file', file);
+    if (fields && Object.keys(fields).length > 0) {
+      // AWS S3 POST with FormData
+      const formData = new FormData();
+      
+      // IMPORTANT: Add all fields from backend BEFORE the file
+      Object.keys(fields).forEach(key => {
+        formData.append(key, fields[key]);
+      });
+      
+      // Add file LAST
+      formData.append('file', file);
 
-    const response = await fetch(uploadUrl, {
-      method: 'POST',
-      body: formData
-      // DO NOT set Content-Type header - browser handles it automatically
-    });
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        body: formData
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error');
-      throw new Error(`S3 upload failed: ${errorText || response.statusText}`);
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`S3 upload failed: ${errorText || response.statusText}`);
+      }
+    } else {
+      // GCS PUT with direct file upload (legacy)
+      const response = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': file.type || 'application/octet-stream'
+        },
+        body: file
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`GCS upload failed: ${errorText || response.statusText}`);
+      }
     }
   }
 
@@ -164,7 +180,7 @@ export class FileUploader {
   private uploadToCloudWithProgress(
     file: File,
     uploadUrl: string,
-    fields: Record<string, string>,
+    fields?: Record<string, string>,
     onProgress?: (progress: UploadProgress) => void
   ): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -193,19 +209,26 @@ export class FileUploader {
         reject(new Error('Upload failed'));
       });
 
-      const formData = new FormData();
-      
-      // Add all fields first
-      Object.keys(fields).forEach(key => {
-        formData.append(key, fields[key]);
-      });
-      
-      // Add file last
-      formData.append('file', file);
+      if (fields && Object.keys(fields).length > 0) {
+        // AWS S3 POST with FormData
+        const formData = new FormData();
+        
+        // Add all fields first
+        Object.keys(fields).forEach(key => {
+          formData.append(key, fields[key]);
+        });
+        
+        // Add file last
+        formData.append('file', file);
 
-      xhr.open('POST', uploadUrl);
-      // DO NOT set Content-Type - browser handles it for FormData
-      xhr.send(formData);
+        xhr.open('POST', uploadUrl);
+        xhr.send(formData);
+      } else {
+        // GCS PUT with direct file upload (legacy)
+        xhr.open('PUT', uploadUrl);
+        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+        xhr.send(file);
+      }
     });
   }
 
