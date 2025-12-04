@@ -195,7 +195,19 @@ const QRAttendance = () => {
     
     // Navigate to RFID page if RFID/NFC is selected
     if (method === 'rfid/nfc') {
-      navigate('/rfid-attendance');
+      // Build context-aware URL for RFID attendance
+      let rfidUrl = '/rfid-attendance';
+      if (currentInstituteId) {
+        rfidUrl = `/institute/${currentInstituteId}`;
+        if (selectedClass?.id) {
+          rfidUrl += `/class/${selectedClass.id}`;
+          if (selectedSubject?.id) {
+            rfidUrl += `/subject/${selectedSubject.id}`;
+          }
+        }
+        rfidUrl += '/rfid-attendance';
+      }
+      navigate(rfidUrl);
       return;
     }
     
