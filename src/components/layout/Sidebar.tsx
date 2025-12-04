@@ -148,7 +148,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         ];
       }
 
-      // 2. Student with institute selected - show basic navigation (Enroll Class removed - moved to ClassSelector)
+      // 2. Student with institute selected - show basic navigation with Select Class
       if (selectedInstitute && !selectedClass) {
         return [
           {
@@ -156,6 +156,13 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             label: 'Dashboard',
             icon: LayoutDashboard,
             permission: 'view-dashboard',
+            alwaysShow: false
+          },
+          {
+            id: 'select-class',
+            label: 'Select Class',
+            icon: School,
+            permission: 'view-classes',
             alwaysShow: false
           },
           {
@@ -175,7 +182,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         ];
       }
 
-      // 3. Student with institute and class selected (but no subject) - remove enroll options
+      // 3. Student with institute and class selected (but no subject) - show subject selection
       if (selectedInstitute && selectedClass && !selectedSubject) {
         return [
           {
@@ -190,6 +197,13 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             label: 'My Attendance',
             icon: UserCheck,
             permission: 'view-dashboard',
+            alwaysShow: false
+          },
+          {
+            id: 'select-subject',
+            label: 'Select Subject',
+            icon: BookOpen,
+            permission: 'view-subjects',
             alwaysShow: false
           }
         ];
@@ -754,8 +768,23 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         ];
       }
 
-      // For AttendanceMarker with institute selected - remove attendance sections
-      const baseItems = [];
+      // For AttendanceMarker with institute selected - show dashboard and attendance options
+      const baseItems = [
+        {
+          id: 'dashboard',
+          label: 'Dashboard',
+          icon: LayoutDashboard,
+          permission: 'view-dashboard',
+          alwaysShow: false
+        },
+        {
+          id: 'attendance-markers',
+          label: 'Attendance Markers',
+          icon: Users,
+          permission: 'manage-attendance-markers',
+          alwaysShow: false
+        }
+      ];
       
       // Only show select-class at institute level (not when class is selected)
       if (!selectedClass) {

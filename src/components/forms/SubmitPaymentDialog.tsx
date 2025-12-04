@@ -25,13 +25,20 @@ const SubmitPaymentDialog = ({ open, onOpenChange, payment, instituteId, onSucce
   const [uploadMessage, setUploadMessage] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [formData, setFormData] = useState<Omit<SubmitPaymentRequest, 'receiptUrl'>>({
-    paymentAmount: 0,
+    paymentAmount: payment?.amount || 0,
     paymentMethod: 'BANK_TRANSFER',
     transactionReference: '',
     paymentDate: '',
     paymentRemarks: ''
   });
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+
+  // Auto-fill payment amount when payment changes
+  React.useEffect(() => {
+    if (payment?.amount) {
+      setFormData(prev => ({ ...prev, paymentAmount: payment.amount }));
+    }
+  }, [payment?.amount]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,7 +66,7 @@ const SubmitPaymentDialog = ({ open, onOpenChange, payment, instituteId, onSucce
       setUploadMessage('Uploading receipt...');
       const relativePath = await uploadWithSignedUrl(
         receiptFile,
-        'payment-receipts',
+        'institute-payment-receipts',
         (message, progress) => {
           setUploadMessage(message);
           setUploadProgress(progress);
@@ -161,7 +168,7 @@ const SubmitPaymentDialog = ({ open, onOpenChange, payment, instituteId, onSucce
                 <p className="text-sm font-medium mb-2">Bank Details:</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                   <p><strong>Bank:</strong> {payment.bankDetails.bankName}</p>
-                  <p><strong>IFSC:</strong> {payment.bankDetails.ifscCode}</p>
+                  <p><strong>Branch:</strong> {payment.bankDetails.branch}</p>
                   <p><strong>Account:</strong> {payment.bankDetails.accountNumber}</p>
                   <p><strong>Holder:</strong> {payment.bankDetails.accountHolderName}</p>
                 </div>

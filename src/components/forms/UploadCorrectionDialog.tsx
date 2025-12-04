@@ -86,10 +86,23 @@ const UploadCorrectionDialog = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('UploadCorrectionDialog - submissionId:', submissionId, 'submission:', submission);
+    
     if (!file) {
       toast({
         title: "Error",
         description: "Please select a correction file to upload",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Use submission.id as fallback if submissionId prop is undefined
+    const effectiveId = submissionId || submission?.id;
+    if (!effectiveId) {
+      toast({
+        title: "Error",
+        description: "Submission ID is missing",
         variant: "destructive"
       });
       return;
@@ -118,8 +131,9 @@ const UploadCorrectionDialog = ({
         teacherCorrectionFileUrl: relativePath
       };
 
+      const effectiveId = submissionId || submission?.id;
       const response = await apiClient.patch(
-        `/institute-class-subject-homeworks-submissions/${submissionId}`,
+        `/institute-class-subject-homeworks-submissions/${effectiveId}`,
         updateData
       );
 

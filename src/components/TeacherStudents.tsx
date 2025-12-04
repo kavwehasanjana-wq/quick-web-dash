@@ -14,6 +14,7 @@ import AssignStudentsDialog from '@/components/forms/AssignStudentsDialog';
 import ImagePreviewModal from '@/components/ImagePreviewModal';
 import { enhancedCachedClient } from '@/api/enhancedCachedClient';
 import { CACHE_TTL } from '@/config/cacheTTL';
+import { getImageUrl } from '@/utils/imageUrlHelper';
 
 interface ClassSubjectStudent {
   id: string;
@@ -181,7 +182,7 @@ const TeacherStudents = () => {
             }}
           >
             <Avatar className="h-8 w-8 sm:h-10 sm:w-10 hover:opacity-80 transition-opacity">
-              <AvatarImage src={row.imageUrl || ''} alt={row.name} />
+              <AvatarImage src={getImageUrl(row.imageUrl || '')} alt={row.name} />
               <AvatarFallback className="text-xs">
                 {row.name.split(' ').map(n => n.charAt(0)).join('')}
               </AvatarFallback>

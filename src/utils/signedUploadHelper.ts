@@ -8,8 +8,26 @@ export type UploadFolder =
   | 'subject-images'
   | 'homework-files'
   | 'correction-files'
-  | 'payment-receipts'
-  | 'id-documents';
+  | 'institute-payment-receipts'
+  | 'subject-payment-receipts'
+  | 'id-documents'
+  | 'bookhire-vehicle-images'
+  | 'bookhire-owner-images';
+
+const UPLOAD_MAX_FILE_SIZES: Record<UploadFolder, number> = {
+  'profile-images': 5 * 1024 * 1024,        // 5MB
+  'student-images': 5 * 1024 * 1024,        // 5MB
+  'institute-images': 10 * 1024 * 1024,     // 10MB
+  'institute-user-images': 5 * 1024 * 1024, // 5MB
+  'subject-images': 5 * 1024 * 1024,        // 5MB
+  'homework-files': 20 * 1024 * 1024,       // 20MB
+  'correction-files': 20 * 1024 * 1024,     // 20MB
+  'institute-payment-receipts': 10 * 1024 * 1024,     // 10MB
+  'subject-payment-receipts': 10 * 1024 * 1024,       // 10MB
+  'id-documents': 10 * 1024 * 1024,          // 10MB
+  'bookhire-vehicle-images': 10 * 1024 * 1024,        // 10MB
+  'bookhire-owner-images': 10 * 1024 * 1024           // 10MB
+};
 
 interface SignedUrlResponse {
   success: boolean;
@@ -46,7 +64,7 @@ export function detectFolder(file: File): UploadFolder {
   if (type === 'application/pdf' || type.includes('document')) {
     if (name.includes('homework') || name.includes('assignment')) return 'homework-files';
     if (name.includes('correction') || name.includes('corrected')) return 'correction-files';
-    if (name.includes('payment') || name.includes('receipt') || name.includes('slip')) return 'payment-receipts';
+    if (name.includes('payment') || name.includes('receipt') || name.includes('slip')) return 'institute-payment-receipts';
     if (name.includes('id') || name.includes('identity') || name.includes('card')) return 'id-documents';
     return 'homework-files'; // default for documents
   }
@@ -55,7 +73,46 @@ export function detectFolder(file: File): UploadFolder {
 }
 
 /**
- * Upload file using signed URL flow
+ * Validate file before upload
+ */
+function validateFile(file: File, folder: UploadFolder): void {
+  // Check file size
+  const maxSize = UPLOAD_MAX_FILE_SIZES[folder];
+  if (file.size > maxSize) {
+    throw new Error(`File too large. Maximum size: ${maxSize / 1024 / 1024}MB`);
+  }
+
+  // Check for suspicious extensions
+  const suspiciousExtensions = ['.exe', '.php', '.sh', '.bat', '.cmd', '.scr', '.vbs'];
+  const fileName = file.name.toLowerCase();
+  if (suspiciousExtensions.some(ext => fileName.endsWith(ext))) {
+    throw new Error('File type not allowed for security reasons');
+  }
+
+  // Validate content type based on folder
+  const allowedTypes: Record<UploadFolder, string[]> = {
+    'profile-images': ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
+    'student-images': ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
+    'institute-images': ['image/jpeg', 'image/jpg', 'image/png', 'image/svg+xml', 'image/webp'],
+    'institute-user-images': ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
+    'subject-images': ['image/jpeg', 'image/jpg', 'image/png', 'image/svg+xml', 'image/webp'],
+    'homework-files': ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'],
+    'correction-files': ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'],
+    'institute-payment-receipts': ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'],
+    'subject-payment-receipts': ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'],
+    'id-documents': ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'],
+    'bookhire-vehicle-images': ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
+    'bookhire-owner-images': ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+  };
+
+  const allowed = allowedTypes[folder];
+  if (allowed && !allowed.includes(file.type)) {
+    throw new Error(`Invalid file type for ${folder}. Allowed: ${allowed.join(', ')}`);
+  }
+}
+
+/**
+ * Upload file using AWS S3 signed URL flow
  * Returns relativePath to send to backend
  */
 export async function uploadWithSignedUrl(
@@ -70,8 +127,11 @@ export async function uploadWithSignedUrl(
     throw new Error('No authentication token found');
   }
 
+  // Validate file before upload
+  validateFile(file, folder);
+
   try {
-    // Step 1: Get signed URL
+    // Step 1: Get signed URL from backend
     onProgress?.('Getting upload URL...', 10);
     
     const contentType = file.type || 'application/octet-stream';
@@ -95,49 +155,43 @@ export async function uploadWithSignedUrl(
     }
 
     const signedUrlData: SignedUrlResponse = await signedUrlResponse.json();
-    const { uploadUrl, relativePath, fields } = signedUrlData;
+    const { uploadUrl, relativePath, fields, publicUrl } = signedUrlData;
 
-    // Step 2: Upload file - handle both AWS S3 (with fields) and GCS (without fields)
+    // Step 2: Upload file to AWS S3 using POST with FormData
     onProgress?.('Uploading file...', 50);
-
-    if (fields && Object.keys(fields).length > 0) {
-      // AWS S3 POST with FormData
-      const formData = new FormData();
-      
-      // Add all fields from backend BEFORE the file
-      Object.keys(fields).forEach(key => {
-        formData.append(key, fields[key]);
-      });
-      
-      // Add file LAST
-      formData.append('file', file);
-
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text();
-        throw new Error(`Upload failed: ${errorText || uploadResponse.statusText}`);
-      }
-    } else {
-      // GCS PUT with direct file upload (legacy)
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': contentType
-        },
-        body: file
-      });
-
-      if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text();
-        throw new Error(`Upload failed: ${errorText || uploadResponse.statusText}`);
-      }
+    
+    if (!fields || typeof fields !== 'object' || Object.keys(fields).length === 0) {
+      throw new Error('Backend did not return required S3 fields. Backend migration may be incomplete.');
     }
 
-    // Step 3: Verify and publish
+    console.log('📤 Uploading to AWS S3 using POST method');
+    const formData = new FormData();
+    
+    // CRITICAL: Add all fields from backend BEFORE the file
+    // The order matters for S3 signature validation
+    Object.keys(fields).forEach(key => {
+      formData.append(key, fields[key]);
+    });
+    
+    // Add file LAST
+    formData.append('file', file);
+
+    // DO NOT set Content-Type header - browser sets it automatically with boundary
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'POST',
+      body: formData
+      // No headers - let browser handle Content-Type with multipart boundary
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text().catch(() => 'Unknown error');
+      console.error('S3 upload error:', errorText);
+      throw new Error(`S3 upload failed (${uploadResponse.status}): ${errorText || uploadResponse.statusText}`);
+    }
+    
+    console.log('✅ File uploaded to S3 successfully');
+
+    // Step 3: Verify and make file public
     onProgress?.('Verifying upload...', 80);
 
     const verifyResponse = await fetch(`${baseUrl}/upload/verify-and-publish`, {
@@ -150,8 +204,12 @@ export async function uploadWithSignedUrl(
     });
 
     if (!verifyResponse.ok) {
-      throw new Error('Failed to verify upload');
+      const verifyError = await verifyResponse.json().catch(() => ({}));
+      throw new Error(verifyError.message || 'Failed to verify upload');
     }
+
+    const verifyData = await verifyResponse.json();
+    console.log('✅ File verified and published:', verifyData.publicUrl || publicUrl);
 
     onProgress?.('Upload complete!', 100);
 

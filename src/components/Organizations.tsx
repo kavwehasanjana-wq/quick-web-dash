@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Building2, Search, Plus, LayoutGrid, List, Filter, UserPlus, ChevronDown, Trash2 } from 'lucide-react';
+import { getImageUrl } from '@/utils/imageUrlHelper';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { organizationApi, Organization, OrganizationQueryParams } from '@/api/organization.api';
@@ -17,6 +18,24 @@ import { useToast } from '@/hooks/use-toast';
 import CreateOrganizationForm from '@/components/forms/CreateOrganizationForm';
 import EnrollOrganizationDialog from './EnrollOrganizationDialog';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+
+// Safe image component that uses state instead of DOM manipulation
+const SafeImage = ({ src, alt, className }: { src: string; alt: string; className?: string }) => {
+  const [hasError, setHasError] = useState(false);
+  
+  if (hasError || !src) {
+    return null;
+  }
+  
+  return (
+    <img 
+      src={getImageUrl(src)} 
+      alt={alt}
+      className={className}
+      onError={() => setHasError(true)}
+    />
+  );
+};
 
 const Organizations = () => {
   const { setSelectedOrganization, user } = useAuth();
@@ -152,13 +171,10 @@ const Organizations = () => {
       <div className="relative mx-4 -mt-6 h-40 overflow-hidden rounded-xl bg-clip-border shadow-lg group">
         {org.imageUrl ? (
           <>
-            <img 
+            <SafeImage 
               src={org.imageUrl} 
               alt={org.name}
               className="absolute inset-0 w-full h-full object-cover"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/70 via-blue-500/70 to-indigo-600/70"></div>
           </>

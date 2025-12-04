@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { useToast } from '@/hooks/use-toast';
+import { getImageUrl } from '@/utils/imageUrlHelper';
 import { ArrowLeft, Camera, QrCode, UserCheck, CheckCircle, MapPin, Monitor, Users, X, RefreshCw } from 'lucide-react';
 import jsQR from 'jsqr';
 import { getAttendanceUrl, getBaseUrl } from '@/contexts/utils/auth.api';
@@ -546,7 +547,7 @@ const QRCodeScanner = () => {
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800">
                 {attendanceNotification.student.imageUrl ? (
                   <img 
-                    src={attendanceNotification.student.imageUrl} 
+                    src={getImageUrl(attendanceNotification.student.imageUrl)} 
                     alt={attendanceNotification.student.name}
                     className="w-full h-full object-cover"
                     onError={(e) => {

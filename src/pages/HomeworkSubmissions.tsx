@@ -9,10 +9,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { homeworkSubmissionsApi, type HomeworkSubmission } from '@/api/homeworkSubmissions.api';
 import { AccessControl, UserRole } from '@/utils/permissions';
-import { FileText, Calendar, User, ExternalLink, RefreshCw, ArrowLeft, BookOpen, School, Users, Lock } from 'lucide-react';
+import { FileText, Calendar, User, ExternalLink, RefreshCw, ArrowLeft, BookOpen, School, Users, Lock, Edit } from 'lucide-react';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
-import AppLayout from '@/components/layout/AppLayout';
-
+import UploadCorrectionDialog from '@/components/forms/UploadCorrectionDialog';
 const HomeworkSubmissions = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -30,6 +29,13 @@ const HomeworkSubmissions = () => {
   // Track current context to prevent unnecessary reloads
   const contextKey = `${currentInstituteId}-${currentClassId}-${currentSubjectId}`;
   const [lastLoadedContext, setLastLoadedContext] = useState<string>('');
+  
+  // State for upload correction dialog
+  const [selectedSubmission, setSelectedSubmission] = useState<HomeworkSubmission | null>(null);
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+
+  // Check if user can edit (Teacher or InstituteAdmin)
+  const canEdit = instituteRole === 'Teacher' || instituteRole === 'InstituteAdmin';
 
   const loadSubmissions = async (page = 1) => {
     if (!currentInstituteId || !currentClassId || !currentSubjectId) {
@@ -177,27 +183,25 @@ const HomeworkSubmissions = () => {
   // Check if user has permission to view homework submissions (institute-specific)
   if (!AccessControl.hasPermission(instituteRole as UserRole, 'view-homework-submissions')) {
     return (
-      <AppLayout>
-        <div className="container mx-auto p-6">
-          <Card>
-            <CardContent className="text-center py-12">
-              <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-medium mb-2">Access Denied</h3>
-              <p className="text-muted-foreground mb-4">
-                You don't have permission to view homework submissions. Only teachers and institute administrators can access this feature.
-              </p>
-              <Button onClick={() => navigate('/homework')}>
-                Back to Homework
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </AppLayout>
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="text-center py-12">
+            <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-lg font-medium mb-2">Access Denied</h3>
+            <p className="text-muted-foreground mb-4">
+              You don't have permission to view homework submissions. Only teachers and institute administrators can access this feature.
+            </p>
+            <Button onClick={() => navigate('/homework')}>
+              Back to Homework
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
@@ -427,23 +431,39 @@ const HomeworkSubmissions = () => {
                                   <span>Corrected</span>
                                 </div>
                               ) : (
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <FileText className="h-4 w-4" />
-                                  <span>Pending</span>
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <FileText className="h-4 w-4" />
+                                    <span>Pending</span>
+                                  </div>
+                                  {canEdit && (
+                                    <Button
+                                      size="default"
+                                      variant="destructive"
+                                      onClick={() => {
+                                        console.log('Setting selected submission:', submission);
+                                        setSelectedSubmission(submission);
+                                        setIsUploadDialogOpen(true);
+                                      }}
+                                    >
+                                      <Edit className="h-4 w-4 mr-2" />
+                                      Upload Correction
+                                    </Button>
+                                  )}
                                 </div>
                               )}
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex gap-1 justify-end">
+                            <div className="flex gap-2 justify-end flex-wrap">
                               {submission.fileUrl && (
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() => window.open(submission.fileUrl, '_blank')}
-                                  title="View Submission"
                                 >
-                                  <ExternalLink className="h-3 w-3" />
+                                  <ExternalLink className="h-3 w-3 mr-1" />
+                                  View Submission
                                 </Button>
                               )}
                               {submission.teacherCorrectionFileUrl && (
@@ -451,10 +471,10 @@ const HomeworkSubmissions = () => {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => window.open(submission.teacherCorrectionFileUrl, '_blank')}
-                                  title="View Correction"
                                   className="text-blue-600 border-blue-200 hover:bg-blue-50"
                                 >
-                                  <ExternalLink className="h-3 w-3" />
+                                  <ExternalLink className="h-3 w-3 mr-1" />
+                                  View Correction
                                 </Button>
                               )}
                             </div>
@@ -517,11 +537,30 @@ const HomeworkSubmissions = () => {
                </div>
              )}
              </>
-           )}
+       )}
           </div>
         )}
       </div>
-    </AppLayout>
+
+      {/* Upload Correction Dialog */}
+      {selectedSubmission && (
+        <UploadCorrectionDialog
+          isOpen={isUploadDialogOpen}
+          onClose={() => {
+            setIsUploadDialogOpen(false);
+            setSelectedSubmission(null);
+          }}
+          submissionId={selectedSubmission.id}
+          studentName={`${selectedSubmission.student?.firstName || ''} ${selectedSubmission.student?.lastName || ''}`}
+          submission={selectedSubmission}
+          onSuccess={() => {
+            setIsUploadDialogOpen(false);
+            setSelectedSubmission(null);
+            loadSubmissions(currentPage);
+          }}
+        />
+      )}
+    </>
   );
 };
 

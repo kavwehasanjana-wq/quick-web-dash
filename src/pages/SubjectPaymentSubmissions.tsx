@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,6 +17,7 @@ import TablePagination from '@mui/material/TablePagination';
 import TableRow from '@mui/material/TableRow';
 import { enhancedCachedClient } from '@/api/enhancedCachedClient';
 import { CACHE_TTL } from '@/config/cacheTTL';
+import { getImageUrl } from '@/utils/imageUrlHelper';
 interface PaymentSubmission {
   id: string;
   paymentId: string;
@@ -225,61 +225,61 @@ const SubjectPaymentSubmissions = () => {
 
   // Check if user is logged in
   if (!user) {
-    return <AppLayout>
-        <div className="text-center py-12">
-          <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground text-lg">
-            Please log in to access this page
-          </p>
-        </div>
-      </AppLayout>;
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground text-lg">
+          Please log in to access this page
+        </p>
+      </div>
+    );
   }
 
   // Check if institute is selected first before checking role
   if (!selectedInstitute) {
-    return <AppLayout>
-        <div className="text-center py-12">
-          <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground text-lg mb-4">
-            Please select an Institute first
-          </p>
-          <p className="text-sm text-muted-foreground">
-            You need to select an institute to access this page
-          </p>
-        </div>
-      </AppLayout>;
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground text-lg mb-4">
+          Please select an Institute first
+        </p>
+        <p className="text-sm text-muted-foreground">
+          You need to select an institute to access this page
+        </p>
+      </div>
+    );
   }
 
   // Now check if user is Student (using instituteUserType)
   const isStudent = instituteRole === 'Student';
   if (!isStudent) {
-    return <AppLayout>
-        <div className="text-center py-12">
-          <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground text-lg">
-            This page is only accessible to Students
-          </p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Your role in {selectedInstitute.name}: {instituteRole}
-          </p>
-        </div>
-      </AppLayout>;
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground text-lg">
+          This page is only accessible to Students
+        </p>
+        <p className="text-sm text-muted-foreground mt-2">
+          Your role in {selectedInstitute.name}: {instituteRole}
+        </p>
+      </div>
+    );
   }
   
   if (!selectedClass || !selectedSubject) {
-    return <AppLayout>
-        <div className="text-center py-12">
-          <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground text-lg mb-4">
-            Please select Institute, Class, and Subject first
-          </p>
-          <div className="text-sm text-muted-foreground">
-            {!selectedInstitute && <p>• Institute not selected</p>}
-            {!selectedClass && <p>• Class not selected</p>}
-            {!selectedSubject && <p>• Subject not selected</p>}
-          </div>
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground text-lg mb-4">
+          Please select Institute, Class, and Subject first
+        </p>
+        <div className="text-sm text-muted-foreground">
+          {!selectedInstitute && <p>• Institute not selected</p>}
+          {!selectedClass && <p>• Class not selected</p>}
+          {!selectedSubject && <p>• Subject not selected</p>}
         </div>
-      </AppLayout>;
+      </div>
+    );
   }
 
   const handleChangePage = (event: unknown, newPage: number) => {
@@ -321,11 +321,11 @@ const SubjectPaymentSubmissions = () => {
     return submissionsData.data.filter(submission => submission.status === status);
   };
   const handleViewReceipt = (receiptUrl: string) => {
-    window.open(receiptUrl, '_blank');
+    window.open(getImageUrl(receiptUrl), '_blank');
   };
   const handleDownloadReceipt = (receiptUrl: string, filename: string) => {
     const link = document.createElement('a');
-    link.href = receiptUrl;
+    link.href = getImageUrl(receiptUrl);
     link.download = filename;
     document.body.appendChild(link);
     link.click();
@@ -410,116 +410,116 @@ const SubjectPaymentSubmissions = () => {
       </TableContainer>
       <TablePagination rowsPerPageOptions={[25, 50, 100]} component="div" count={submissionsData?.pagination.total || 0} rowsPerPage={rowsPerPage} page={page} onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage} />
     </Paper>;
-  return <AppLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Subject Payment Submissions</h1>
-            <div className="mt-2 text-sm text-muted-foreground">
-              <p><strong>Institute:</strong> {selectedInstitute.name}</p>
-              <p><strong>Class:</strong> {selectedClass.name}</p>
-              <p><strong>Subject:</strong> {selectedSubject.name}</p>
-            </div>
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Subject Payment Submissions</h1>
+          <div className="mt-2 text-sm text-muted-foreground">
+            <p><strong>Institute:</strong> {selectedInstitute.name}</p>
+            <p><strong>Class:</strong> {selectedClass.name}</p>
+            <p><strong>Subject:</strong> {selectedSubject.name}</p>
           </div>
-          <Button onClick={() => loadSubmissions(1, rowsPerPage, true)} disabled={loading}>
-            {loading ? 'Refreshing...' : 'Refresh'}
-          </Button>
         </div>
-
-        {/* Summary Stats */}
-        {submissionsData && <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center space-x-2">
-                  <FileText className="h-8 w-8 text-blue-600" />
-                  <div>
-                    <p className="text-2xl font-bold">{submissionsData.summary.total}</p>
-                    <p className="text-sm text-muted-foreground">Total Submissions</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center space-x-2">
-                  <Clock className="h-8 w-8 text-yellow-600" />
-                  <div>
-                    <p className="text-2xl font-bold">{submissionsData.summary.byStatus.pending}</p>
-                    <p className="text-sm text-muted-foreground">Pending</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-8 w-8 text-green-600" />
-                  <div>
-                    <p className="text-2xl font-bold">{submissionsData.summary.byStatus.verified}</p>
-                    <p className="text-sm text-muted-foreground">Verified</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center space-x-2">
-                  <XCircle className="h-8 w-8 text-red-600" />
-                  <div>
-                    <p className="text-2xl font-bold">{submissionsData.summary.byStatus.rejected}</p>
-                    <p className="text-sm text-muted-foreground">Rejected</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>}
-
-        {/* Submissions Tabs */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <FileText className="h-5 w-5" />
-              <span>Payment Submissions</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {!submissionsData ? <div className="text-center py-12">
-                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground text-lg mb-2">
-                  Click "Load Submissions" to view your payment submissions
-                </p>
-              </div> : <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="PENDING" className="flex items-center space-x-2">
-                    <Clock className="h-4 w-4" />
-                    <span>Pending ({submissionsData.summary.byStatus.pending})</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="VERIFIED" className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4" />
-                    <span>Verified ({submissionsData.summary.byStatus.verified})</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="REJECTED" className="flex items-center space-x-2">
-                    <XCircle className="h-4 w-4" />
-                    <span>Rejected ({submissionsData.summary.byStatus.rejected})</span>
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="PENDING" className="mt-6">
-                  {renderTableContent(filterSubmissionsByStatus('PENDING'))}
-                </TabsContent>
-                
-                <TabsContent value="VERIFIED" className="mt-6">
-                  {renderTableContent(filterSubmissionsByStatus('VERIFIED'))}
-                </TabsContent>
-                
-                <TabsContent value="REJECTED" className="mt-6">
-                  {renderTableContent(filterSubmissionsByStatus('REJECTED'))}
-                </TabsContent>
-              </Tabs>}
-          </CardContent>
-        </Card>
+        <Button onClick={() => loadSubmissions(1, rowsPerPage, true)} disabled={loading}>
+          {loading ? 'Refreshing...' : 'Refresh'}
+        </Button>
       </div>
-    </AppLayout>;
+
+      {/* Summary Stats */}
+      {submissionsData && <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center space-x-2">
+                <FileText className="h-8 w-8 text-blue-600" />
+                <div>
+                  <p className="text-2xl font-bold">{submissionsData.summary.total}</p>
+                  <p className="text-sm text-muted-foreground">Total Submissions</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center space-x-2">
+                <Clock className="h-8 w-8 text-yellow-600" />
+                <div>
+                  <p className="text-2xl font-bold">{submissionsData.summary.byStatus.pending}</p>
+                  <p className="text-sm text-muted-foreground">Pending</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+                <div>
+                  <p className="text-2xl font-bold">{submissionsData.summary.byStatus.verified}</p>
+                  <p className="text-sm text-muted-foreground">Verified</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center space-x-2">
+                <XCircle className="h-8 w-8 text-red-600" />
+                <div>
+                  <p className="text-2xl font-bold">{submissionsData.summary.byStatus.rejected}</p>
+                  <p className="text-sm text-muted-foreground">Rejected</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>}
+
+      {/* Submissions Tabs */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <FileText className="h-5 w-5" />
+            <span>Payment Submissions</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!submissionsData ? <div className="text-center py-12">
+              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground text-lg mb-2">
+                Click "Load Submissions" to view your payment submissions
+              </p>
+            </div> : <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="PENDING" className="flex items-center space-x-2">
+                  <Clock className="h-4 w-4" />
+                  <span>Pending ({submissionsData.summary.byStatus.pending})</span>
+                </TabsTrigger>
+                <TabsTrigger value="VERIFIED" className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Verified ({submissionsData.summary.byStatus.verified})</span>
+                </TabsTrigger>
+                <TabsTrigger value="REJECTED" className="flex items-center space-x-2">
+                  <XCircle className="h-4 w-4" />
+                  <span>Rejected ({submissionsData.summary.byStatus.rejected})</span>
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="PENDING" className="mt-6">
+                {renderTableContent(filterSubmissionsByStatus('PENDING'))}
+              </TabsContent>
+              
+              <TabsContent value="VERIFIED" className="mt-6">
+                {renderTableContent(filterSubmissionsByStatus('VERIFIED'))}
+              </TabsContent>
+              
+              <TabsContent value="REJECTED" className="mt-6">
+                {renderTableContent(filterSubmissionsByStatus('REJECTED'))}
+              </TabsContent>
+            </Tabs>}
+        </CardContent>
+      </Card>
+    </div>
+  );
 };
 export default SubjectPaymentSubmissions;

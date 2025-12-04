@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useTableData } from '@/hooks/useTableData';
 import ImagePreviewModal from '@/components/ImagePreviewModal';
 import { Occupation, formatOccupation } from '@/types/occupation.types';
+import { getImageUrl } from '@/utils/imageUrlHelper';
 
 const Parents = () => {
   const {
@@ -109,8 +110,8 @@ const Parents = () => {
           }
         }}
       >
-        <Avatar className="h-10 w-10 md:h-12 md:w-12 lg:h-14 lg:w-14 hover:opacity-80 transition-opacity border-2 border-border">
-          <AvatarImage src={value} alt={row.name} className="object-cover" />
+      <Avatar className="h-10 w-10 md:h-12 md:w-12 lg:h-14 lg:w-14 hover:opacity-80 transition-opacity border-2 border-border">
+          <AvatarImage src={getImageUrl(value)} alt={row.name} className="object-cover" />
           <AvatarFallback className="bg-muted">
             <User className="h-5 w-5 md:h-6 md:w-6" />
           </AvatarFallback>

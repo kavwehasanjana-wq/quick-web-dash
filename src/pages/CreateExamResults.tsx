@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate, useLocation } from 'react-router-dom';
+
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,9 +14,23 @@ import donutChartIcon from '@/assets/donut-chart.png';
 import { examApi } from '@/api/exam.api';
 import { examResultsApi } from '@/api/examResults.api';
 import { instituteApi } from '@/api/institute.api';
-import AppLayout from '@/components/layout/AppLayout';
 import GradeConfigurationCard, { GradeRange } from '@/components/GradeConfigurationCard';
 import { cn } from '@/lib/utils';
+
+// Parse URL params manually since we use catch-all routes
+const parseUrlParams = (pathname: string) => {
+  const instituteMatch = pathname.match(/\/institute\/(\d+)/);
+  const classMatch = pathname.match(/\/class\/(\d+)/);
+  const subjectMatch = pathname.match(/\/subject\/(\d+)/);
+  const examMatch = pathname.match(/\/exam\/(\d+)/);
+  
+  return {
+    instituteId: instituteMatch?.[1] || null,
+    classId: classMatch?.[1] || null,
+    subjectId: subjectMatch?.[1] || null,
+    examId: examMatch?.[1] || null,
+  };
+};
 
 interface Student {
   id: string;
@@ -50,15 +64,14 @@ const defaultRemarks: Record<string, string> = {
 };
 
 const CreateExamResults = () => {
-  const { instituteId, classId, subjectId, examId } = useParams<{ 
-    instituteId: string;
-    classId: string;
-    subjectId: string;
-    examId: string;
-  }>();
   const navigate = useNavigate();
-  const { currentInstituteId, currentClassId, currentSubjectId } = useAuth();
+  const location = useLocation();
   const { toast } = useToast();
+  
+  // Parse URL params manually since useParams doesn't work with catch-all routes
+  const { instituteId, classId, subjectId, examId } = parseUrlParams(location.pathname);
+  
+  console.log('CreateExamResults - Parsed URL params:', { instituteId, classId, subjectId, examId });
 
   const [exam, setExam] = useState<any>(null);
   const [students, setStudents] = useState<Student[]>([]);
@@ -70,15 +83,12 @@ const CreateExamResults = () => {
 
   useEffect(() => {
     loadData();
-  }, [examId, currentInstituteId, currentClassId, currentSubjectId]);
+  }, [examId, instituteId, classId, subjectId]);
 
   const loadData = async () => {
-    if (!examId || !currentInstituteId || !currentClassId || !currentSubjectId) {
-      toast({
-        title: "Missing Information",
-        description: "Institute, class, and subject must be selected.",
-        variant: "destructive"
-      });
+    // Use URL params directly - they should always be present in this route
+    if (!examId || !instituteId || !classId || !subjectId) {
+      console.log('Missing URL params:', { examId, instituteId, classId, subjectId });
       return;
     }
 
@@ -86,9 +96,9 @@ const CreateExamResults = () => {
     try {
       // Load exam details from the exams list to avoid 403 error on single exam endpoint
       const examsResponse = await examApi.getExams({
-        instituteId: currentInstituteId,
-        classId: currentClassId,
-        subjectId: currentSubjectId,
+        instituteId: instituteId,
+        classId: classId,
+        subjectId: subjectId,
         page: 1,
         limit: 50
       });
@@ -101,9 +111,9 @@ const CreateExamResults = () => {
 
       // Load students from API
       const response = await instituteApi.getInstituteStudentsByClassAndSubject(
-        currentInstituteId,
-        currentClassId,
-        currentSubjectId,
+        instituteId,
+        classId,
+        subjectId,
         { page: 1, limit: 100 }
       );
 
@@ -181,7 +191,7 @@ const CreateExamResults = () => {
   };
 
   const handleSubmit = async () => {
-    if (!examId || !currentInstituteId || !currentClassId || !currentSubjectId) {
+    if (!examId || !instituteId || !classId || !subjectId) {
       return;
     }
 
@@ -200,9 +210,9 @@ const CreateExamResults = () => {
     setSubmitting(true);
     try {
       await examResultsApi.createBulkResults({
-        instituteId: currentInstituteId,
-        classId: currentClassId,
-        subjectId: currentSubjectId,
+        instituteId: instituteId,
+        classId: classId,
+        subjectId: subjectId,
         examId: examId,
         results: validResults
       });
@@ -227,18 +237,16 @@ const CreateExamResults = () => {
 
   if (loading) {
     return (
-      <AppLayout>
-        <div className="container mx-auto p-6">
-          <div className="flex items-center justify-center py-12">
-            <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-          </div>
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center py-12">
+          <RefreshCw className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </AppLayout>
+      </div>
     );
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="container mx-auto p-6 space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate(`/institute/${instituteId}/class/${classId}/subject/${subjectId}/exams`)}>
@@ -387,7 +395,7 @@ const CreateExamResults = () => {
         </>
       )}
       </div>
-    </AppLayout>
+    </>
   );
 };
 

@@ -10,12 +10,12 @@ import { useToast } from '@/hooks/use-toast';
 import { cachedApiClient } from '@/api/cachedClient';
 import { getBaseUrl } from '@/contexts/utils/auth.api';
 
+import { getImageUrl } from '@/utils/imageUrlHelper';
+
 // Helper function to resolve image URLs
 const resolveImageUrl = (val?: string) => {
   if (!val) return '/placeholder.svg';
-  if (val.startsWith('http')) return val;
-  const base = getBaseUrl();
-  return `${base}${val.startsWith('/') ? '' : '/'}${val}`;
+  return getImageUrl(val);
 };
 interface InstituteApiResponse {
   id: string;

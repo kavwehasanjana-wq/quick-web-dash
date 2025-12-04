@@ -86,11 +86,16 @@ export type Permission =
   | 'view-settings'
   | 'view-appearance'
   | 'view-transport'
-  | 'manage-transport';
+  | 'manage-transport'
+  | 'view-payments'
+  | 'view-submissions';
 
 const rolePermissions: Record<UserRole, Permission[]> = {
   Student: [
     'view-dashboard',
+    'view-classes',
+    'view-subjects',
+    'view-students',
     'view-grades',
     'view-lectures',
     'view-homework',

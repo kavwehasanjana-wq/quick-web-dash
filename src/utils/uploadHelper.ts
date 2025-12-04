@@ -42,8 +42,11 @@ export type UploadFolder =
   | 'subject-images'
   | 'homework-files'
   | 'correction-files'
-  | 'payment-receipts'
-  | 'id-documents';
+  | 'institute-payment-receipts'
+  | 'subject-payment-receipts'
+  | 'id-documents'
+  | 'bookhire-vehicle-images'
+  | 'bookhire-owner-images';
 
 const MAX_FILE_SIZES: Record<UploadFolder, number> = {
   'profile-images': 5 * 1024 * 1024,        // 5MB
@@ -53,8 +56,11 @@ const MAX_FILE_SIZES: Record<UploadFolder, number> = {
   'subject-images': 5 * 1024 * 1024,        // 5MB
   'homework-files': 20 * 1024 * 1024,       // 20MB
   'correction-files': 20 * 1024 * 1024,     // 20MB
-  'payment-receipts': 10 * 1024 * 1024,     // 10MB
-  'id-documents': 10 * 1024 * 1024          // 10MB
+  'institute-payment-receipts': 10 * 1024 * 1024,     // 10MB
+  'subject-payment-receipts': 10 * 1024 * 1024,       // 10MB
+  'id-documents': 10 * 1024 * 1024,          // 10MB
+  'bookhire-vehicle-images': 10 * 1024 * 1024,        // 10MB
+  'bookhire-owner-images': 10 * 1024 * 1024           // 10MB
 };
 
 export class FileUploader {
@@ -129,15 +135,17 @@ export class FileUploader {
   }
 
   /**
-   * Upload file to cloud storage using signed URL (AWS S3 POST)
+   * Upload file to cloud storage using signed URL (supports both AWS S3 and GCS)
    */
   private async uploadToCloud(
     file: File, 
-    uploadUrl: string, 
+    uploadUrl: string,
+    folder: UploadFolder,
     fields?: Record<string, string>
   ): Promise<void> {
     if (fields && Object.keys(fields).length > 0) {
       // AWS S3 POST with FormData
+      console.log('📤 Using AWS S3 POST method');
       const formData = new FormData();
       
       // IMPORTANT: Add all fields from backend BEFORE the file
@@ -155,22 +163,27 @@ export class FileUploader {
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown error');
-        throw new Error(`S3 upload failed: ${errorText || response.statusText}`);
+        throw new Error(`S3 upload failed (${response.status}): ${errorText || response.statusText}`);
       }
+      console.log('✅ Uploaded to S3');
     } else {
-      // GCS PUT with direct file upload (legacy)
+      // GCS PUT with direct file upload (legacy - backend not migrated yet)
+      console.log('📤 Using GCS PUT method (legacy)');
+      const maxSize = MAX_FILE_SIZES[folder] || (100 * 1024 * 1024);
       const response = await fetch(uploadUrl, {
         method: 'PUT',
         headers: {
-          'Content-Type': file.type || 'application/octet-stream'
+          'Content-Type': file.type || 'application/octet-stream',
+          'x-goog-content-length-range': `0,${maxSize}` // MUST match backend signature
         },
         body: file
       });
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown error');
-        throw new Error(`GCS upload failed: ${errorText || response.statusText}`);
+        throw new Error(`GCS upload failed (${response.status}): ${errorText || response.statusText}`);
       }
+      console.log('✅ Uploaded to GCS');
     }
   }
 
@@ -180,6 +193,7 @@ export class FileUploader {
   private uploadToCloudWithProgress(
     file: File,
     uploadUrl: string,
+    folder: UploadFolder,
     fields?: Record<string, string>,
     onProgress?: (progress: UploadProgress) => void
   ): Promise<void> {
@@ -211,6 +225,7 @@ export class FileUploader {
 
       if (fields && Object.keys(fields).length > 0) {
         // AWS S3 POST with FormData
+        console.log('📤 XHR: Using AWS S3 POST method');
         const formData = new FormData();
         
         // Add all fields first
@@ -225,8 +240,12 @@ export class FileUploader {
         xhr.send(formData);
       } else {
         // GCS PUT with direct file upload (legacy)
+        console.log('📤 XHR: Using GCS PUT method (legacy)');
+        const contentType = file.type || 'application/octet-stream';
+        const maxSize = MAX_FILE_SIZES[folder] || (100 * 1024 * 1024);
         xhr.open('PUT', uploadUrl);
-        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+        xhr.setRequestHeader('Content-Type', contentType);
+        xhr.setRequestHeader('x-goog-content-length-range', `0,${maxSize}`); // MUST match backend signature
         xhr.send(file);
       }
     });
@@ -289,11 +308,12 @@ export class FileUploader {
         await this.uploadToCloudWithProgress(
           file,
           signedUrlData.uploadUrl,
+          folder,
           signedUrlData.fields,
           onProgress
         );
       } else {
-        await this.uploadToCloud(file, signedUrlData.uploadUrl, signedUrlData.fields);
+        await this.uploadToCloud(file, signedUrlData.uploadUrl, folder, signedUrlData.fields);
       }
 
       // Step 3: Verify and publish

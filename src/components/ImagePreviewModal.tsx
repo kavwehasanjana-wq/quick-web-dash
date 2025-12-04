@@ -2,6 +2,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { getImageUrl } from '@/utils/imageUrlHelper';
 interface ImagePreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -23,7 +24,7 @@ const ImagePreviewModal = ({
           </div>
         </DialogHeader>
         <div className="p-4">
-          <img src={imageUrl} alt={title} className="w-full h-auto max-h-[70vh] object-contain rounded-lg" />
+          <img src={getImageUrl(imageUrl)} alt={title} className="w-full h-auto max-h-[70vh] object-contain rounded-lg" />
         </div>
       </DialogContent>
     </Dialog>;

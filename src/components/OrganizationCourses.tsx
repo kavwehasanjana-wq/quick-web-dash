@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { getImageUrl } from '@/utils/imageUrlHelper';
 import { BookOpen, Search, Filter, Eye, EyeOff, Plus, ChevronDown, Play, ExternalLink } from 'lucide-react';
 import { organizationApi, Course, OrganizationQueryParams } from '@/api/organization.api';
 import { useToast } from '@/hooks/use-toast';
@@ -294,7 +295,7 @@ const OrganizationCourses = ({ organizationId, onSelectCourse, organization }: O
               <div className="h-40 overflow-hidden">
                 {course.imageUrl ? (
                   <img 
-                    src={course.imageUrl} 
+                    src={getImageUrl(course.imageUrl)} 
                     alt={course.title}
                     className="w-full h-full object-cover"
                   />

@@ -9,6 +9,7 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TablePagination from '@mui/material/TablePagination';
 import TableRow from '@mui/material/TableRow';
+import { getImageUrl } from '@/utils/imageUrlHelper';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -840,7 +841,7 @@ const InstituteUsers = () => {
                       }}
                     >
                       <Avatar className="h-10 w-10 md:h-12 md:w-12 lg:h-14 lg:w-14 hover:opacity-80 transition-opacity border-2 border-border">
-                        <AvatarImage src={userData.imageUrl || ''} alt={userData.name} className="object-cover" />
+                        <AvatarImage src={getImageUrl(userData.imageUrl || '')} alt={userData.name} className="object-cover" />
                         <AvatarFallback className="bg-muted">
                           {userData.name.split(' ').map(n => n.charAt(0)).join('').slice(0, 2)}
                         </AvatarFallback>
@@ -1036,7 +1037,7 @@ const InstituteUsers = () => {
               {/* Basic Info */}
               <div className="flex items-center space-x-4">
                 <Avatar className="h-16 w-16">
-                  <AvatarImage src={selectedUser.imageUrl || ''} alt={selectedUser.name} />
+                  <AvatarImage src={getImageUrl(selectedUser.imageUrl || '')} alt={selectedUser.name} />
                   <AvatarFallback className="text-lg">
                     {selectedUser.name.split(' ').map(n => n.charAt(0)).join('').slice(0, 2)}
                   </AvatarFallback>

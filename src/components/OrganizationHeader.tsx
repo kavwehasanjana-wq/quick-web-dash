@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { getImageUrl } from '@/utils/imageUrlHelper';
 import ReactCrop, { Crop, PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { 
@@ -305,7 +306,7 @@ const OrganizationHeader = ({ title }: OrganizationHeaderProps) => {
       <div className="absolute -bottom-8 sm:-bottom-10 lg:-bottom-12 left-2 sm:left-4 lg:left-6">
         <div className="relative">
           <Avatar className="h-16 w-16 sm:h-20 sm:w-20 lg:h-24 lg:w-24 border-2 sm:border-4 border-white shadow-lg">
-            <AvatarImage src={profileImage || user?.imageUrl} />
+            <AvatarImage src={getImageUrl(profileImage || user?.imageUrl)} />
             <AvatarFallback className="text-lg sm:text-xl lg:text-2xl font-bold bg-primary text-primary-foreground">
               {user?.name?.charAt(0) || selectedOrganization?.name?.charAt(0) || 'O'}
             </AvatarFallback>

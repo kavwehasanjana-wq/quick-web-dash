@@ -11,6 +11,7 @@ import ReactCrop, {
 } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { getSignedUrl, uploadToSignedUrl, verifyAndPublish } from '@/utils/imageUploadHelper';
+import { getImageUrl } from '@/utils/imageUrlHelper';
 
 interface ImageCropUploadProps {
   currentImageUrl?: string | null;
@@ -225,7 +226,7 @@ const ImageCropUpload: React.FC<ImageCropUploadProps> = ({
         <div className="relative w-full h-48 sm:h-56 md:h-64 bg-muted rounded-lg border-2 border-dashed border-border overflow-hidden">
           {currentImageUrl ? (
             <img
-              src={currentImageUrl}
+              src={getImageUrl(currentImageUrl)}
               alt={label}
               className="w-full h-full object-cover"
             />

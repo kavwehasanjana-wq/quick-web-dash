@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Eye, EyeOff, Users, BookOpen, UserPlus, Trash2 } from 'lucide-react';
+import { Building2, Trash2 } from 'lucide-react';
+import { getImageUrl } from '@/utils/imageUrlHelper';
 import { Organization } from '@/api/organization.api';
 import ImagePreviewModal from './ImagePreviewModal';
 import { Button } from '@/components/ui/button';
@@ -25,9 +26,10 @@ const OrganizationCard = ({
   showDeleteButton = false
 }: OrganizationCardProps) => {
   const [imagePreviewOpen, setImagePreviewOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const handleImageClick = () => {
-    if (organization.imageUrl) {
+    if (organization.imageUrl && !imageError) {
       setImagePreviewOpen(true);
     }
   };
@@ -36,12 +38,13 @@ const OrganizationCard = ({
     <>
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden w-full max-w-sm">
         <div className="relative h-48 bg-gray-100 overflow-hidden">
-          {organization.imageUrl ? (
+          {organization.imageUrl && !imageError ? (
             <img 
-              src={organization.imageUrl} 
+              src={getImageUrl(organization.imageUrl)} 
               alt={organization.name}
               className="w-full h-full object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
               onClick={handleImageClick}
+              onError={() => setImageError(true)}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -89,7 +92,7 @@ const OrganizationCard = ({
       <ImagePreviewModal
         isOpen={imagePreviewOpen}
         onClose={() => setImagePreviewOpen(false)}
-        imageUrl={organization.imageUrl || ''}
+        imageUrl={getImageUrl(organization.imageUrl)}
         title={organization.name}
       />
     </>

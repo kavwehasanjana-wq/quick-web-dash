@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
+import { getImageUrl } from '@/utils/imageUrlHelper';
 
 import { RefreshCw, Filter, Eye, Edit, Trash2, Plus, UserPlus, UserMinus } from 'lucide-react';
 import { useAuth, type UserRole } from '@/contexts/AuthContext';
@@ -160,9 +161,7 @@ const Subjects = () => {
 
   const resolveImageUrl = (url?: string | null) => {
     if (!url) return '/placeholder.svg';
-    if (url.startsWith('http')) return url;
-    const base = getBaseUrl();
-    return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
+    return getImageUrl(url);
   };
 
   const handleAssignTeacher = (subject: SubjectData) => {
@@ -298,8 +297,8 @@ const Subjects = () => {
         {isClassLevel ? (
           value ? (
             <div className="flex items-center gap-2">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={value.imageUrl} alt={value.firstName ? `${value.firstName} ${value.lastName}` : 'Teacher'} />
+            <Avatar className="h-8 w-8">
+                <AvatarImage src={getImageUrl(value.imageUrl)} alt={value.firstName ? `${value.firstName} ${value.lastName}` : 'Teacher'} />
                 <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
                   {value.firstName?.[0] || 'T'}{value.lastName?.[0] || 'R'}
                 </AvatarFallback>

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DataCardView } from '@/components/ui/data-card-view';
 import { useAuth, type UserRole } from '@/contexts/AuthContext';
+import { getImageUrl } from '@/utils/imageUrlHelper';
 import { BookOpen, Clock, CheckCircle, RefreshCw, User, School, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getBaseUrl } from '@/contexts/utils/auth.api';
@@ -381,7 +382,7 @@ const SubjectSelector = () => {
                   <div className="relative mx-4 -mt-6 h-40 overflow-hidden rounded-xl bg-clip-border text-white shadow-lg shadow-blue-gray-500/40 bg-gradient-to-r from-blue-500 to-blue-600">
                     {subject.imgUrl ? (
                       <img 
-                        src={subject.imgUrl} 
+                        src={getImageUrl(subject.imgUrl)} 
                         alt={subject.name} 
                         className="w-full h-full object-cover"
                       />

@@ -78,6 +78,12 @@ import ChildTransportPage from '@/pages/ChildTransportPage';
 import InstituteOrganizations from '@/pages/InstituteOrganizations';
 import InstitutePayments from '@/pages/InstitutePayments';
 import SubjectPayments from '@/pages/SubjectPayments';
+import SubjectSubmissions from '@/pages/SubjectSubmissions';
+import SubjectPaymentSubmissions from '@/pages/SubjectPaymentSubmissions';
+import MySubmissions from '@/pages/MySubmissions';
+import HomeworkSubmissions from '@/pages/HomeworkSubmissions';
+import ExamResults from '@/pages/ExamResults';
+import CreateExamResults from '@/pages/CreateExamResults';
 
 interface AppContentProps {
   initialPage?: string;
@@ -100,6 +106,24 @@ const AppContent = ({ initialPage }: AppContentProps) => {
   // Derive current page from URL pathname
   const currentPage = React.useMemo(() => {
     return extractPageFromUrl(location.pathname);
+  }, [location.pathname]);
+  
+  // Check for nested route patterns that need direct component rendering
+  const nestedRouteComponent = React.useMemo(() => {
+    const path = location.pathname;
+    // homework/:id/submissions
+    if (/\/homework\/[^\/]+\/submissions/.test(path)) {
+      return 'homework-submissions-view';
+    }
+    // exam/:id/results
+    if (/\/exam\/[^\/]+\/results$/.test(path)) {
+      return 'exam-results-view';
+    }
+    // exam/:id/create-results
+    if (/\/exam\/[^\/]+\/create-results/.test(path)) {
+      return 'exam-create-results';
+    }
+    return null;
   }, [location.pathname]);
   
   // 🔗 Sync URL with context automatically
@@ -470,6 +494,10 @@ const AppContent = ({ initialPage }: AppContentProps) => {
       switch (currentPage) {
         case 'dashboard':
           return <Dashboard />;
+        case 'select-class':
+          return <ClassSelector />;
+        case 'select-subject':
+          return <SubjectSelector />;
         case 'enroll-class':
           console.log('Student: Rendering EnrollClass component');
           return <EnrollClass />;
@@ -479,6 +507,8 @@ const AppContent = ({ initialPage }: AppContentProps) => {
         case 'my-attendance':
           console.log('Student: Rendering MyAttendance component');
           return <MyAttendance />;
+        case 'students':
+          return <Students />;
         case 'lectures':
           return <Lectures />;
         case 'free-lectures':
@@ -508,6 +538,12 @@ const AppContent = ({ initialPage }: AppContentProps) => {
           return <InstitutePayments />;
         case 'subject-payments':
           return <SubjectPayments />;
+        case 'subject-submissions':
+          return <SubjectSubmissions />;
+        case 'my-submissions':
+          return <MySubmissions />;
+        case 'subject-pay-submission':
+          return <SubjectPaymentSubmissions />;
         case 'my-children':
           return <MyChildren />;
         default:
@@ -586,6 +622,11 @@ const AppContent = ({ initialPage }: AppContentProps) => {
       if (selectedClass && !selectedSubject && subjectRequiredPages.includes(currentPage)) {
         return <SubjectSelector />;
       }
+
+      // Handle nested routes first
+      if (nestedRouteComponent === 'homework-submissions-view') return <HomeworkSubmissions />;
+      if (nestedRouteComponent === 'exam-results-view') return <ExamResults />;
+      if (nestedRouteComponent === 'exam-create-results') return <CreateExamResults />;
 
       switch (currentPage) {
         case 'dashboard':
@@ -703,7 +744,8 @@ const AppContent = ({ initialPage }: AppContentProps) => {
       'child/:childId/attendance',
       'child/:childId/transport',
       'institute-payments',
-      'subject-payments'
+      'subject-payments',
+      'my-submissions'
     ];
     
     console.log('🔍 Student Role - Debug:', { 
@@ -741,6 +783,11 @@ const AppContent = ({ initialPage }: AppContentProps) => {
     if (selectedClass && !selectedSubject && subjectRequiredPages.includes(currentPage) && !pagesWithoutClassRequirement.includes(currentPage)) {
       return <SubjectSelector />;
     }
+
+    // Handle nested routes first
+    if (nestedRouteComponent === 'homework-submissions-view') return <HomeworkSubmissions />;
+    if (nestedRouteComponent === 'exam-results-view') return <ExamResults />;
+    if (nestedRouteComponent === 'exam-create-results') return <CreateExamResults />;
 
     switch (currentPage) {
       case 'dashboard':
@@ -843,6 +890,10 @@ const AppContent = ({ initialPage }: AppContentProps) => {
         return <InstitutePayments />;
       case 'subject-payments':
         return <SubjectPayments />;
+      case 'my-submissions':
+        return <MySubmissions />;
+      case 'subject-pay-submission':
+        return <SubjectPaymentSubmissions />;
       case 'my-children':
         return <MyChildren />;
       case 'child/:childId/dashboard':

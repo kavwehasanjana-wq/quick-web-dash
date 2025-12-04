@@ -10,8 +10,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { examResultsApi, type ExamResult, type ExamResultsQueryParams } from '@/api/examResults.api';
 import { useApiRequest } from '@/hooks/useApiRequest';
-import AppLayout from '@/components/layout/AppLayout';
 import MUITable from '@/components/ui/mui-table';
+
 const ExamResults = () => {
   const navigate = useNavigate();
   const {
@@ -171,7 +171,7 @@ const ExamResults = () => {
     const searchLower = searchTerm.toLowerCase();
     return result.student.firstName.toLowerCase().includes(searchLower) || result.student.lastName.toLowerCase().includes(searchLower) || result.student.email.toLowerCase().includes(searchLower) || result.grade.toLowerCase().includes(searchLower) || result.remarks && result.remarks.toLowerCase().includes(searchLower);
   });
-  return <AppLayout>
+  return <>
       <div className="w-full min-h-full">
         <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Header */}
@@ -520,6 +520,6 @@ const ExamResults = () => {
         </Dialog>
         </div>
       </div>
-    </AppLayout>;
+    </>;
 };
 export default ExamResults;

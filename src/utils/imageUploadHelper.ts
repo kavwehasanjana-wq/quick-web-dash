@@ -69,6 +69,7 @@ export const uploadToSignedUrl = async (
   try {
     if (fields && Object.keys(fields).length > 0) {
       // AWS S3 POST with FormData
+      console.log('📤 Using AWS S3 POST method with fields');
       const formData = new FormData();
       
       // IMPORTANT: Add all fields from backend BEFORE the file
@@ -82,6 +83,7 @@ export const uploadToSignedUrl = async (
       const response = await fetch(uploadUrl, {
         method: 'POST',
         body: formData
+        // DO NOT set Content-Type header - browser sets it automatically
       });
 
       if (!response.ok) {
@@ -90,16 +92,18 @@ export const uploadToSignedUrl = async (
           status: response.status,
           error: errorText
         });
-        throw new Error(`S3 upload failed: ${errorText || response.statusText}`);
+        throw new Error(`S3 upload failed (${response.status}): ${errorText || response.statusText}`);
       }
       
       console.log('✅ File uploaded successfully to S3');
     } else {
-      // GCS PUT with direct file upload (legacy)
+      // GCS PUT with direct file upload (legacy - backend not migrated yet)
+      console.log('📤 Using GCS PUT method (legacy)');
       const response = await fetch(uploadUrl, {
         method: 'PUT',
         headers: {
-          'Content-Type': file.type || 'application/octet-stream'
+          'Content-Type': file.type || 'application/octet-stream',
+          'x-goog-content-length-range': `0,${100 * 1024 * 1024}` // 100MB max - MUST match backend signature
         },
         body: file
       });
@@ -110,7 +114,7 @@ export const uploadToSignedUrl = async (
           status: response.status,
           error: errorText
         });
-        throw new Error(`GCS upload failed: ${errorText || response.statusText}`);
+        throw new Error(`GCS upload failed (${response.status}): ${errorText || response.statusText}`);
       }
       
       console.log('✅ File uploaded successfully to GCS');
@@ -118,7 +122,7 @@ export const uploadToSignedUrl = async (
   } catch (error) {
     console.error('❌ Upload failed:', error);
     if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-      throw new Error('Unable to upload file. This may be due to CORS configuration. Please contact support.');
+      throw new Error('Network error: Unable to upload file. Check your internet connection.');
     }
     throw error;
   }
@@ -158,7 +162,7 @@ export const detectFolder = (file: File, context?: 'homework' | 'payment' | 'cor
   
   if (context === 'homework') return 'homework-files';
   if (context === 'correction') return 'correction-files';
-  if (context === 'payment') return 'payment-receipts';
+  if (context === 'payment') return 'institute-payment-receipts';
   if (context === 'id-document') return 'id-documents';
   if (context === 'profile') return 'profile-images';
   if (context === 'institute') return 'institute-images';

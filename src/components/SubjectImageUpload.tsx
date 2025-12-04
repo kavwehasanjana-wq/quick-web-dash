@@ -11,6 +11,7 @@ import ReactCrop, {
 import 'react-image-crop/dist/ReactCrop.css';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { getSignedUrl, uploadToSignedUrl, verifyAndPublish } from '@/utils/imageUploadHelper';
+import { getImageUrl } from '@/utils/imageUrlHelper';
 
 interface SubjectImageUploadProps {
   value?: string;
@@ -40,7 +41,7 @@ function centerAspectCrop(
 
 const SubjectImageUpload: React.FC<SubjectImageUploadProps> = ({ value, onChange, onRemove }) => {
   const { toast } = useToast();
-  const [previewUrl, setPreviewUrl] = useState<string>(value || '');
+  const [previewUrl, setPreviewUrl] = useState<string>(value ? getImageUrl(value) : '');
   const [showCropDialog, setShowCropDialog] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<string>('');
   const [crop, setCrop] = useState<Crop>();
@@ -173,8 +174,8 @@ const SubjectImageUpload: React.FC<SubjectImageUploadProps> = ({ value, onChange
       // Step 3: Verify and publish
       await verifyAndPublish(signedUrlData.relativePath);
 
-      // Step 4: Use public URL
-      setPreviewUrl(signedUrlData.publicUrl);
+      // Step 4: Use public URL with transformed base
+      setPreviewUrl(getImageUrl(signedUrlData.publicUrl));
       onChange(signedUrlData.publicUrl);
       
       toast({

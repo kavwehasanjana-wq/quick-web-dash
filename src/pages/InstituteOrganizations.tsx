@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Building2, RefreshCw, Plus, UserPlus, Eye, Key } from 'lucide-react';
+import { getImageUrl } from '@/utils/imageUrlHelper';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { useTableData } from '@/hooks/useTableData';
@@ -49,6 +50,30 @@ interface OrganizationMember {
   status: string;
   enrolledDate: string;
 }
+
+// Safe image component that doesn't manipulate DOM directly
+const ImageCell = ({ imageUrl, name }: { imageUrl: string; name: string }) => {
+  const [hasError, setHasError] = React.useState(false);
+  
+  if (!imageUrl || hasError) {
+    return (
+      <div className="flex items-center justify-center">
+        <Building2 className="w-8 h-8 text-muted-foreground" />
+      </div>
+    );
+  }
+  
+  return (
+    <div className="flex items-center justify-center">
+      <img 
+        src={getImageUrl(imageUrl)} 
+        alt={name}
+        className="w-10 h-10 rounded-md object-cover"
+        onError={() => setHasError(true)}
+      />
+    </div>
+  );
+};
 
 const InstituteOrganizations = () => {
   const { user, selectedInstitute } = useAuth();
@@ -244,17 +269,7 @@ const InstituteOrganizations = () => {
       label: 'Image',
       minWidth: 100,
       format: (_value: any, row: any) => (
-        <div className="flex items-center justify-center">
-          {row.imageUrl ? (
-            <img 
-              src={row.imageUrl} 
-              alt={row.name}
-              className="w-10 h-10 rounded-md object-cover"
-            />
-          ) : (
-            <Building2 className="w-8 h-8 text-muted-foreground" />
-          )}
-        </div>
+        <ImageCell imageUrl={row.imageUrl} name={row.name} />
       )
     },
     {

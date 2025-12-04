@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { getImageUrl } from '@/utils/imageUrlHelper';
 import { DataCardView } from '@/components/ui/data-card-view';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth, type UserRole } from '@/contexts/AuthContext';
@@ -525,7 +526,7 @@ const ClassSelector = () => {
     key: 'imageUrl',
     header: 'Image',
     render: (value: any, row: ClassCardData) => <Avatar className="h-12 w-12">
-          <AvatarImage src={value} alt={row.name} className="object-cover" />
+          <AvatarImage src={getImageUrl(value)} alt={row.name} className="object-cover" />
           <AvatarFallback className="bg-blue-100 text-blue-600">
             <Image className="h-6 w-6" />
           </AvatarFallback>
@@ -754,7 +755,7 @@ const ClassSelector = () => {
                   <div className="relative mx-4 -mt-6 h-40 overflow-hidden rounded-xl bg-clip-border text-white shadow-lg shadow-blue-gray-500/40 bg-gradient-to-r from-blue-500 to-blue-600">
                     {classItem.imageUrl ? (
                       <img 
-                        src={classItem.imageUrl} 
+                        src={getImageUrl(classItem.imageUrl)} 
                         alt={classItem.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -866,7 +867,7 @@ const ClassSelector = () => {
                   <div className="relative mx-4 -mt-6 h-40 overflow-hidden rounded-xl bg-clip-border text-white shadow-lg shadow-blue-gray-500/40 bg-gradient-to-r from-blue-500 to-blue-600">
                     {classItem.imageUrl ? (
                       <img 
-                        src={classItem.imageUrl} 
+                        src={getImageUrl(classItem.imageUrl)} 
                         alt={classItem.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {

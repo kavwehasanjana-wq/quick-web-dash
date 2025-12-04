@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import QRAttendance from '@/components/QRAttendance';
-import RFIDAttendance from '@/pages/RFIDAttendance';
+import RfidAttendance from '@/pages/RFIDAttendance';
 import InstituteMarkAttendance from '@/pages/InstituteMarkAttendance';
 
 import NotFound from "./pages/NotFound";

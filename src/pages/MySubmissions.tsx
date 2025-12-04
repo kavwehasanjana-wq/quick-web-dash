@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileText, CheckCircle, Calendar, DollarSign, Clock, XCircle, Eye, RefreshCw } from 'lucide-react';
@@ -9,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import MUITable from '@/components/ui/mui-table';
+import { getImageUrl } from '@/utils/imageUrlHelper';
 
 const MySubmissions = () => {
   const { selectedInstitute } = useAuth();
@@ -197,7 +197,7 @@ const MySubmissions = () => {
         <Button 
           variant="outline" 
           size="sm"
-          onClick={() => window.open(value, '_blank')}
+          onClick={() => window.open(getImageUrl(value), '_blank')}
         >
           <Eye className="h-4 w-4 mr-1" />
           View
@@ -221,8 +221,7 @@ const MySubmissions = () => {
   };
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -375,8 +374,7 @@ const MySubmissions = () => {
             </TabsContent>
           </Tabs>
         )}
-      </div>
-    </AppLayout>
+    </div>
   );
 };
 

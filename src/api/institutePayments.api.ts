@@ -13,9 +13,9 @@ export interface InstitutePayment {
   paymentInstructions?: string;
   bankDetails?: {
     bankName: string;
-    ifscCode: string;
     accountNumber: string;
     accountHolderName: string;
+    branch?: string;
   };
   lateFeeAmount?: number;
   lateFeeAfterDays?: number;
@@ -30,6 +30,9 @@ export interface InstitutePayment {
   verifiedSubmissions: number;
   pendingSubmissions: number;
   rejectedSubmissions: number;
+  // Student-specific fields for submission status
+  mySubmissionStatus?: 'PENDING' | 'VERIFIED' | 'REJECTED' | null;
+  hasSubmitted?: boolean;
 }
 
 export interface PaymentSubmission {
@@ -170,7 +173,7 @@ export interface CreatePaymentRequest {
     bankName: string;
     accountNumber: string;
     accountHolderName: string;
-    ifscCode: string;
+    branch?: string;
   };
   lateFeeAmount?: number;
   lateFeeAfterDays?: number;

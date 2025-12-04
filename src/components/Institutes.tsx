@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { getImageUrl } from '@/utils/imageUrlHelper';
 import {
   Card,
   CardContent,
@@ -558,7 +559,7 @@ const Institutes = () => {
               {selectedInstitute.imageUrl && (
                 <div className="flex justify-center">
                   <img 
-                    src={selectedInstitute.imageUrl} 
+                    src={getImageUrl(selectedInstitute.imageUrl)} 
                     alt={selectedInstitute.name}
                     className="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-lg border"
                   />

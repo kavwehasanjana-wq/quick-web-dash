@@ -4,6 +4,7 @@ import MUITable from '@/components/ui/mui-table';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { getImageUrl } from '@/utils/imageUrlHelper';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -350,7 +351,7 @@ const Classes = () => {
       render: (value: string, row: any) => (
         <Avatar className="h-12 w-12">
           <AvatarImage 
-            src={value} 
+            src={getImageUrl(value)} 
             alt={row.name}
             className="object-cover"
           />
@@ -398,7 +399,7 @@ const Classes = () => {
           {value ? (
             <div className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={value.imageUrl} alt={`${value.firstName} ${value.lastName}`} />
+                <AvatarImage src={getImageUrl(value.imageUrl)} alt={`${value.firstName} ${value.lastName}`} />
                 <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
                   {value.firstName[0]}{value.lastName[0]}
                 </AvatarFallback>

@@ -85,15 +85,15 @@ const VerifySubmissionDialog = ({ open, onOpenChange, submission, instituteId, o
           <h3 className="font-semibold mb-2">Submission Details</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
             <p><strong>Submission ID:</strong> {submission.id}</p>
-            <p><strong>Amount:</strong> ₹{parseFloat(submission.submittedAmount).toLocaleString()}</p>
-            <p><strong>User Type:</strong> {submission.userType}</p>
-            <p><strong>Transaction ID:</strong> {submission.transactionId}</p>
-            <p><strong>Submitted by:</strong> {submission.username}</p>
+            <p><strong>Amount:</strong> ₹{parseFloat((submission as any).paymentAmount || (submission as any).submittedAmount || '0').toLocaleString()}</p>
+            <p><strong>Student:</strong> {(submission as any).studentName || (submission as any).username || '-'}</p>
+            <p><strong>Transaction Ref:</strong> {(submission as any).transactionRef || (submission as any).transactionId || '-'}</p>
+            <p><strong>Payment Method:</strong> {(submission as any).paymentMethod || '-'}</p>
             <p><strong>Payment Date:</strong> {new Date(submission.paymentDate).toLocaleDateString()}</p>
           </div>
-          {submission.notes && (
+          {((submission as any).remarks || (submission as any).notes) && (
             <div className="mt-2">
-              <p className="text-sm"><strong>Notes:</strong> {submission.notes}</p>
+              <p className="text-sm"><strong>Remarks:</strong> {(submission as any).remarks || (submission as any).notes}</p>
             </div>
           )}
         </div>

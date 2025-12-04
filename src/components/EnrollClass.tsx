@@ -4,6 +4,7 @@ import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { getImageUrl } from '@/utils/imageUrlHelper';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -333,7 +334,7 @@ const EnrollClass = () => {
                   <div className="relative mx-4 -mt-6 h-32 overflow-hidden rounded-xl bg-clip-border shadow-lg group">
                     {classItem.imageUrl ? (
                       <img 
-                        src={classItem.imageUrl} 
+                        src={getImageUrl(classItem.imageUrl)} 
                         alt={classItem.name}
                         className="absolute inset-0 w-full h-full object-cover"
                       />

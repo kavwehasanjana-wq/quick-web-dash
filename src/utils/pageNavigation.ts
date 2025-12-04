@@ -118,6 +118,26 @@ export const extractPageFromUrl = (pathname: string): string => {
     .replace(/^organization\/[^\/]+\/?/, '')
     .replace(/^transport\/[^\/]+\/?/, '');
   
+  // Handle nested hierarchical routes with IDs
+  // These routes should highlight their parent menu item in sidebar
+  // homework/:id/submissions -> homework (for sidebar) but return actual page for rendering
+  const homeworkSubmissionsMatch = path.match(/^homework\/([^\/]+)\/submissions$/);
+  if (homeworkSubmissionsMatch) {
+    return 'homework'; // Map to parent for sidebar highlighting
+  }
+  
+  // exam/:id/results -> exams (for sidebar)
+  const examResultsMatch = path.match(/^exam\/([^\/]+)\/results$/);
+  if (examResultsMatch) {
+    return 'exams'; // Map to parent for sidebar highlighting
+  }
+  
+  // exam/:id/create-results -> exams (for sidebar)
+  const examCreateResultsMatch = path.match(/^exam\/([^\/]+)\/create-results$/);
+  if (examCreateResultsMatch) {
+    return 'exams'; // Map to parent for sidebar highlighting
+  }
+  
   // Map sub-routes to their parent pages
   const subRouteMap: Record<string, string> = {
     'system-payments/create': 'system-payment',
