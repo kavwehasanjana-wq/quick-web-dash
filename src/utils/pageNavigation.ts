@@ -142,6 +142,7 @@ export const extractPageFromUrl = (pathname: string): string => {
   const subRouteMap: Record<string, string> = {
     'system-payments/create': 'system-payment',
     'payment-submissions': 'system-payment',
+    'rfid-attendance': 'qr-attendance', // RFID page should highlight Mark Attendance in sidebar
   };
   
   // Check if path matches any sub-route pattern
