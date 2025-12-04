@@ -393,7 +393,6 @@ const RfidAttendance = () => {
           >
             {isProcessing ? 'Processing...' : 'Mark Attendance'}
           </Button>
-        </div>
       </div>
     </div>
   );
