@@ -197,10 +197,8 @@ export const uploadFile = async (file: File, context: string = 'profile'): Promi
   // Step 2: Upload file to S3 using POST with FormData
   await uploadFileToSignedUrl(file, signedUrlResponse);
   
-  // Step 3: Verify and make public
-  const verifyResult = await verifyAndPublish(signedUrlResponse.relativePath);
-  
-  // Step 4: Return relative path for use in API
+  // Step 3: Return relative path for use in API (no verify-and-publish needed)
+  console.log('✅ Upload successful, using publicUrl:', signedUrlResponse.publicUrl);
   return signedUrlResponse.relativePath;
 };
 
