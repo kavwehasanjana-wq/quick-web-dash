@@ -84,12 +84,18 @@ const getSkipReasons = (parentType: "Father" | "Mother" | "Guardian", hasFather?
     ];
   }
   
-  // Guardian
-  const reasons = [
-    { id: "parents_added", icon: Users, label: "Already added parents", description: "Father and/or mother are the primary caregivers" },
+  // Guardian - only show "Already added parents" if at least one parent was actually added
+  const reasons = [];
+  
+  // Only add "parents_added" reason if at least father or mother was actually added (not skipped)
+  if (hasFather || hasMother) {
+    reasons.push({ id: "parents_added", icon: Users, label: "Already added parents", description: "Father and/or mother are the primary caregivers" });
+  }
+  
+  reasons.push(
     { id: "living_with_parents", icon: Home, label: "Living with parents", description: "No separate guardian needed" },
-    { id: "parent_is_guardian", icon: Shield, label: "Parent is my guardian", description: "Father or mother is also my legal guardian" },
-  ];
+    { id: "parent_is_guardian", icon: Shield, label: "Parent is my guardian", description: "Father or mother is also my legal guardian" }
+  );
   
   return reasons;
 };
