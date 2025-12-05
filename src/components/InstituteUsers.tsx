@@ -888,24 +888,24 @@ const InstituteUsers = () => {
                   </TableCell>
                   <TableCell>
                     {userData.instituteUserImageUrl ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-green-600 hover:text-green-700 pointer-events-none"
-                        disabled
-                      >
-                        <CheckCircle className="h-4 w-4 mr-1" />
+                      <Badge variant="default" className="bg-green-600 hover:bg-green-600 text-white">
+                        <CheckCircle className="h-3 w-3 mr-1" />
                         Uploaded
-                      </Button>
+                      </Badge>
                     ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setUploadingUserId(userData.id)}
-                      >
-                        <Upload className="h-4 w-4 mr-1" />
-                        Upload
-                      </Button>
+                      <div className="flex flex-col items-center gap-1">
+                        <Badge variant="secondary" className="text-xs">
+                          No Image
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setUploadingUserId(userData.id)}
+                        >
+                          <Upload className="h-4 w-4 mr-1" />
+                          Upload
+                        </Button>
+                      </div>
                     )}
                   </TableCell>
                   {activeTab === 'STUDENT' && (
