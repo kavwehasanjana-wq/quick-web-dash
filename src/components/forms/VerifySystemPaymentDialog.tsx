@@ -51,22 +51,21 @@ export function VerifySystemPaymentDialog({
 
     setIsLoading(true);
     try {
-      const payload = action === "VERIFIED" 
-        ? {
-            status: PaymentStatus.VERIFIED,
-            subscriptionPlan,
-            paymentValidityDays,
-            notes: notes || "Payment verified successfully",
-          }
-        : {
-            status: PaymentStatus.REJECTED,
-            rejectionReason,
-            notes,
-            subscriptionPlan: "",
-            paymentValidityDays: 0,
-          };
+      const payload =
+        action === "VERIFIED"
+          ? {
+              status: PaymentStatus.VERIFIED,
+              subscriptionPlan,
+              paymentValidityDays,
+              notes: notes || "Payment verified successfully",
+            }
+          : {
+              status: PaymentStatus.REJECTED,
+              rejectionReason,
+              notes: notes || "Payment rejected",
+            };
 
-      await api.verifyPayment(payment.id, payload);
+      await api.verifyPayment(payment.id, payload as any);
 
       toast({
         title: "Success",

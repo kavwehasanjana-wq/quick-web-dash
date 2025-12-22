@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -73,10 +73,10 @@ export function VerifySMSPaymentDialog({
     setAdminNotes("");
   };
 
-  // Update credits when payment changes
-  if (payment && creditsToGrant === 1000 && payment.requestedCredits) {
-    setCreditsToGrant(payment.requestedCredits);
-  }
+  useEffect(() => {
+    if (!payment) return;
+    setCreditsToGrant(payment.requestedCredits ?? 1000);
+  }, [payment?.id]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
