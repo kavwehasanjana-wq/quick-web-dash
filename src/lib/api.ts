@@ -153,4 +153,11 @@ export const api = {
 
   getSenderMasks: (instituteId: string) =>
     apiRequest(`/sms/sender-masks?instituteId=${instituteId}`),
+
+  // Advertisements
+  createAdvertisement: (data: any) =>
+    apiRequest("/api/advertisements", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 };
