@@ -33,13 +33,43 @@ export function VerifySMSPaymentDialog({
 }: VerifySMSPaymentDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [action, setAction] = useState<string>(SMSVerificationAction.APPROVE);
-  const [creditsToGrant, setCreditsToGrant] = useState<number>(1000);
+  const [action, setAction] = useState<SMSVerificationAction | "">("");
+  const [creditsToGrant, setCreditsToGrant] = useState<number>(0);
   const [adminNotes, setAdminNotes] = useState<string>("");
   const [rejectionReason, setRejectionReason] = useState<string>("");
 
+  const resetForm = () => {
+    setAction("");
+    setAdminNotes("");
+    setRejectionReason("");
+    setCreditsToGrant(payment?.requestedCredits ?? 0);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    resetForm();
+  }, [open, payment?.id]);
+
   const handleSubmit = async () => {
     if (!payment) return;
+
+    if (!action) {
+      toast({
+        title: "Action required",
+        description: "Please select Verify or Reject.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (action === SMSVerificationAction.REJECT && !rejectionReason.trim()) {
+      toast({
+        title: "Rejection reason required",
+        description: "Please enter a rejection reason.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -48,12 +78,12 @@ export function VerifySMSPaymentDialog({
           ? {
               action: SMSVerificationAction.APPROVE,
               creditsToGrant,
-              adminNotes: adminNotes || "Payment verified successfully",
+              adminNotes: adminNotes.trim() || "Payment verified successfully",
             }
           : {
               action: SMSVerificationAction.REJECT,
-              rejectionReason,
-              adminNotes: adminNotes || "Payment rejected",
+              rejectionReason: rejectionReason.trim(),
+              adminNotes: adminNotes.trim() || "Payment rejected",
             };
 
       await api.verifySMSPayment(payment.id, payload as any);
@@ -62,7 +92,7 @@ export function VerifySMSPaymentDialog({
         title: "Success",
         description:
           action === SMSVerificationAction.APPROVE
-            ? `Payment approved and ${creditsToGrant} credits granted`
+            ? `Payment verified and ${creditsToGrant} credits granted`
             : "Payment rejected",
       });
 
@@ -80,18 +110,6 @@ export function VerifySMSPaymentDialog({
       setIsLoading(false);
     }
   };
-
-  const resetForm = () => {
-    setAction(SMSVerificationAction.APPROVE);
-    setCreditsToGrant(1000);
-    setAdminNotes("");
-    setRejectionReason("");
-  };
-
-  useEffect(() => {
-    if (!payment) return;
-    setCreditsToGrant(payment.requestedCredits ?? 1000);
-  }, [payment?.id]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -117,12 +135,16 @@ export function VerifySMSPaymentDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Action</Label>
-            <RadioGroup value={action} onValueChange={setAction} className="flex gap-4">
+            <Label>Action *</Label>
+            <RadioGroup
+              value={action}
+              onValueChange={(val) => setAction(val as SMSVerificationAction)}
+              className="flex gap-4"
+            >
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value={SMSVerificationAction.APPROVE} id="approve" />
-                <Label htmlFor="approve" className="cursor-pointer text-green-600 font-medium">
-                  Approve
+                <RadioGroupItem value={SMSVerificationAction.APPROVE} id="verify" />
+                <Label htmlFor="verify" className="cursor-pointer font-medium">
+                  Verify
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
@@ -136,54 +158,56 @@ export function VerifySMSPaymentDialog({
 
           {action === SMSVerificationAction.APPROVE ? (
             <div className="space-y-2">
-              <Label htmlFor="creditsToGrant">Credits to Grant</Label>
-              <Input
-                id="creditsToGrant"
-                type="number"
-                min={0}
-                value={creditsToGrant}
-                onChange={(e) => setCreditsToGrant(Number(e.target.value))}
+              <Label htmlFor="adminNotes">Admin Notes</Label>
+              <Textarea
+                id="adminNotes"
+                placeholder="e.g., Payment proof is valid"
+                value={adminNotes}
+                onChange={(e) => setAdminNotes(e.target.value)}
               />
             </div>
-          ) : (
-            <div className="space-y-2">
-              <Label htmlFor="rejectionReason">Rejection Reason</Label>
-              <Input
-                id="rejectionReason"
-                placeholder="e.g., Invalid payment proof provided"
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-              />
-            </div>
-          )}
+          ) : action === SMSVerificationAction.REJECT ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="rejectionReason">Rejection Reason *</Label>
+                <Input
+                  id="rejectionReason"
+                  placeholder="e.g., Invalid payment proof provided"
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="adminNotes">Admin Notes</Label>
-            <Textarea
-              id="adminNotes"
-              placeholder="Add verification notes..."
-              value={adminNotes}
-              onChange={(e) => setAdminNotes(e.target.value)}
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="adminNotes">Admin Notes</Label>
+                <Textarea
+                  id="adminNotes"
+                  placeholder="e.g., Uploaded receipt is unclear"
+                  value={adminNotes}
+                  onChange={(e) => setAdminNotes(e.target.value)}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="text-sm text-muted-foreground">Please select an action to continue.</div>
+          )}
         </div>
 
         <DialogFooter>
           <Button
             onClick={handleSubmit}
-            disabled={isLoading || (action === SMSVerificationAction.REJECT && !rejectionReason)}
-            className={action === SMSVerificationAction.APPROVE ? "bg-green-600 hover:bg-green-700" : ""}
+            disabled={!action || isLoading || (action === SMSVerificationAction.REJECT && !rejectionReason.trim())}
             variant={action === SMSVerificationAction.REJECT ? "destructive" : "default"}
           >
-            {action === SMSVerificationAction.APPROVE ? (
-              <>
-                <CheckCircle className="h-4 w-4 mr-1" />
-                Approve
-              </>
-            ) : (
+            {action === SMSVerificationAction.REJECT ? (
               <>
                 <XCircle className="h-4 w-4 mr-1" />
                 Reject
+              </>
+            ) : (
+              <>
+                <CheckCircle className="h-4 w-4 mr-1" />
+                Verify
               </>
             )}
           </Button>
