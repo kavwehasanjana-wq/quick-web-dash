@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import {
   MediaType,
   SupportivePlatform,
@@ -43,7 +44,7 @@ import {
   SubscriptionPlan,
   Occupation,
 } from "@/lib/enums";
-import { Upload, X, Search } from "lucide-react";
+import { Upload, X, Search, Plus } from "lucide-react";
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -53,8 +54,6 @@ const formSchema = z.object({
   sendingUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   supportivePlatforms: z.array(z.string()).min(1, "Select at least one platform"),
   mediaType: z.string().min(1, "Media type is required"),
-  targetInstituteIds: z.string().optional(),
-  targetCities: z.string().optional(),
   targetProvinces: z.array(z.string()).optional(),
   targetDistricts: z.array(z.string()).optional(),
   minBornYear: z.number().optional(),
@@ -95,6 +94,12 @@ export function CreateAdvertisementForm({
   const [isUploading, setIsUploading] = useState(false);
   const [occupationSearch, setOccupationSearch] = useState("");
 
+  // State for array fields with add button
+  const [targetInstituteIds, setTargetInstituteIds] = useState<string[]>([]);
+  const [instituteIdInput, setInstituteIdInput] = useState("");
+  const [targetCities, setTargetCities] = useState<string[]>([]);
+  const [cityInput, setCityInput] = useState("");
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -105,8 +110,6 @@ export function CreateAdvertisementForm({
       sendingUrl: "",
       supportivePlatforms: [],
       mediaType: "image",
-      targetInstituteIds: "",
-      targetCities: "",
       targetProvinces: [],
       targetDistricts: [],
       minBornYear: undefined,
@@ -155,6 +158,28 @@ export function CreateAdvertisementForm({
     }
   };
 
+  const addInstituteId = () => {
+    if (instituteIdInput.trim() && !targetInstituteIds.includes(instituteIdInput.trim())) {
+      setTargetInstituteIds([...targetInstituteIds, instituteIdInput.trim()]);
+      setInstituteIdInput("");
+    }
+  };
+
+  const removeInstituteId = (id: string) => {
+    setTargetInstituteIds(targetInstituteIds.filter((item) => item !== id));
+  };
+
+  const addCity = () => {
+    if (cityInput.trim() && !targetCities.includes(cityInput.trim())) {
+      setTargetCities([...targetCities, cityInput.trim()]);
+      setCityInput("");
+    }
+  };
+
+  const removeCity = (city: string) => {
+    setTargetCities(targetCities.filter((item) => item !== city));
+  };
+
   const onSubmit = async (data: FormData) => {
     try {
       setIsSubmitting(true);
@@ -179,12 +204,8 @@ export function CreateAdvertisementForm({
         sendingUrl: data.sendingUrl || undefined,
         supportivePlatforms: data.supportivePlatforms,
         mediaType: data.mediaType,
-        targetInstituteIds: data.targetInstituteIds
-          ? data.targetInstituteIds.split(",").map((s) => s.trim())
-          : [],
-        targetCities: data.targetCities
-          ? data.targetCities.split(",").map((s) => s.trim())
-          : [],
+        targetInstituteIds,
+        targetCities,
         targetProvinces: data.targetProvinces || [],
         targetDistricts: data.targetDistricts || [],
         minBornYear: data.minBornYear,
@@ -215,6 +236,8 @@ export function CreateAdvertisementForm({
 
       form.reset();
       setSelectedFile(null);
+      setTargetInstituteIds([]);
+      setTargetCities([]);
       onOpenChange(false);
       onSuccess();
     } catch (error) {
@@ -449,32 +472,77 @@ export function CreateAdvertisementForm({
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Targeting</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="targetInstituteIds"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Target Institute IDs</FormLabel>
-                        <FormControl>
-                          <Input placeholder="1, 2, 3 (comma separated)" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="targetCities"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Target Cities</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Colombo, Kandy (comma separated)" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {/* Target Institute IDs with Add Button */}
+                  <FormItem>
+                    <FormLabel>Target Institute IDs</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        placeholder="Enter Institute ID"
+                        value={instituteIdInput}
+                        onChange={(e) => setInstituteIdInput(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addInstituteId();
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        onClick={addInstituteId}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {targetInstituteIds.map((id) => (
+                        <Badge key={id} variant="secondary" className="flex items-center gap-1">
+                          {id}
+                          <button type="button" onClick={() => removeInstituteId(id)}>
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  </FormItem>
+
+                  {/* Target Cities with Add Button */}
+                  <FormItem>
+                    <FormLabel>Target Cities</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        placeholder="Enter City"
+                        value={cityInput}
+                        onChange={(e) => setCityInput(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addCity();
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        onClick={addCity}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {targetCities.map((city) => (
+                        <Badge key={city} variant="secondary" className="flex items-center gap-1">
+                          {city}
+                          <button type="button" onClick={() => removeCity(city)}>
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  </FormItem>
                 </div>
 
                 <FormField
@@ -494,13 +562,13 @@ export function CreateAdvertisementForm({
                                   field.onChange([...(field.value || []), province]);
                                 } else {
                                   field.onChange(
-                                    (field.value || []).filter((p) => p !== province)
+                                    field.value?.filter((p) => p !== province)
                                   );
                                 }
                               }}
                             />
                             <label htmlFor={province} className="text-sm">
-                              {province.replace("_", " ")}
+                              {province.replace(/_/g, " ")}
                             </label>
                           </div>
                         ))}
@@ -527,13 +595,13 @@ export function CreateAdvertisementForm({
                                   field.onChange([...(field.value || []), district]);
                                 } else {
                                   field.onChange(
-                                    (field.value || []).filter((d) => d !== district)
+                                    field.value?.filter((d) => d !== district)
                                   );
                                 }
                               }}
                             />
                             <label htmlFor={district} className="text-sm">
-                              {district.replace("_", " ")}
+                              {district.replace(/_/g, " ")}
                             </label>
                           </div>
                         ))}
@@ -560,10 +628,9 @@ export function CreateAdvertisementForm({
                             placeholder="2005"
                             {...field}
                             onChange={(e) =>
-                              field.onChange(
-                                e.target.value ? parseInt(e.target.value) : undefined
-                              )
+                              field.onChange(e.target.value ? parseInt(e.target.value) : undefined)
                             }
+                            value={field.value || ""}
                           />
                         </FormControl>
                         <FormMessage />
@@ -582,10 +649,9 @@ export function CreateAdvertisementForm({
                             placeholder="2010"
                             {...field}
                             onChange={(e) =>
-                              field.onChange(
-                                e.target.value ? parseInt(e.target.value) : undefined
-                              )
+                              field.onChange(e.target.value ? parseInt(e.target.value) : undefined)
                             }
+                            value={field.value || ""}
                           />
                         </FormControl>
                         <FormMessage />
@@ -600,7 +666,7 @@ export function CreateAdvertisementForm({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Target Genders</FormLabel>
-                      <div className="flex gap-4">
+                      <div className="grid grid-cols-3 gap-2">
                         {Object.values(Gender).map((gender) => (
                           <div key={gender} className="flex items-center space-x-2">
                             <Checkbox
@@ -611,7 +677,7 @@ export function CreateAdvertisementForm({
                                   field.onChange([...(field.value || []), gender]);
                                 } else {
                                   field.onChange(
-                                    (field.value || []).filter((g) => g !== gender)
+                                    field.value?.filter((g) => g !== gender)
                                   );
                                 }
                               }}
@@ -633,38 +699,36 @@ export function CreateAdvertisementForm({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Target Occupations</FormLabel>
-                      <div className="space-y-2">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input
-                            placeholder="Search occupations..."
-                            value={occupationSearch}
-                            onChange={(e) => setOccupationSearch(e.target.value)}
-                            className="pl-10"
-                          />
-                        </div>
-                        <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto border rounded-md p-2">
-                          {filteredOccupations.map((occupation) => (
-                            <div key={occupation} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={occupation}
-                                checked={field.value?.includes(occupation)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    field.onChange([...(field.value || []), occupation]);
-                                  } else {
-                                    field.onChange(
-                                      (field.value || []).filter((o) => o !== occupation)
-                                    );
-                                  }
-                                }}
-                              />
-                              <label htmlFor={occupation} className="text-xs">
-                                {occupation.replace(/_/g, " ")}
-                              </label>
-                            </div>
-                          ))}
-                        </div>
+                      <div className="relative mb-2">
+                        <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search occupations..."
+                          value={occupationSearch}
+                          onChange={(e) => setOccupationSearch(e.target.value)}
+                          className="pl-8"
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto">
+                        {filteredOccupations.map((occupation) => (
+                          <div key={occupation} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={occupation}
+                              checked={field.value?.includes(occupation)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  field.onChange([...(field.value || []), occupation]);
+                                } else {
+                                  field.onChange(
+                                    field.value?.filter((o) => o !== occupation)
+                                  );
+                                }
+                              }}
+                            />
+                            <label htmlFor={occupation} className="text-sm">
+                              {occupation.replace(/_/g, " ")}
+                            </label>
+                          </div>
+                        ))}
                       </div>
                       <FormMessage />
                     </FormItem>
@@ -672,33 +736,33 @@ export function CreateAdvertisementForm({
                 />
               </div>
 
-              {/* User Types & Plans */}
+              {/* User Types & Subscription Plans */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">User Types & Subscription Plans</h3>
+                <h3 className="text-lg font-semibold">User Types & Subscriptions</h3>
                 <FormField
                   control={form.control}
                   name="targetUserTypes"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Target User Types</FormLabel>
-                      <div className="flex flex-wrap gap-4">
-                        {Object.values(UserType).map((type) => (
-                          <div key={type} className="flex items-center space-x-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        {Object.values(UserType).map((userType) => (
+                          <div key={userType} className="flex items-center space-x-2">
                             <Checkbox
-                              id={type}
-                              checked={field.value?.includes(type)}
+                              id={userType}
+                              checked={field.value?.includes(userType)}
                               onCheckedChange={(checked) => {
                                 if (checked) {
-                                  field.onChange([...(field.value || []), type]);
+                                  field.onChange([...(field.value || []), userType]);
                                 } else {
                                   field.onChange(
-                                    (field.value || []).filter((t) => t !== type)
+                                    field.value?.filter((u) => u !== userType)
                                   );
                                 }
                               }}
                             />
-                            <label htmlFor={type} className="text-sm">
-                              {type.replace(/_/g, " ")}
+                            <label htmlFor={userType} className="text-sm">
+                              {userType.replace(/_/g, " ")}
                             </label>
                           </div>
                         ))}
@@ -725,13 +789,13 @@ export function CreateAdvertisementForm({
                                   field.onChange([...(field.value || []), plan]);
                                 } else {
                                   field.onChange(
-                                    (field.value || []).filter((p) => p !== plan)
+                                    field.value?.filter((p) => p !== plan)
                                   );
                                 }
                               }}
                             />
                             <label htmlFor={plan} className="text-sm">
-                              {plan}
+                              {plan.replace(/-/g, " ")}
                             </label>
                           </div>
                         ))}
@@ -794,10 +858,9 @@ export function CreateAdvertisementForm({
                             placeholder="1000"
                             {...field}
                             onChange={(e) =>
-                              field.onChange(
-                                e.target.value ? parseInt(e.target.value) : undefined
-                              )
+                              field.onChange(e.target.value ? parseInt(e.target.value) : undefined)
                             }
+                            value={field.value || ""}
                           />
                         </FormControl>
                         <FormMessage />
@@ -835,19 +898,16 @@ export function CreateAdvertisementForm({
                   />
                 </div>
 
-                <div className="flex gap-6">
+                <div className="flex items-center gap-8">
                   <FormField
                     control={form.control}
                     name="isActive"
                     render={({ field }) => (
                       <FormItem className="flex items-center gap-2">
+                        <FormLabel className="mt-2">Is Active</FormLabel>
                         <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
                         </FormControl>
-                        <FormLabel className="!mt-0">Active</FormLabel>
                       </FormItem>
                     )}
                   />
@@ -856,22 +916,19 @@ export function CreateAdvertisementForm({
                     name="cascadeToParents"
                     render={({ field }) => (
                       <FormItem className="flex items-center gap-2">
+                        <FormLabel className="mt-2">Cascade to Parents</FormLabel>
                         <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
                         </FormControl>
-                        <FormLabel className="!mt-0">Cascade to Parents</FormLabel>
                       </FormItem>
                     )}
                   />
                 </div>
               </div>
 
-              {/* Budget */}
+              {/* Budget & Costs */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Budget</h3>
+                <h3 className="text-lg font-semibold">Budget & Costs</h3>
                 <div className="grid grid-cols-3 gap-4">
                   <FormField
                     control={form.control}
@@ -885,10 +942,9 @@ export function CreateAdvertisementForm({
                             placeholder="5000"
                             {...field}
                             onChange={(e) =>
-                              field.onChange(
-                                e.target.value ? parseFloat(e.target.value) : undefined
-                              )
+                              field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)
                             }
+                            value={field.value || ""}
                           />
                         </FormControl>
                         <FormMessage />
@@ -908,10 +964,9 @@ export function CreateAdvertisementForm({
                             placeholder="0.50"
                             {...field}
                             onChange={(e) =>
-                              field.onChange(
-                                e.target.value ? parseFloat(e.target.value) : undefined
-                              )
+                              field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)
                             }
+                            value={field.value || ""}
                           />
                         </FormControl>
                         <FormMessage />
@@ -931,10 +986,9 @@ export function CreateAdvertisementForm({
                             placeholder="0.05"
                             {...field}
                             onChange={(e) =>
-                              field.onChange(
-                                e.target.value ? parseFloat(e.target.value) : undefined
-                              )
+                              field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)
                             }
+                            value={field.value || ""}
                           />
                         </FormControl>
                         <FormMessage />
@@ -944,7 +998,7 @@ export function CreateAdvertisementForm({
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-4">
+              <div className="flex justify-end gap-4 pt-4">
                 <Button
                   type="button"
                   variant="outline"
@@ -953,11 +1007,7 @@ export function CreateAdvertisementForm({
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isSubmitting || isUploading}>
-                  {isUploading
-                    ? "Uploading..."
-                    : isSubmitting
-                    ? "Creating..."
-                    : "Create Advertisement"}
+                  {isUploading ? "Uploading..." : isSubmitting ? "Creating..." : "Create Advertisement"}
                 </Button>
               </div>
             </form>
