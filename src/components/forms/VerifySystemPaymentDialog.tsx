@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 import { PaymentStatus, SubscriptionPlan } from "@/lib/enums";
 import { CheckCircle, XCircle } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface Payment {
   id: string;
@@ -33,33 +34,49 @@ export function VerifySystemPaymentDialog({
 }: VerifySystemPaymentDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [status, setStatus] = useState<string>(PaymentStatus.VERIFIED);
+  const [action, setAction] = useState<"VERIFIED" | "REJECTED">("VERIFIED");
   const [subscriptionPlan, setSubscriptionPlan] = useState<string>(SubscriptionPlan.PRO_WHATSAPP);
   const [paymentValidityDays, setPaymentValidityDays] = useState<number>(30);
   const [notes, setNotes] = useState<string>("");
+  const [rejectionReason, setRejectionReason] = useState<string>("");
 
-  const handleSubmit = async (actionStatus: string) => {
+  useEffect(() => {
+    if (open) {
+      resetForm();
+    }
+  }, [open]);
+
+  const handleSubmit = async () => {
     if (!payment) return;
 
     setIsLoading(true);
     try {
-      await api.verifyPayment(payment.id, {
-        status: actionStatus,
-        subscriptionPlan,
-        paymentValidityDays,
-        notes: notes || (actionStatus === PaymentStatus.VERIFIED ? "Payment verified successfully" : "Payment rejected"),
-      });
+      const payload = action === "VERIFIED" 
+        ? {
+            status: PaymentStatus.VERIFIED,
+            subscriptionPlan,
+            paymentValidityDays,
+            notes: notes || "Payment verified successfully",
+          }
+        : {
+            status: PaymentStatus.REJECTED,
+            rejectionReason,
+            notes,
+            subscriptionPlan: "",
+            paymentValidityDays: 0,
+          };
+
+      await api.verifyPayment(payment.id, payload);
 
       toast({
         title: "Success",
-        description: actionStatus === PaymentStatus.VERIFIED 
+        description: action === "VERIFIED" 
           ? "Payment verified successfully" 
           : "Payment rejected",
       });
 
       onSuccess();
       onOpenChange(false);
-      resetForm();
     } catch (error) {
       console.error("Failed to verify payment:", error);
       toast({
@@ -73,10 +90,11 @@ export function VerifySystemPaymentDialog({
   };
 
   const resetForm = () => {
-    setStatus(PaymentStatus.VERIFIED);
+    setAction("VERIFIED");
     setSubscriptionPlan(SubscriptionPlan.PRO_WHATSAPP);
     setPaymentValidityDays(30);
     setNotes("");
+    setRejectionReason("");
   };
 
   return (
@@ -99,59 +117,104 @@ export function VerifySystemPaymentDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="subscriptionPlan">Subscription Plan</Label>
-            <Select value={subscriptionPlan} onValueChange={setSubscriptionPlan}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select plan" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.values(SubscriptionPlan).map((plan) => (
-                  <SelectItem key={plan} value={plan}>
-                    {plan}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Action</Label>
+            <RadioGroup value={action} onValueChange={(val) => setAction(val as "VERIFIED" | "REJECTED")} className="flex gap-4">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="VERIFIED" id="verify" />
+                <Label htmlFor="verify" className="text-green-600 font-medium cursor-pointer">Verify</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="REJECTED" id="reject" />
+                <Label htmlFor="reject" className="text-red-600 font-medium cursor-pointer">Reject</Label>
+              </div>
+            </RadioGroup>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="validityDays">Validity Days</Label>
-            <Input
-              id="validityDays"
-              type="number"
-              min={1}
-              value={paymentValidityDays}
-              onChange={(e) => setPaymentValidityDays(Number(e.target.value))}
-            />
-          </div>
+          {action === "VERIFIED" ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="subscriptionPlan">Subscription Plan</Label>
+                <Select value={subscriptionPlan} onValueChange={setSubscriptionPlan}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(SubscriptionPlan).map((plan) => (
+                      <SelectItem key={plan} value={plan}>
+                        {plan}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              placeholder="Add verification notes..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="validityDays">Validity Days</Label>
+                <Input
+                  id="validityDays"
+                  type="number"
+                  min={1}
+                  value={paymentValidityDays}
+                  onChange={(e) => setPaymentValidityDays(Number(e.target.value))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Add verification notes..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="rejectionReason">Rejection Reason *</Label>
+                <Input
+                  id="rejectionReason"
+                  placeholder="e.g., Invalid payment receipt"
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="e.g., Receipt number does not match bank records"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </div>
+            </>
+          )}
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button
-            variant="destructive"
-            onClick={() => handleSubmit(PaymentStatus.REJECTED)}
-            disabled={isLoading}
-          >
-            <XCircle className="h-4 w-4 mr-1" />
-            Reject
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
           </Button>
           <Button
-            onClick={() => handleSubmit(PaymentStatus.VERIFIED)}
-            disabled={isLoading}
-            className="bg-green-600 hover:bg-green-700"
+            onClick={handleSubmit}
+            disabled={isLoading || (action === "REJECTED" && !rejectionReason)}
+            className={action === "VERIFIED" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
           >
-            <CheckCircle className="h-4 w-4 mr-1" />
-            Verify
+            {action === "VERIFIED" ? (
+              <>
+                <CheckCircle className="h-4 w-4 mr-1" />
+                Verify
+              </>
+            ) : (
+              <>
+                <XCircle className="h-4 w-4 mr-1" />
+                Reject
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
