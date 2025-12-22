@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { DataTable, Column, PaginationMeta } from "@/components/shared/DataTable";
 import { ViewDetailsDialog } from "@/components/shared/ViewDetailsDialog";
+import { VerifySMSPaymentDialog } from "@/components/forms/VerifySMSPaymentDialog";
 
 interface SMSPayment {
   id: string;
@@ -29,6 +30,7 @@ export default function SMSPaymentPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPayment, setSelectedPayment] = useState<SMSPayment | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [verifyDialogOpen, setVerifyDialogOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
@@ -66,10 +68,8 @@ export default function SMSPaymentPage() {
   };
 
   const handleVerify = (payment: SMSPayment) => {
-    toast({
-      title: "Verify Payment",
-      description: `Verification for payment #${payment.id} would be processed here.`,
-    });
+    setSelectedPayment(payment);
+    setVerifyDialogOpen(true);
   };
 
   const handlePageChange = (newPage: number) => {
@@ -117,6 +117,13 @@ export default function SMSPaymentPage() {
         onOpenChange={setViewDialogOpen}
         data={selectedPayment}
         title={`SMS Payment #${selectedPayment?.id || ""}`}
+      />
+
+      <VerifySMSPaymentDialog
+        open={verifyDialogOpen}
+        onOpenChange={setVerifyDialogOpen}
+        payment={selectedPayment}
+        onSuccess={fetchSMSPayments}
       />
     </DashboardLayout>
   );

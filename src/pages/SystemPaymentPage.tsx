@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { DataTable, Column, PaginationMeta } from "@/components/shared/DataTable";
 import { ViewDetailsDialog } from "@/components/shared/ViewDetailsDialog";
+import { VerifySystemPaymentDialog } from "@/components/forms/VerifySystemPaymentDialog";
 
 interface Payment {
   id: string;
@@ -32,6 +33,7 @@ export default function SystemPaymentPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [verifyDialogOpen, setVerifyDialogOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
@@ -68,6 +70,11 @@ export default function SystemPaymentPage() {
     setViewDialogOpen(true);
   };
 
+  const handleVerify = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setVerifyDialogOpen(true);
+  };
+
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
   };
@@ -100,6 +107,7 @@ export default function SystemPaymentPage() {
         data={payments}
         isLoading={isLoading}
         onView={handleView}
+        onVerify={handleVerify}
         showViewSlip={true}
         slipUrlKey="paymentSlipUrl"
         pagination={pagination || undefined}
@@ -112,6 +120,13 @@ export default function SystemPaymentPage() {
         onOpenChange={setViewDialogOpen}
         data={selectedPayment}
         title={`Payment #${selectedPayment?.id || ""}`}
+      />
+
+      <VerifySystemPaymentDialog
+        open={verifyDialogOpen}
+        onOpenChange={setVerifyDialogOpen}
+        payment={selectedPayment}
+        onSuccess={fetchPayments}
       />
     </DashboardLayout>
   );
