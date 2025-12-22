@@ -74,3 +74,27 @@ export enum BasketCategory {
   G002 = "G002",
   G003 = "G003",
 }
+
+export enum PaymentStatus {
+  PENDING = 'PENDING',
+  VERIFIED = 'VERIFIED',
+  REJECTED = 'REJECTED',
+  EXPIRED = 'EXPIRED',
+}
+
+export enum SubscriptionPlan {
+  FREE = 'FREE',
+  WHATSAPP = 'WHATSAPP',
+  TELEGRAM = 'TELEGRAM',
+  EMAIL = 'EMAIL',
+  PRO_WHATSAPP = 'PRO-WHATSAPP',
+  PRO_SMS = 'PRO-SMS',
+  PRO_TELEGRAM = 'PRO-TELEGRAM',
+  PRO_EMAIL = 'PRO-EMAIL',
+  DYNAMAD = 'DYNAMAD',
+}
+
+export enum SMSVerificationAction {
+  APPROVE = 'APPROVE',
+  REJECT = 'REJECT',
+}

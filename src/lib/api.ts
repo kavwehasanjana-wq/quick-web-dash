@@ -65,9 +65,30 @@ export const api = {
   getPayments: (page = 1, limit = 10) =>
     apiRequest(`/payment?page=${page}&limit=${limit}`),
 
+  verifyPayment: (paymentId: string, data: {
+    status: string;
+    subscriptionPlan: string;
+    paymentValidityDays: number;
+    notes: string;
+  }) =>
+    apiRequest(`/payment/${paymentId}/verify`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
   // SMS Payments
   getSMSPayments: (page = 1, limit = 10) =>
     apiRequest(`/sms/admin/verifications/pending?page=${page}&limit=${limit}`),
+
+  verifySMSPayment: (submissionId: string, data: {
+    action: string;
+    creditsToGrant: number;
+    adminNotes: string;
+  }) =>
+    apiRequest(`/sms/admin/verifications/${submissionId}/verify`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
 
   // SMS Approvals
   getSMSApprovals: (page = 1, limit = 10) =>
