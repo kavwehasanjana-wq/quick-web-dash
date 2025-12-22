@@ -156,7 +156,8 @@ export default function InstitutePage() {
           </Button>
           <Button
             size="sm"
-            variant="ghost"
+            variant="outline"
+            className="text-blue-600 border-blue-600 hover:bg-blue-50 hover:text-blue-700"
             onClick={(e) => {
               e.stopPropagation();
               handleViewMasks(row as Institute);

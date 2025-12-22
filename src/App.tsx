@@ -13,6 +13,7 @@ import TransportPage from "./pages/TransportPage";
 import SystemPaymentPage from "./pages/SystemPaymentPage";
 import SMSPage from "./pages/SMSPage";
 import SMSPaymentPage from "./pages/SMSPaymentPage";
+import AdvertisementPage from "./pages/AdvertisementPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/dashboard/system-payment" element={<SystemPaymentPage />} />
             <Route path="/dashboard/sms" element={<SMSPage />} />
             <Route path="/dashboard/sms-payment" element={<SMSPaymentPage />} />
+            <Route path="/dashboard/advertisement" element={<AdvertisementPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

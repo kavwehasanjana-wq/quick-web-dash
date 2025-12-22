@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   Menu,
   X,
+  Megaphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,6 +39,7 @@ const navItems = [
   { to: "/dashboard/system-payment", icon: CreditCard, label: "System Payment" },
   { to: "/dashboard/sms", icon: MessageSquare, label: "SMS" },
   { to: "/dashboard/sms-payment", icon: Receipt, label: "SMS Payment" },
+  { to: "/dashboard/advertisement", icon: Megaphone, label: "Advertisement" },
 ];
 
 export function AppSidebar() {
