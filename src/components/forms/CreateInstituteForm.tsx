@@ -1,233 +1,652 @@
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api";
+import { uploadFile } from "@/lib/upload";
+import { InstituteType, Country, District, Province } from "@/lib/enums";
+import { Loader2, Upload, X } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-import React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-
-const instituteSchema = z.object({
-  name: z.string().min(2, 'Institute name must be at least 2 characters'),
-  code: z.string().min(1, 'Institute code is required'),
-  email: z.string().email('Please enter a valid email'),
-  phone: z.string().min(10, 'Phone number must be at least 10 digits'),
-  address: z.string().min(10, 'Address is required'),
-  city: z.string().min(1, 'City is required'),
-  state: z.string().min(1, 'State is required'),
-  country: z.string().min(1, 'Country is required'),
-  pinCode: z.string().min(4, 'Pin code is required'),
-  imageUrl: z.string().url('Please enter a valid image URL').optional().or(z.literal(''))
+const formSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  shortName: z.string().min(1, "Short name is required"),
+  code: z.string().min(1, "Code is required"),
+  email: z.string().email("Invalid email"),
+  phone: z.string().min(1, "Phone is required"),
+  address: z.string().min(1, "Address is required"),
+  city: z.string().min(1, "City is required"),
+  state: z.string().min(1, "State is required"),
+  country: z.string().min(1, "Country is required"),
+  district: z.string().min(1, "District is required"),
+  province: z.string().min(1, "Province is required"),
+  pinCode: z.string().min(1, "Pin code is required"),
+  type: z.string().min(1, "Type is required"),
+  primaryColorCode: z.string().optional(),
+  secondaryColorCode: z.string().optional(),
+  isDefault: z.boolean().default(false),
+  vision: z.string().optional(),
+  mission: z.string().optional(),
+  websiteUrl: z.string().url().optional().or(z.literal("")),
+  facebookPageUrl: z.string().url().optional().or(z.literal("")),
+  youtubeChannelUrl: z.string().url().optional().or(z.literal("")),
 });
 
-type InstituteFormData = z.infer<typeof instituteSchema>;
+type FormData = z.infer<typeof formSchema>;
 
 interface CreateInstituteFormProps {
-  onSubmit: (data: InstituteFormData) => void;
-  onCancel: () => void;
-  initialData?: any;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
 }
 
-const CreateInstituteForm = ({ onSubmit, onCancel, initialData }: CreateInstituteFormProps) => {
-  const isEditing = !!initialData;
-  
-  console.log('Form initialData:', initialData);
-  
-  const form = useForm<InstituteFormData>({
-    resolver: zodResolver(instituteSchema),
+export function CreateInstituteForm({
+  open,
+  onOpenChange,
+  onSuccess,
+}: CreateInstituteFormProps) {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      name: initialData?.name || '',
-      code: initialData?.code || '',
-      email: initialData?.email || '',
-      phone: initialData?.phone || '',
-      address: initialData?.address || '',
-      city: initialData?.city || '',
-      state: initialData?.state || '',
-      country: initialData?.country || '',
-      pinCode: initialData?.pinCode || '',
-      imageUrl: initialData?.imageUrl || ''
-    }
+      name: "",
+      shortName: "",
+      code: "",
+      email: "",
+      phone: "",
+      address: "",
+      city: "",
+      state: "",
+      country: Country.SRI_LANKA,
+      district: "",
+      province: "",
+      pinCode: "",
+      type: InstituteType.SCHOOL,
+      primaryColorCode: "#4CAF50",
+      secondaryColorCode: "#E91E63",
+      isDefault: false,
+      vision: "",
+      mission: "",
+      websiteUrl: "",
+      facebookPageUrl: "",
+      youtubeChannelUrl: "",
+    },
   });
 
-  const handleSubmit = (data: InstituteFormData) => {
-    console.log('Form submitted with data:', data);
-    onSubmit(data);
+  const handleFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    type: "logo" | "image"
+  ) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (type === "logo") {
+          setLogoFile(file);
+          setLogoPreview(reader.result as string);
+        } else {
+          setImageFile(file);
+          setImagePreview(reader.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeFile = (type: "logo" | "image") => {
+    if (type === "logo") {
+      setLogoFile(null);
+      setLogoPreview(null);
+    } else {
+      setImageFile(null);
+      setImagePreview(null);
+    }
+  };
+
+  const onSubmit = async (data: FormData) => {
+    try {
+      setIsSubmitting(true);
+
+      let logoUrl = "";
+      let imageUrl = "";
+
+      // Upload logo if selected
+      if (logoFile) {
+        const logoResult = await uploadFile(logoFile, "institute-images");
+        logoUrl = logoResult.relativePath;
+      }
+
+      // Upload image if selected
+      if (imageFile) {
+        const imageResult = await uploadFile(imageFile, "institute-images");
+        imageUrl = imageResult.relativePath;
+      }
+
+      const payload = {
+        ...data,
+        logoUrl: logoUrl || undefined,
+        imageUrl: imageUrl || undefined,
+      };
+
+      await api.createInstitute(payload);
+
+      toast({
+        title: "Success",
+        description: "Institute created successfully",
+      });
+
+      form.reset();
+      setLogoFile(null);
+      setImageFile(null);
+      setLogoPreview(null);
+      setImagePreview(null);
+      onOpenChange(false);
+      onSuccess();
+    } catch (error) {
+      console.error("Failed to create institute:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create institute",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle>{isEditing ? 'Edit Institute' : 'Add New Institute'}</CardTitle>
-        <CardDescription>{isEditing ? 'Update institute information' : 'Enter institute information to create a new record'}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogHeader>
+          <DialogTitle>Create Institute</DialogTitle>
+        </DialogHeader>
+        <ScrollArea className="max-h-[75vh] pr-4">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* Basic Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Institute name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="shortName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Short Name *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Short name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Code *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Institute code" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Type *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Object.entries(InstituteType).map(([key, value]) => (
+                            <SelectItem key={key} value={value}>
+                              {key.replace(/_/g, " ")}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Contact Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email *</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="Email" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Phone number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Address */}
               <FormField
                 control={form.control}
-                name="name"
+                name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Institute Name</FormLabel>
+                    <FormLabel>Address *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Cambridge International School" {...field} />
+                      <Textarea placeholder="Full address" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>City *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="City" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="state"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>State *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="State" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="pinCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pin Code *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Pin code" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="country"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Country *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select country" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Object.entries(Country).map(([key, value]) => (
+                            <SelectItem key={key} value={value}>
+                              {value}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="district"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>District *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select district" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Object.entries(District).map(([key, value]) => (
+                            <SelectItem key={key} value={value}>
+                              {key.replace(/_/g, " ")}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="province"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Province *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select province" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Object.entries(Province).map(([key, value]) => (
+                            <SelectItem key={key} value={value}>
+                              {key.replace(/_/g, " ")}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Colors */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="primaryColorCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Primary Color</FormLabel>
+                      <FormControl>
+                        <div className="flex gap-2">
+                          <Input type="color" className="w-14 h-10 p-1" {...field} />
+                          <Input placeholder="#4CAF50" {...field} />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="secondaryColorCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Secondary Color</FormLabel>
+                      <FormControl>
+                        <div className="flex gap-2">
+                          <Input type="color" className="w-14 h-10 p-1" {...field} />
+                          <Input placeholder="#E91E63" {...field} />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Vision & Mission */}
               <FormField
                 control={form.control}
-                name="code"
+                name="vision"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Institute Code</FormLabel>
+                    <FormLabel>Vision</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="CIS002" 
-                        {...field} 
-                        disabled={isEditing}
-                        className={isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                      <Textarea placeholder="Institute vision" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="mission"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mission</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Institute mission" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* URLs */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="websiteUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Website URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="facebookPageUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Facebook URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://facebook.com/..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="youtubeChannelUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>YouTube URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://youtube.com/..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* File Uploads */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <FormLabel>Logo Image</FormLabel>
+                  <div className="border-2 border-dashed border-border rounded-lg p-4">
+                    {logoPreview ? (
+                      <div className="relative">
+                        <img
+                          src={logoPreview}
+                          alt="Logo preview"
+                          className="w-full h-32 object-contain rounded"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-0 right-0"
+                          onClick={() => removeFile("logo")}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center cursor-pointer">
+                        <Upload className="h-8 w-8 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground mt-2">
+                          Click to upload logo
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => handleFileChange(e, "logo")}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <FormLabel>Cover Image</FormLabel>
+                  <div className="border-2 border-dashed border-border rounded-lg p-4">
+                    {imagePreview ? (
+                      <div className="relative">
+                        <img
+                          src={imagePreview}
+                          alt="Image preview"
+                          className="w-full h-32 object-cover rounded"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-0 right-0"
+                          onClick={() => removeFile("image")}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center cursor-pointer">
+                        <Upload className="h-8 w-8 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground mt-2">
+                          Click to upload image
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => handleFileChange(e, "image")}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Is Default */}
+              <FormField
+                control={form.control}
+                name="isDefault"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Set as Default</FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        Make this the default institute
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
                       />
                     </FormControl>
-                    <FormMessage />
-                    {isEditing && (
-                      <p className="text-xs text-gray-500">Institute code cannot be changed</p>
-                    )}
                   </FormItem>
                 )}
               />
-              
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="admin@cambridge-school.edu" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone</FormLabel>
-                    <FormControl>
-                      <Input placeholder="+1-234-567-8900" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Colombo" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="state"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>State</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Western" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="country"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Country</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Sri Lanka" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="pinCode"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Pin Code</FormLabel>
-                    <FormControl>
-                      <Input placeholder="10100" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Address</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="123 Education Boulevard, Academic District" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="imageUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Image URL (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://cambridge-school.edu/logo.png" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={onCancel}>
-                Cancel
-              </Button>
-              <Button type="submit">
-                {isEditing ? 'Update Institute' : 'Create Institute'}
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
-  );
-};
 
-export default CreateInstituteForm;
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Create Institute
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+  );
+}

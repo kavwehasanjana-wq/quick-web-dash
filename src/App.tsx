@@ -1,88 +1,46 @@
-
-import { useEffect } from "react";
-import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import QRAttendance from '@/components/QRAttendance';
-import RfidAttendance from '@/pages/RFIDAttendance';
-import InstituteMarkAttendance from '@/pages/InstituteMarkAttendance';
-
-import NotFound from "./pages/NotFound";
-import Payments from "./pages/Payments";
-import CreatePayment from "./pages/CreatePayment";
-import PaymentSubmissions from "./pages/PaymentSubmissions";
-import MySubmissions from "./pages/MySubmissions";
-import InstitutePayments from "./pages/InstitutePayments";
-import SubjectPayments from "./pages/SubjectPayments";
-import SubjectSubmissions from "./pages/SubjectSubmissions";
-import SubjectPaymentSubmissions from "./pages/SubjectPaymentSubmissions";
-import PaymentSubmissionsPage from "./pages/PaymentSubmissionsPage";
-import HomeworkSubmissions from "./pages/HomeworkSubmissions";
-import HomeworkSubmissionDetails from "./pages/HomeworkSubmissionDetails";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import UpdateHomework from '@/pages/UpdateHomework';
-import UpdateLecture from '@/pages/UpdateLecture';
-import CardDemo from '@/pages/CardDemo';
-import ExamResults from '@/pages/ExamResults';
-import CreateExamResults from '@/pages/CreateExamResults';
-import ErrorBoundary from '@/components/ErrorBoundary';
-import Transport from '@/pages/Transport';
-import TransportAttendance from '@/pages/TransportAttendance';
-import MyChildren from '@/pages/MyChildren';
-import ChildDashboard from '@/pages/ChildDashboard';
-import ChildResultsPage from '@/pages/ChildResultsPage';
-import ChildAttendancePage from '@/pages/ChildAttendancePage';
-import ChildTransportPage from '@/pages/ChildTransportPage';
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import UsersPage from "./pages/UsersPage";
+import InstitutePage from "./pages/InstitutePage";
+import SubjectsPage from "./pages/SubjectsPage";
+import TransportPage from "./pages/TransportPage";
+import SystemPaymentPage from "./pages/SystemPaymentPage";
+import SMSPage from "./pages/SMSPage";
+import SMSPaymentPage from "./pages/SMSPaymentPage";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => {
-  useEffect(() => {
-    // Force light mode
-    const root = document.documentElement;
-    root.classList.remove('dark');
-    root.classList.add('light');
-    localStorage.setItem('theme', 'light');
-  }, []);
-
-  return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
         <BrowserRouter>
-          <AuthProvider>
-            <Toaster />
-            <Sonner />
-            <Routes>
-              {/* Main Routes - All handled by Index/AppContent */}
-              <Route path="/" element={<Index />} />
-              
-              {/* Hierarchical Routes with Context */}
-              <Route path="/institute/:instituteId/*" element={<Index />} />
-              <Route path="/organization/:organizationId/*" element={<Index />} />
-              <Route path="/child/:childId/*" element={<Index />} />
-              <Route path="/transport/:transportId/*" element={<Index />} />
-              
-              {/* Dedicated Page Routes */}
-              <Route path="/my-children" element={<MyChildren />} />
-              <Route path="/transport" element={<Transport />} />
-              <Route path="/system-payment" element={<Payments />} />
-              <Route path="/system-payments/create" element={<CreatePayment />} />
-              <Route path="/payment-submissions/:paymentId" element={<PaymentSubmissions />} />
-              <Route path="/payment-submissions" element={<PaymentSubmissionsPage />} />
-              <Route path="/my-submissions" element={<MySubmissions />} />
-              <Route path="/card-demo" element={<CardDemo />} />
-              
-              {/* Catch-all - Everything else goes to Index/AppContent */}
-              <Route path="*" element={<Index />} />
-            </Routes>
-          </AuthProvider>
+          <Routes>
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard/users" element={<UsersPage />} />
+            <Route path="/dashboard/institute" element={<InstitutePage />} />
+            <Route path="/dashboard/subjects" element={<SubjectsPage />} />
+            <Route path="/dashboard/transport" element={<TransportPage />} />
+            <Route path="/dashboard/system-payment" element={<SystemPaymentPage />} />
+            <Route path="/dashboard/sms" element={<SMSPage />} />
+            <Route path="/dashboard/sms-payment" element={<SMSPaymentPage />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </BrowserRouter>
-      </QueryClientProvider>
-    </ErrorBoundary>
-  );
-};
+      </TooltipProvider>
+    </AuthProvider>
+  </QueryClientProvider>
+);
 
 export default App;
