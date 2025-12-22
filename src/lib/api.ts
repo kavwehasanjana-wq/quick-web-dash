@@ -137,4 +137,20 @@ export const api = {
     apiRequest(`/users/${userId}/activate`, {
       method: "PATCH",
     }),
+
+  // SMS Sender Masks
+  createSenderMask: (data: {
+    instituteId: string;
+    maskId: string;
+    displayName: string;
+    phoneNumber: string;
+    isActive: boolean;
+  }) =>
+    apiRequest("/sms/sender-masks", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  getSenderMasks: (instituteId: string) =>
+    apiRequest(`/sms/sender-masks?instituteId=${instituteId}`),
 };

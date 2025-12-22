@@ -1,6 +1,6 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader, ActionButton } from "@/components/shared/PageComponents";
-import { Building2, UserPlus } from "lucide-react";
+import { Building2, UserPlus, Tag, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -9,6 +9,8 @@ import { DataTable, Column, PaginationMeta } from "@/components/shared/DataTable
 import { ViewDetailsDialog } from "@/components/shared/ViewDetailsDialog";
 import { CreateInstituteForm } from "@/components/forms/CreateInstituteForm";
 import { AssignUserToInstituteForm } from "@/components/forms/AssignUserToInstituteForm";
+import { CreateSenderMaskForm } from "@/components/forms/CreateSenderMaskForm";
+import { ViewSenderMasksDialog } from "@/components/forms/ViewSenderMasksDialog";
 
 interface Institute {
   id: string;
@@ -43,6 +45,8 @@ export default function InstitutePage() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [assignUserDialogOpen, setAssignUserDialogOpen] = useState(false);
+  const [createMaskDialogOpen, setCreateMaskDialogOpen] = useState(false);
+  const [viewMasksDialogOpen, setViewMasksDialogOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
@@ -87,6 +91,16 @@ export default function InstitutePage() {
     setAssignUserDialogOpen(true);
   };
 
+  const handleCreateMask = (institute: Institute) => {
+    setSelectedInstitute(institute);
+    setCreateMaskDialogOpen(true);
+  };
+
+  const handleViewMasks = (institute: Institute) => {
+    setSelectedInstitute(institute);
+    setViewMasksDialogOpen(true);
+  };
+
   const handleView = (institute: Institute) => {
     setSelectedInstitute(institute);
     setViewDialogOpen(true);
@@ -122,6 +136,36 @@ export default function InstitutePage() {
           <UserPlus className="w-4 h-4 mr-1" />
           Assign
         </Button>
+      ),
+    },
+    {
+      key: "maskId",
+      label: "MaskID",
+      render: (_, row) => (
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCreateMask(row as Institute);
+            }}
+          >
+            <Tag className="w-4 h-4 mr-1" />
+            Mask
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleViewMasks(row as Institute);
+            }}
+          >
+            <Eye className="w-4 h-4 mr-1" />
+            View
+          </Button>
+        </div>
       ),
     },
   ];
@@ -161,13 +205,30 @@ export default function InstitutePage() {
       />
 
       {selectedInstitute && (
-        <AssignUserToInstituteForm
-          open={assignUserDialogOpen}
-          onOpenChange={setAssignUserDialogOpen}
-          onSuccess={fetchInstitutes}
-          instituteId={selectedInstitute.id}
-          instituteName={selectedInstitute.name}
-        />
+        <>
+          <AssignUserToInstituteForm
+            open={assignUserDialogOpen}
+            onOpenChange={setAssignUserDialogOpen}
+            onSuccess={fetchInstitutes}
+            instituteId={selectedInstitute.id}
+            instituteName={selectedInstitute.name}
+          />
+          
+          <CreateSenderMaskForm
+            open={createMaskDialogOpen}
+            onOpenChange={setCreateMaskDialogOpen}
+            onSuccess={fetchInstitutes}
+            instituteId={selectedInstitute.id}
+            instituteName={selectedInstitute.name}
+          />
+          
+          <ViewSenderMasksDialog
+            open={viewMasksDialogOpen}
+            onOpenChange={setViewMasksDialogOpen}
+            instituteId={selectedInstitute.id}
+            instituteName={selectedInstitute.name}
+          />
+        </>
       )}
     </DashboardLayout>
   );
