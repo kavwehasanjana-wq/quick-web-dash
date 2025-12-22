@@ -155,6 +155,9 @@ export const api = {
     apiRequest(`/sms/sender-masks?instituteId=${instituteId}`),
 
   // Advertisements
+  getAdvertisements: (page = 1, limit = 10) =>
+    apiRequest(`/api/advertisements?page=${page}&limit=${limit}`),
+
   createAdvertisement: (data: any) =>
     apiRequest("/api/advertisements", {
       method: "POST",
