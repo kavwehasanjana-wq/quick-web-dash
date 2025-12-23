@@ -143,19 +143,10 @@ export function CreateAdvertisementForm({
     setSelectedFile(null);
   };
 
-  const getFolder = (mediaType: string) => {
-    switch (mediaType) {
-      case "image":
-        return "advertisement-images";
-      case "video":
-        return "advertisement-videos";
-      case "audio":
-        return "advertisement-audio";
-      case "pdf":
-        return "advertisement-pdfs";
-      default:
-        return "advertisements";
-    }
+  const getFolder = (_mediaType: string) => {
+    // Backend validation only allows specific folder names.
+    // "advertisement-images" is currently rejected, so we reuse the working folder used in other forms.
+    return "institute-images";
   };
 
   const addInstituteId = () => {
