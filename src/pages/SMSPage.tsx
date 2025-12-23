@@ -6,9 +6,18 @@ import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { DataTable, Column, PaginationMeta } from "@/components/shared/DataTable";
 import { ViewDetailsDialog } from "@/components/shared/ViewDetailsDialog";
+import { VerifySMSApprovalDialog } from "@/components/forms/VerifySMSApprovalDialog";
 
 interface SMSApproval {
-  id: string;
+  messageId: string;
+  maskIdUsed?: string;
+  instituteId?: string;
+  instituteName?: string;
+  senderName?: string;
+  messageTemplate?: string;
+  totalRecipients?: number;
+  estimatedCredits?: number;
+  status?: string;
   [key: string]: any;
 }
 
@@ -18,6 +27,7 @@ export default function SMSPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedApproval, setSelectedApproval] = useState<SMSApproval | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [verifyDialogOpen, setVerifyDialogOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
@@ -30,7 +40,12 @@ export default function SMSPage() {
     try {
       setIsLoading(true);
       const response = await api.getSMSApprovals(page, limit);
-      setApprovals(response.approvals || []);
+      // Map the data to include an `id` field for DataTable and `status` for verify button logic
+      const mappedApprovals = (response.approvals || []).map((item: any) => ({
+        ...item,
+        id: item.messageId,
+      }));
+      setApprovals(mappedApprovals);
       setPagination({
         page: response.page || page,
         limit: response.limit || limit,
@@ -54,6 +69,11 @@ export default function SMSPage() {
     setViewDialogOpen(true);
   };
 
+  const handleVerify = (approval: SMSApproval) => {
+    setSelectedApproval(approval);
+    setVerifyDialogOpen(true);
+  };
+
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
   };
@@ -64,11 +84,13 @@ export default function SMSPage() {
   };
 
   const columns: Column[] = [
-    { key: "id", label: "ID" },
-    { key: "instituteId", label: "Institute ID" },
+    { key: "messageId", label: "Message ID" },
+    { key: "maskIdUsed", label: "Sender ID" },
+    { key: "instituteName", label: "Institute" },
     { key: "senderName", label: "Sender Name" },
-    { key: "message", label: "Message" },
-    { key: "recipientCount", label: "Recipients" },
+    { key: "messageTemplate", label: "Message" },
+    { key: "totalRecipients", label: "Recipients" },
+    { key: "estimatedCredits", label: "Est. Credits" },
     { key: "status", label: "Status", type: "badge" },
     { key: "createdAt", label: "Created", type: "date" },
   ];
@@ -86,6 +108,7 @@ export default function SMSPage() {
         data={approvals}
         isLoading={isLoading}
         onView={handleView}
+        onVerify={handleVerify}
         pagination={pagination || undefined}
         onPageChange={handlePageChange}
         onLimitChange={handleLimitChange}
@@ -95,7 +118,14 @@ export default function SMSPage() {
         open={viewDialogOpen}
         onOpenChange={setViewDialogOpen}
         data={selectedApproval}
-        title={`SMS Approval #${selectedApproval?.id || ""}`}
+        title={`SMS Approval #${selectedApproval?.messageId || ""}`}
+      />
+
+      <VerifySMSApprovalDialog
+        open={verifyDialogOpen}
+        onOpenChange={setVerifyDialogOpen}
+        approval={selectedApproval}
+        onSuccess={fetchApprovals}
       />
     </DashboardLayout>
   );

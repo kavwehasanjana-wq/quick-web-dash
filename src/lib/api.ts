@@ -119,6 +119,18 @@ export const api = {
   getSMSApprovals: (page = 1, limit = 10) =>
     apiRequest(`/sms/admin/pending-approvals?page=${page}&limit=${limit}`),
 
+  approveSMSCampaign: (messageId: string, data: { adminNotes: string }) =>
+    apiRequest(`/sms/admin/campaigns/${messageId}/approve`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  rejectSMSCampaign: (messageId: string, data: { rejectionReason: string; adminNotes: string }) =>
+    apiRequest(`/sms/admin/campaigns/${messageId}/reject`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
   // File Upload
   generateSignedUrl: (folder: string, fileName: string, contentType: string, fileSize: number) =>
     apiRequest("/upload/generate-signed-url", {
