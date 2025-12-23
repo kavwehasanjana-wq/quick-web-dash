@@ -8,7 +8,7 @@ import { DataTable, Column, PaginationMeta } from "@/components/shared/DataTable
 import { ViewDetailsDialog } from "@/components/shared/ViewDetailsDialog";
 import { AssignRfidDialog } from "@/components/forms/AssignRfidDialog";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 interface User {
   id: string;
@@ -70,9 +70,6 @@ export default function UsersPage() {
     }
   };
 
-  // Frontend filtering by isActive
-  const activeUsers = useMemo(() => allUsers.filter(u => u.isActive === true), [allUsers]);
-  const inactiveUsers = useMemo(() => allUsers.filter(u => u.isActive === false), [allUsers]);
 
   const handleCreateUser = () => {
     toast({
@@ -126,42 +123,18 @@ export default function UsersPage() {
         actions={<ActionButton label="Create User" onClick={handleCreateUser} />}
       />
       
-      <Tabs defaultValue="active" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="active">Active ({activeUsers.length})</TabsTrigger>
-          <TabsTrigger value="inactive">Inactive ({inactiveUsers.length})</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="active">
-          <DataTable
-            columns={columns}
-            data={activeUsers}
-            isLoading={isLoading}
-            onView={handleView}
-            pagination={pagination || undefined}
-            onPageChange={setPage}
-            onLimitChange={(newLimit) => {
-              setLimit(newLimit);
-              setPage(1);
-            }}
-          />
-        </TabsContent>
-        
-        <TabsContent value="inactive">
-          <DataTable
-            columns={columns}
-            data={inactiveUsers}
-            isLoading={isLoading}
-            onView={handleView}
-            pagination={pagination || undefined}
-            onPageChange={setPage}
-            onLimitChange={(newLimit) => {
-              setLimit(newLimit);
-              setPage(1);
-            }}
-          />
-        </TabsContent>
-      </Tabs>
+      <DataTable
+        columns={columns}
+        data={allUsers}
+        isLoading={isLoading}
+        onView={handleView}
+        pagination={pagination || undefined}
+        onPageChange={setPage}
+        onLimitChange={(newLimit) => {
+          setLimit(newLimit);
+          setPage(1);
+        }}
+      />
 
       <ViewDetailsDialog
         open={viewDialogOpen}
