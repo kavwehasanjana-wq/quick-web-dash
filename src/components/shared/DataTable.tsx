@@ -196,7 +196,7 @@ export function DataTable({
                         View
                       </Button>
                     )}
-                    {onVerify && (
+                    {onVerify && row.status?.toUpperCase() === "PENDING" && (
                       <Button 
                         variant="default" 
                         size="sm" 
