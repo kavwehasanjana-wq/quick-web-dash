@@ -10,11 +10,17 @@ export const uploadFile = async (
   folder: string
 ): Promise<UploadResult> => {
   try {
+    const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+    // Backend is sometimes strict about MIME types (e.g. expects image/jpg)
+    const normalizedContentType =
+      file.type === "image/jpeg" ? "image/jpg" : file.type;
+
     // Step 1: Get signed URL
     const signedUrlResponse = await api.generateSignedUrl(
       folder,
-      file.name,
-      file.type,
+      safeFileName,
+      normalizedContentType,
       file.size
     );
 

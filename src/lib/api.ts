@@ -20,8 +20,33 @@ export const apiRequest = async (
   });
 
   if (!response.ok) {
-    throw new Error(`API Error: ${response.status}`);
+    // Include server error message when available
+    let details = "";
+    try {
+      const text = await response.text();
+      details = text;
+      try {
+        const parsed = JSON.parse(text);
+        const msg = parsed?.message || parsed?.details?.message || parsed?.error;
+        if (typeof msg === "string" && msg.trim()) {
+          throw new Error(msg);
+        }
+      } catch {
+        // not JSON
+      }
+    } catch {
+      // ignore
+    }
+
+    throw new Error(
+      details?.trim()
+        ? `API Error: ${response.status} - ${details}`
+        : `API Error: ${response.status}`
+    );
   }
+
+  // Some endpoints may return 204
+  if (response.status === 204) return null;
 
   return response.json();
 };
