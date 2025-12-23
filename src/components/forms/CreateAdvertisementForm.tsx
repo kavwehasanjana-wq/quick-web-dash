@@ -146,15 +146,15 @@ export function CreateAdvertisementForm({
   const getFolder = (mediaType: string) => {
     switch (mediaType) {
       case "image":
-        return "institute-image";
+        return "advertisement-images";
       case "video":
-        return "institute-image";
+        return "advertisement-videos";
       case "audio":
-        return "institute-image";
+        return "advertisement-audio";
       case "pdf":
-        return "institute-image";
+        return "advertisement-pdfs";
       default:
-        return "institute-image";
+        return "advertisements";
     }
   };
 
