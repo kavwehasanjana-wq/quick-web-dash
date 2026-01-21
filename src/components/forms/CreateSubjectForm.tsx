@@ -1,376 +1,382 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
-import { api } from "@/lib/api";
-import { uploadFile } from "@/lib/upload";
-import { InstituteType, SubjectType, BasketCategory } from "@/lib/enums";
-import { Loader2, Upload, X } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Keep for category field
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Switch } from '@/components/ui/switch';
+import { useAuth } from '@/contexts/AuthContext';
+import { useInstituteRole } from '@/hooks/useInstituteRole';
+import { toast } from 'sonner';
+import SubjectImageUpload from '@/components/SubjectImageUpload';
+import { 
+  subjectsApi, 
+  SUBJECT_TYPE_OPTIONS, 
+  BASKET_CATEGORY_OPTIONS, 
+  requiresBasketCategory
+} from '@/api/subjects.api';
 
-const formSchema = z.object({
-  code: z.string().min(1, "Code is required"),
-  name: z.string().min(1, "Name is required"),
+const subjectSchema = z.object({
+  name: z.string().min(2, 'Subject name must be at least 2 characters').max(255),
+  code: z.string().min(1, 'Subject code is required').max(50),
   description: z.string().optional(),
   category: z.string().optional(),
-  creditHours: z.coerce.number().min(1, "Credit hours must be at least 1"),
+  creditHours: z.number().min(1).max(1000).optional(),
+  basketCategory: z.string().optional(),
+  subjectType: z.string().default('MAIN'),
   isActive: z.boolean().default(true),
-  subjectType: z.string().min(1, "Subject type is required"),
-  basketCategory: z.string().min(1, "Basket category is required"),
-  instituteType: z.string().min(1, "Institute type is required"),
+  image: z.any().optional()
+}).refine((data) => {
+  // If subject type contains 'BASKET', basketCategory is required
+  if (data.subjectType && data.subjectType.includes('BASKET') && data.subjectType !== 'MAIN' && data.subjectType !== 'COMMON') {
+    return !!data.basketCategory;
+  }
+  return true;
+}, {
+  message: 'Basket category is required for basket subject types',
+  path: ['basketCategory']
 });
 
-type FormData = z.infer<typeof formSchema>;
+type SubjectFormData = z.infer<typeof subjectSchema>;
 
 interface CreateSubjectFormProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSubmit: (data: SubjectFormData) => void;
+  onCancel: () => void;
+  initialData?: any;
 }
 
-export function CreateSubjectForm({
-  open,
-  onOpenChange,
-  onSuccess,
-}: CreateSubjectFormProps) {
-  const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+const CreateSubjectForm = ({ onSubmit, onCancel, initialData }: CreateSubjectFormProps) => {
+  const isEditing = !!initialData;
+  const [isLoading, setIsLoading] = useState(false);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string>(initialData?.imgUrl || '');
+  const { currentInstituteId, user } = useAuth();
+  
+  // Check if user has permission (only SuperAdmin and InstituteAdmin)
+  const userRole = useInstituteRole();
+  const hasPermission = user?.role === 'SystemAdmin' || userRole === 'InstituteAdmin';
+  
+  const form = useForm<SubjectFormData>({
+    resolver: zodResolver(subjectSchema),
     defaultValues: {
-      code: "",
-      name: "",
-      description: "",
-      category: "",
-      creditHours: 3,
-      isActive: true,
-      subjectType: SubjectType.MAIN,
-      basketCategory: BasketCategory.COMMON,
-      instituteType: InstituteType.SCHOOL,
-    },
+      name: initialData?.name || '',
+      code: initialData?.code || '',
+      description: initialData?.description || '',
+      category: initialData?.category || '',
+      creditHours: initialData?.creditHours || 3,
+      basketCategory: initialData?.basketCategory || '',
+      subjectType: initialData?.subjectType || 'MAIN',
+      isActive: initialData?.isActive ?? true
+    }
   });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setImageFile(file);
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  const watchSubjectType = form.watch('subjectType');
+  const showBasketCategory = requiresBasketCategory(watchSubjectType);
+
+  const handleImageUpload = (imageUrl: string) => {
+    setImagePreviewUrl(imageUrl);
+  };
+
+  const handleImageRemove = () => {
+    setImagePreviewUrl('');
+  };
+
+  const handleSubmit = async (data: SubjectFormData) => {
+    if (!currentInstituteId) {
+      toast.error('Please select an institute first');
+      return;
     }
-  };
 
-  const removeFile = () => {
-    setImageFile(null);
-    setImagePreview(null);
-  };
+    if (!hasPermission) {
+      toast.error('You do not have permission to create subjects');
+      return;
+    }
 
-  const onSubmit = async (data: FormData) => {
+    setIsLoading(true);
+    
     try {
-      setIsSubmitting(true);
-
-      let imgUrl = "";
-
-      // Upload image if selected
-      if (imageFile) {
-        const imageResult = await uploadFile(imageFile, "subject-images");
-        imgUrl = imageResult.relativePath;
+      if (!isEditing) {
+        // Create subject using new API
+        await subjectsApi.create({
+          code: data.code,
+          name: data.name,
+          description: data.description,
+          category: data.category,
+          creditHours: data.creditHours,
+          isActive: data.isActive,
+          subjectType: data.subjectType,
+          basketCategory: showBasketCategory ? data.basketCategory : undefined,
+          instituteId: currentInstituteId,
+          imgUrl: imagePreviewUrl || undefined
+        });
+        
+        toast.success('Subject created successfully!');
+        onSubmit(data);
+      } else {
+        // Update subject
+        await subjectsApi.update(initialData.id, {
+          code: data.code,
+          name: data.name,
+          description: data.description,
+          category: data.category,
+          creditHours: data.creditHours,
+          isActive: data.isActive,
+          subjectType: data.subjectType,
+          basketCategory: showBasketCategory ? data.basketCategory : undefined,
+          imgUrl: imagePreviewUrl || undefined
+        }, currentInstituteId);
+        
+        toast.success('Subject updated successfully!');
+        onSubmit(data);
       }
-
-      const payload = {
-        ...data,
-        imgUrl: imgUrl || undefined,
-      };
-
-      await api.createSubject(payload);
-
-      toast({
-        title: "Success",
-        description: "Subject created successfully",
-      });
-
-      form.reset();
-      setImageFile(null);
-      setImagePreview(null);
-      onOpenChange(false);
-      onSuccess();
-    } catch (error) {
-      console.error("Failed to create subject:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create subject",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      console.error('Error saving subject:', error);
+      toast.error(error?.message || 'Failed to save subject');
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
+
+  if (!hasPermission) {
+    return (
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle>Access Denied</CardTitle>
+          <CardDescription>Only SuperAdmin and InstituteAdmin can manage subjects.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-end">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Close
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle>Create Subject</DialogTitle>
-        </DialogHeader>
-        <ScrollArea className="max-h-[75vh] pr-4">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Basic Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="code"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Code *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Subject code" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Name *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Subject name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
+    <Card className="w-full max-w-2xl mx-auto">
+      <CardHeader>
+        <CardTitle>{isEditing ? 'Edit Subject' : 'Add New Subject'}</CardTitle>
+        <CardDescription>
+          {isEditing ? 'Update subject information' : 'Create a new subject for this institute'}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="description"
+                name="code"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>Subject Code *</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Subject description" {...field} />
+                      <Input placeholder="MATH101" {...field} maxLength={50} />
+                    </FormControl>
+                    <FormDescription>Unique identifier (max 50 chars)</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Subject Name *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Mathematics" {...field} maxLength={255} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Science">Science</SelectItem>
+                        <SelectItem value="Mathematics">Mathematics</SelectItem>
+                        <SelectItem value="Languages">Languages</SelectItem>
+                        <SelectItem value="Arts">Arts</SelectItem>
+                        <SelectItem value="Commerce">Commerce</SelectItem>
+                        <SelectItem value="Technology">Technology</SelectItem>
+                        <SelectItem value="Humanities">Humanities</SelectItem>
+                        <SelectItem value="Religion">Religion</SelectItem>
+                        <SelectItem value="Physical Education">Physical Education</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="creditHours"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Credit Hours</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        placeholder="3" 
+                        min={1}
+                        max={1000}
+                        {...field} 
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Category</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Category" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="creditHours"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Credit Hours *</FormLabel>
-                      <FormControl>
-                        <Input type="number" min={1} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="subjectType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Subject Type *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {Object.entries(SubjectType).map(([key, value]) => (
-                            <SelectItem key={key} value={value}>
-                              {key}
-                            </SelectItem>
+              <FormField
+                control={form.control}
+                name="subjectType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Subject Type *</FormLabel>
+                    <FormControl>
+                      <>
+                        <Input 
+                          placeholder="Type or select subject type" 
+                          list="subject-type-options"
+                          {...field} 
+                        />
+                        <datalist id="subject-type-options">
+                          {SUBJECT_TYPE_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
                           ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        </datalist>
+                      </>
+                    </FormControl>
+                    <FormDescription>
+                      {SUBJECT_TYPE_OPTIONS.find(o => o.value === field.value)?.description || 'Enter custom type or select from suggestions'}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {showBasketCategory && (
                 <FormField
                   control={form.control}
                   name="basketCategory"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Basket Category *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select category" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {Object.entries(BasketCategory).map(([key, value]) => (
-                            <SelectItem key={key} value={value}>
-                              {key}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <>
+                          <Input 
+                            placeholder="Type or select basket category" 
+                            list="basket-category-options"
+                            {...field} 
+                          />
+                          <datalist id="basket-category-options">
+                            {BASKET_CATEGORY_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </datalist>
+                        </>
+                      </FormControl>
+                      <FormDescription>
+                        Required for basket subject types. Type custom or select from suggestions.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="instituteType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Institute Type *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {Object.entries(InstituteType).map(([key, value]) => (
-                            <SelectItem key={key} value={value}>
-                              {key.replace(/_/g, " ")}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* File Upload */}
-              <div className="space-y-2">
-                <FormLabel>Subject Image</FormLabel>
-                <div className="border-2 border-dashed border-border rounded-lg p-4">
-                  {imagePreview ? (
-                    <div className="relative">
-                      <img
-                        src={imagePreview}
-                        alt="Image preview"
-                        className="w-full h-40 object-cover rounded"
-                      />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-2 right-2"
-                        onClick={removeFile}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <label className="flex flex-col items-center cursor-pointer py-4">
-                      <Upload className="h-10 w-10 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground mt-2">
-                        Click to upload subject image
-                      </span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleFileChange}
-                      />
-                    </label>
-                  )}
-                </div>
-              </div>
-
-              {/* Is Active */}
-              <FormField
-                control={form.control}
-                name="isActive"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Active</FormLabel>
-                      <p className="text-sm text-muted-foreground">
-                        Make this subject active
-                      </p>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
+              )}
+            </div>
+            
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Enter subject description..." 
+                      rows={3}
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <div className="space-y-2">
+              <FormLabel>Subject Image (Optional)</FormLabel>
+              <SubjectImageUpload
+                value={imagePreviewUrl}
+                onChange={handleImageUpload}
+                onRemove={handleImageRemove}
               />
-
-              <div className="flex justify-end gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create Subject
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </ScrollArea>
-      </DialogContent>
-    </Dialog>
+              <FormDescription>
+                Recommended: 4:3 aspect ratio, max 5MB (JPG, PNG, WebP)
+              </FormDescription>
+            </div>
+            
+            <FormField
+              control={form.control}
+              name="isActive"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Active Status</FormLabel>
+                    <FormDescription>
+                      Enable this subject for students and classes
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button type="button" variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? 'Saving...' : (isEditing ? 'Update Subject' : 'Create Subject')}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
   );
-}
+};
+
+export default CreateSubjectForm;
