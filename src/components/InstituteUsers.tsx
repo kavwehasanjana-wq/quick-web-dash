@@ -78,7 +78,8 @@ interface InstituteUsersResponse {
     totalPages: number;
   };
 }
-type UserType = 'STUDENT' | 'TEACHER' | 'ATTENDANCE_MARKER' | 'INSTITUTE_ADMIN' | 'PENDING' | 'INACTIVE';
+type UserType = 'STUDENT' | 'TEACHER' | 'ATTENDANCE_MARKER' | 'INSTITUTE_ADMIN';
+type ViewType = 'USERS' | 'PENDING' | 'INACTIVE';
 const InstituteUsers = () => {
   const {
     toast
@@ -96,7 +97,8 @@ const InstituteUsers = () => {
   const [showAssignParentDialog, setShowAssignParentDialog] = useState(false);
   const [selectedStudentForParent, setSelectedStudentForParent] = useState<InstituteUserData | null>(null);
   const [assignInitialUserId, setAssignInitialUserId] = useState<string | undefined>(undefined);
-  const [activeTab, setActiveTab] = useState<UserType>('STUDENT');
+  const [activeView, setActiveView] = useState<ViewType>('USERS');
+  const [selectedUserType, setSelectedUserType] = useState<UserType>('STUDENT');
   const [isApplyingFilters, setIsApplyingFilters] = useState(false);
 
   // Filter state for each user type
@@ -157,45 +159,47 @@ const InstituteUsers = () => {
   const [activatingUserId, setActivatingUserId] = useState<string | null>(null);
   const [deactivatingUserId, setDeactivatingUserId] = useState<string | null>(null);
 
-  // Get current filters based on active tab
+  // Get current filters based on active view and selected user type
   const getCurrentFilters = () => {
-    switch (activeTab) {
-      case 'STUDENT':
-        return studentFilters;
-      case 'TEACHER':
-        return teacherFilters;
-      case 'ATTENDANCE_MARKER':
-        return markerFilters;
-      case 'INSTITUTE_ADMIN':
-        return adminFilters;
-      case 'PENDING':
-        return pendingFilters;
-      case 'INACTIVE':
-        return inactiveFilters;
-      default:
-        return studentFilters;
+    if (activeView === 'USERS') {
+      switch (selectedUserType) {
+        case 'STUDENT':
+          return studentFilters;
+        case 'TEACHER':
+          return teacherFilters;
+        case 'ATTENDANCE_MARKER':
+          return markerFilters;
+        case 'INSTITUTE_ADMIN':
+          return adminFilters;
+        default:
+          return studentFilters;
+      }
+    } else if (activeView === 'PENDING') {
+      return pendingFilters;
+    } else {
+      return inactiveFilters;
     }
   };
   const setCurrentFilters = (filters: InstituteUserFilterParams) => {
-    switch (activeTab) {
-      case 'STUDENT':
-        setStudentFilters(filters);
-        break;
-      case 'TEACHER':
-        setTeacherFilters(filters);
-        break;
-      case 'ATTENDANCE_MARKER':
-        setMarkerFilters(filters);
-        break;
-      case 'INSTITUTE_ADMIN':
-        setAdminFilters(filters);
-        break;
-      case 'PENDING':
-        setPendingFilters(filters);
-        break;
-      case 'INACTIVE':
-        setInactiveFilters(filters);
-        break;
+    if (activeView === 'USERS') {
+      switch (selectedUserType) {
+        case 'STUDENT':
+          setStudentFilters(filters);
+          break;
+        case 'TEACHER':
+          setTeacherFilters(filters);
+          break;
+        case 'ATTENDANCE_MARKER':
+          setMarkerFilters(filters);
+          break;
+        case 'INSTITUTE_ADMIN':
+          setAdminFilters(filters);
+          break;
+      }
+    } else if (activeView === 'PENDING') {
+      setPendingFilters(filters);
+    } else {
+      setInactiveFilters(filters);
     }
   };
 
@@ -551,21 +555,23 @@ const InstituteUsers = () => {
     }
   };
   const getCurrentTable = () => {
-    switch (activeTab) {
-      case 'STUDENT':
-        return studentsTable;
-      case 'TEACHER':
-        return teachersTable;
-      case 'ATTENDANCE_MARKER':
-        return attendanceMarkersTable;
-      case 'INSTITUTE_ADMIN':
-        return instituteAdminsTable;
-      case 'PENDING':
-        return pendingUsersTable;
-      case 'INACTIVE':
-        return inactiveUsersTable;
-      default:
-        return studentsTable;
+    if (activeView === 'USERS') {
+      switch (selectedUserType) {
+        case 'STUDENT':
+          return studentsTable;
+        case 'TEACHER':
+          return teachersTable;
+        case 'ATTENDANCE_MARKER':
+          return attendanceMarkersTable;
+        case 'INSTITUTE_ADMIN':
+          return instituteAdminsTable;
+        default:
+          return studentsTable;
+      }
+    } else if (activeView === 'PENDING') {
+      return pendingUsersTable;
+    } else {
+      return inactiveUsersTable;
     }
   };
 
@@ -598,7 +604,7 @@ const InstituteUsers = () => {
     setCurrentFilters({});
     getCurrentTable().actions.updateFilters({});
   };
-  const getUserTypeLabel = (type: UserType) => {
+  const getUserTypeLabel = (type: UserType | ViewType) => {
     switch (type) {
       case 'STUDENT':
         return 'Students';
@@ -608,6 +614,8 @@ const InstituteUsers = () => {
         return 'Attendance Markers';
       case 'INSTITUTE_ADMIN':
         return 'Institute Admins';
+      case 'USERS':
+        return 'Users';
       case 'PENDING':
         return 'Pending Users';
       case 'INACTIVE':
@@ -616,7 +624,7 @@ const InstituteUsers = () => {
         return '';
     }
   };
-  const getUserTypeIcon = (type: UserType) => {
+  const getUserTypeIcon = (type: UserType | ViewType) => {
     switch (type) {
       case 'STUDENT':
         return GraduationCap;
@@ -626,6 +634,8 @@ const InstituteUsers = () => {
         return UserCheck;
       case 'INSTITUTE_ADMIN':
         return Shield;
+      case 'USERS':
+        return Users;
       case 'PENDING':
         return Clock;
       case 'INACTIVE':
@@ -749,7 +759,7 @@ const InstituteUsers = () => {
   const currentTable = getCurrentTable();
   const currentUsers = getCurrentUsers();
   const currentLoading = currentTable.state.loading;
-  const IconComponent = getUserTypeIcon(activeTab);
+  const IconComponent = activeView === 'USERS' ? getUserTypeIcon(selectedUserType) : getUserTypeIcon(activeView);
   return <div className="container mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:gap-4">
         <div>
@@ -771,58 +781,34 @@ const InstituteUsers = () => {
       </div>
 
       {/* Filters Component */}
-      <InstituteUsersFilters filters={getCurrentFilters()} onFiltersChange={handleFiltersChange} onApplyFilters={handleApplyFilters} onClearFilters={handleClearFilters} userType={activeTab} isApplying={isApplyingFilters} />
+      <InstituteUsersFilters filters={getCurrentFilters()} onFiltersChange={handleFiltersChange} onApplyFilters={handleApplyFilters} onClearFilters={handleClearFilters} userType={activeView === 'USERS' ? selectedUserType : activeView} isApplying={isApplyingFilters} />
 
-      {/* Tabs for different user types */}
-      <Tabs value={activeTab} onValueChange={value => setActiveTab(value as UserType)}>
-        {/* Mobile: Horizontal scrollable tabs - icon only, name shows when active */}
+      {/* Tabs for Views: Users, Pending, Inactive */}
+      <Tabs value={activeView} onValueChange={value => setActiveView(value as ViewType)}>
+        {/* Mobile: Horizontal scrollable tabs */}
         <div className="lg:hidden overflow-x-auto">
           <TabsList className="inline-flex h-auto w-auto gap-2 p-1.5 bg-background border rounded-lg">
-            <TabsTrigger value="STUDENT" className="flex items-center gap-2 px-3 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md whitespace-nowrap data-[state=inactive]:px-2">
-              <GraduationCap className="h-4 w-4" />
-              {activeTab === 'STUDENT' && <span className="text-sm">Students</span>}
-            </TabsTrigger>
-            <TabsTrigger value="TEACHER" className="flex items-center gap-2 px-3 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md whitespace-nowrap data-[state=inactive]:px-2">
+            <TabsTrigger value="USERS" className="flex items-center gap-2 px-3 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md whitespace-nowrap data-[state=inactive]:px-2">
               <Users className="h-4 w-4" />
-              {activeTab === 'TEACHER' && <span className="text-sm">Teachers</span>}
-            </TabsTrigger>
-            <TabsTrigger value="ATTENDANCE_MARKER" className="flex items-center gap-2 px-3 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md whitespace-nowrap data-[state=inactive]:px-2">
-              <UserCheck className="h-4 w-4" />
-              {activeTab === 'ATTENDANCE_MARKER' && <span className="text-sm">Markers</span>}
-            </TabsTrigger>
-            <TabsTrigger value="INSTITUTE_ADMIN" className="flex items-center gap-2 px-3 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md whitespace-nowrap data-[state=inactive]:px-2">
-              <Shield className="h-4 w-4" />
-              {activeTab === 'INSTITUTE_ADMIN' && <span className="text-sm">Admins</span>}
+              {activeView === 'USERS' && <span className="text-sm">Users</span>}
             </TabsTrigger>
             <TabsTrigger value="PENDING" className="flex items-center gap-2 px-3 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md whitespace-nowrap data-[state=inactive]:px-2">
               <Clock className="h-4 w-4" />
-              {activeTab === 'PENDING' && <span className="text-sm">Pending</span>}
+              {activeView === 'PENDING' && <span className="text-sm">Pending</span>}
             </TabsTrigger>
             <TabsTrigger value="INACTIVE" className="flex items-center gap-2 px-3 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md whitespace-nowrap data-[state=inactive]:px-2">
               <UserX className="h-4 w-4" />
-              {activeTab === 'INACTIVE' && <span className="text-sm">Inactive</span>}
+              {activeView === 'INACTIVE' && <span className="text-sm">Inactive</span>}
             </TabsTrigger>
           </TabsList>
         </div>
 
         {/* Desktop: Full width tabs with text */}
         <div className="hidden lg:block">
-          <TabsList className="grid w-full grid-cols-6 gap-2 p-2 h-auto bg-muted/50">
-            <TabsTrigger value="STUDENT" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <GraduationCap className="h-4 w-4" />
-              <span>Students</span>
-            </TabsTrigger>
-            <TabsTrigger value="TEACHER" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+          <TabsList className="grid w-full grid-cols-3 gap-2 p-2 h-auto bg-muted/50">
+            <TabsTrigger value="USERS" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Users className="h-4 w-4" />
-              <span>Teachers</span>
-            </TabsTrigger>
-            <TabsTrigger value="ATTENDANCE_MARKER" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <UserCheck className="h-4 w-4" />
-              <span>Markers</span>
-            </TabsTrigger>
-            <TabsTrigger value="INSTITUTE_ADMIN" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <Shield className="h-4 w-4" />
-              <span>Admins</span>
+              <span>Users</span>
             </TabsTrigger>
             <TabsTrigger value="PENDING" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Clock className="h-4 w-4" />
@@ -835,84 +821,53 @@ const InstituteUsers = () => {
           </TabsList>
         </div>
 
-        <TabsContent value="STUDENT" className="space-y-4">
+        <TabsContent value="USERS" className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              {/* User Type Dropdown */}
+              <Select value={selectedUserType} onValueChange={(value: UserType) => setSelectedUserType(value)}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Select user type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="STUDENT">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="h-4 w-4" />
+                      <span>Students</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="TEACHER">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      <span>Teachers</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="ATTENDANCE_MARKER">
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="h-4 w-4" />
+                      <span>Attendance Markers</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="INSTITUTE_ADMIN">
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-4 w-4" />
+                      <span>Admins</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
               <Badge variant="outline" className="flex items-center gap-1">
-                <GraduationCap className="h-4 w-4" />
-                {studentsTable.pagination.totalCount} Students
+                {React.createElement(getUserTypeIcon(selectedUserType), { className: "h-4 w-4" })}
+                {currentTable.pagination.totalCount} {getUserTypeLabel(selectedUserType)}
               </Badge>
             </div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <Button onClick={() => studentsTable.actions.refresh()} disabled={studentsTable.state.loading} variant="outline" size="sm" className="w-full sm:w-auto">
-                {studentsTable.state.loading ? <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    <span className="hidden sm:inline">Loading...</span>
-                  </> : <>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">Load Students</span>
-                    <span className="sm:hidden">Load</span>
-                  </>}
-              </Button>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="TEACHER" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="flex items-center gap-1">
-                <Users className="h-4 w-4" />
-                {teachersTable.pagination.totalCount} Teachers
-              </Badge>
-            </div>
-            <Button onClick={() => teachersTable.actions.refresh()} disabled={teachersTable.state.loading} variant="outline" size="sm">
-              {teachersTable.state.loading ? <>
+            <Button onClick={() => currentTable.actions.refresh()} disabled={currentTable.state.loading} variant="outline" size="sm">
+              {currentTable.state.loading ? <>
                   <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                   Loading...
                 </> : <>
                   <RefreshCw className="h-4 w-4 mr-2" />
-                  Load Teachers
-                </>}
-            </Button>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="ATTENDANCE_MARKER" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="flex items-center gap-1">
-                <UserCheck className="h-4 w-4" />
-                {attendanceMarkersTable.pagination.totalCount} Attendance Markers
-              </Badge>
-            </div>
-            <Button onClick={() => attendanceMarkersTable.actions.refresh()} disabled={attendanceMarkersTable.state.loading} variant="outline" size="sm">
-              {attendanceMarkersTable.state.loading ? <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Loading...
-                </> : <>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Load Attendance Markers
-                </>}
-            </Button>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="INSTITUTE_ADMIN" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="flex items-center gap-1">
-                <Shield className="h-4 w-4" />
-                {instituteAdminsTable.pagination.totalCount} Institute Admins
-              </Badge>
-            </div>
-            <Button onClick={() => instituteAdminsTable.actions.refresh()} disabled={instituteAdminsTable.state.loading} variant="outline" size="sm">
-              {instituteAdminsTable.state.loading ? <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Loading...
-                </> : <>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Load Institute Admins
+                  Load {getUserTypeLabel(selectedUserType)}
                 </>}
             </Button>
           </div>
@@ -960,7 +915,7 @@ const InstituteUsers = () => {
                 <span className="text-sm font-medium">
                   {selectedPendingUsers.length} selected
                 </span>
-                <Button onClick={handleBulkVerify} disabled={bulkVerifying} size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+                <Button onClick={handleBulkVerify} disabled={bulkVerifying} size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground">
                   {bulkVerifying ? <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Verifying...
@@ -1008,7 +963,7 @@ const InstituteUsers = () => {
           <Table stickyHeader aria-label="users table">
             <TableHead>
               <TableRow>
-                {activeTab === 'PENDING' && <TableCell padding="checkbox">
+                {activeView === 'PENDING' && <TableCell padding="checkbox">
                     <input type="checkbox" checked={selectedPendingUsers.length === currentUsers.length && currentUsers.length > 0} onChange={toggleAllPendingUsers} className="w-4 h-4 rounded border-border" />
                   </TableCell>}
                 <TableCell>Image</TableCell>
@@ -1017,15 +972,15 @@ const InstituteUsers = () => {
                 <TableCell>Email</TableCell>
                 <TableCell>Phone Number</TableCell>
                 <TableCell>Institute User ID</TableCell>
-                {activeTab !== 'PENDING' && <TableCell>Org</TableCell>}
-                {activeTab !== 'PENDING' && <TableCell>Upload</TableCell>}
-                {activeTab === 'STUDENT' && <TableCell>Parent</TableCell>}
+                {activeView !== 'PENDING' && <TableCell>Org</TableCell>}
+                {activeView !== 'PENDING' && <TableCell>Upload</TableCell>}
+                {activeView === 'USERS' && selectedUserType === 'STUDENT' && <TableCell>Parent</TableCell>}
                 <TableCell>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {currentUsers.map(userData => <TableRow hover role="checkbox" tabIndex={-1} key={userData.id}>
-                  {activeTab === 'PENDING' && <TableCell padding="checkbox">
+                  {activeView === 'PENDING' && <TableCell padding="checkbox">
                       <input type="checkbox" checked={selectedPendingUsers.includes(userData.id)} onChange={() => togglePendingUserSelection(userData.id)} className="w-4 h-4 rounded border-border" />
                     </TableCell>}
                   <TableCell>
@@ -1061,7 +1016,7 @@ const InstituteUsers = () => {
                   <TableCell>
                     <span className="font-mono text-sm">{userData.userIdByInstitute || 'Not assigned'}</span>
                   </TableCell>
-                  {activeTab !== 'PENDING' && <TableCell>
+                  {activeView !== 'PENDING' && <TableCell>
                       <Button size="sm" variant="outline" onClick={() => {
                   setSelectedUserForOrg({
                     id: userData.id,
@@ -1073,8 +1028,8 @@ const InstituteUsers = () => {
                         View
                       </Button>
                     </TableCell>}
-                  {activeTab !== 'PENDING' && <TableCell>
-                      {userData.instituteUserImageUrl ? <Badge variant="default" className="bg-green-600 hover:bg-green-600 text-white">
+                  {activeView !== 'PENDING' && <TableCell>
+                      {userData.instituteUserImageUrl ? <Badge variant="default" className="bg-primary hover:bg-primary text-primary-foreground">
                           <CheckCircle className="h-3 w-3 mr-1" />
                           Uploaded
                         </Badge> : <Button size="sm" variant="outline" onClick={() => setUploadingUserId(userData.id)}>
@@ -1082,7 +1037,7 @@ const InstituteUsers = () => {
                           Upload
                         </Button>}
                     </TableCell>}
-                  {activeTab === 'STUDENT' && <TableCell>
+                  {activeView === 'USERS' && selectedUserType === 'STUDENT' && <TableCell>
                       <Button size="sm" variant="outline" onClick={() => handleAssignParent(userData)}>
                         <UserCog className="h-4 w-4 mr-1" />
                         Assign Parent
@@ -1090,7 +1045,7 @@ const InstituteUsers = () => {
                     </TableCell>}
                   <TableCell>
                     <div className="flex gap-2">
-                      {activeTab === 'STUDENT' ? <Button size="sm" variant="default" onClick={() => setStudentDetailsDialog({
+                      {activeView === 'USERS' && selectedUserType === 'STUDENT' ? <Button size="sm" variant="default" onClick={() => setStudentDetailsDialog({
                     open: true,
                     student: userData
                   })}>
@@ -1100,10 +1055,10 @@ const InstituteUsers = () => {
                           <Eye className="h-4 w-4 mr-1" />
                           View
                         </Button>}
-                      {activeTab === 'PENDING' ? <Button size="sm" onClick={() => handleVerifyUser(userData.id)} disabled={verifyingIds.has(userData.id)} className="bg-green-600 hover:bg-green-700 text-white">
+                      {activeView === 'PENDING' ? <Button size="sm" onClick={() => handleVerifyUser(userData.id)} disabled={verifyingIds.has(userData.id)} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                           {verifyingIds.has(userData.id) ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1" />}
                           {verifyingIds.has(userData.id) ? 'Verifying...' : 'Verify'}
-                        </Button> : activeTab === 'INACTIVE' ? <Button size="sm" variant="default" onClick={() => handleActivateUser(userData.id)} disabled={activatingUserId === userData.id} className="bg-green-600 hover:bg-green-700">
+                        </Button> : activeView === 'INACTIVE' ? <Button size="sm" variant="default" onClick={() => handleActivateUser(userData.id)} disabled={activatingUserId === userData.id} className="bg-primary hover:bg-primary/90">
                           {activatingUserId === userData.id ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <UserCheck className="h-4 w-4 mr-1" />}
                           {activatingUserId === userData.id ? 'Activating...' : 'Activate'}
                         </Button> : <Button size="sm" variant="destructive" onClick={() => handleDeactivateUser(userData.id)} disabled={deactivatingUserId === userData.id}>
@@ -1114,10 +1069,10 @@ const InstituteUsers = () => {
                   </TableCell>
                 </TableRow>)}
               {currentUsers.length === 0 && <TableRow>
-                  <TableCell colSpan={activeTab === 'STUDENT' ? 10 : activeTab === 'INACTIVE' ? 9 : 9} align="center">
-                    <div className="py-12 text-center text-gray-500">
+                  <TableCell colSpan={activeView === 'USERS' && selectedUserType === 'STUDENT' ? 10 : activeView === 'INACTIVE' ? 9 : 9} align="center">
+                    <div className="py-12 text-center text-muted-foreground">
                       <IconComponent className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p className="text-lg">No {getUserTypeLabel(activeTab).toLowerCase()}</p>
+                      <p className="text-lg">No {activeView === 'USERS' ? getUserTypeLabel(selectedUserType).toLowerCase() : getUserTypeLabel(activeView).toLowerCase()}</p>
                       <p className="text-sm">No users found for the current selection</p>
                     </div>
                   </TableCell>
@@ -1133,14 +1088,14 @@ const InstituteUsers = () => {
 
       {/* Pagination */}
       {currentTable.pagination.totalPages > 1 && <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Showing {currentTable.pagination.page * currentTable.pagination.limit + 1} to {Math.min((currentTable.pagination.page + 1) * currentTable.pagination.limit, currentTable.pagination.totalCount)} of {currentTable.pagination.totalCount} {activeTab.toLowerCase()}s
+          <p className="text-sm text-muted-foreground">
+            Showing {currentTable.pagination.page * currentTable.pagination.limit + 1} to {Math.min((currentTable.pagination.page + 1) * currentTable.pagination.limit, currentTable.pagination.totalCount)} of {currentTable.pagination.totalCount} {activeView === 'USERS' ? selectedUserType.toLowerCase() : activeView.toLowerCase()}s
           </p>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => currentTable.actions.prevPage()} disabled={currentTable.pagination.page === 0 || currentTable.state.loading}>
               Previous
             </Button>
-            <span className="text-sm text-gray-600 dark:text-gray-400">
+            <span className="text-sm text-muted-foreground">
               Page {currentTable.pagination.page + 1} of {currentTable.pagination.totalPages}
             </span>
             <Button variant="outline" size="sm" onClick={() => currentTable.actions.nextPage()} disabled={currentTable.pagination.page === currentTable.pagination.totalPages - 1 || currentTable.state.loading}>
@@ -1151,12 +1106,12 @@ const InstituteUsers = () => {
 
       {currentUsers.length === 0 && !currentLoading && <Card>
           <CardContent className="text-center py-12">
-            <IconComponent className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              No {getUserTypeLabel(activeTab)} Found
+            <IconComponent className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-lg font-medium mb-2">
+              No {activeView === 'USERS' ? getUserTypeLabel(selectedUserType) : getUserTypeLabel(activeView)} Found
             </h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              No {activeTab.toLowerCase().replace('_', ' ')}s found in this institute. Click the button above to load data.
+            <p className="text-muted-foreground">
+              No {activeView === 'USERS' ? selectedUserType.toLowerCase().replace('_', ' ') : activeView.toLowerCase().replace('_', ' ')}s found in this institute. Click the button above to load data.
             </p>
           </CardContent>
         </Card>}
@@ -1165,7 +1120,7 @@ const InstituteUsers = () => {
       <Dialog open={showUserDialog} onOpenChange={setShowUserDialog}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{getUserTypeLabel(activeTab).slice(0, -1)} Details</DialogTitle>
+            <DialogTitle>{activeView === 'USERS' ? getUserTypeLabel(selectedUserType).slice(0, -1) : getUserTypeLabel(activeView).slice(0, -1)} Details</DialogTitle>
           </DialogHeader>
           {selectedUser && <div className="space-y-6">
               {/* Basic Info */}
@@ -1178,31 +1133,31 @@ const InstituteUsers = () => {
                 </Avatar>
                 <div>
                   <h3 className="text-xl font-semibold">{selectedUser.name}</h3>
-                  <p className="text-gray-600">{selectedUser.email || 'N/A'}</p>
-                  <Badge variant="outline">{activeTab.replace('_', ' ')}</Badge>
+                  <p className="text-muted-foreground">{selectedUser.email || 'N/A'}</p>
+                  <Badge variant="outline">{activeView === 'USERS' ? selectedUserType.replace('_', ' ') : activeView.replace('_', ' ')}</Badge>
                 </div>
               </div>
 
               {/* Personal Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-500">User ID</label>
+                  <label className="text-sm font-medium text-muted-foreground">User ID</label>
                   <p className="text-sm">{selectedUser.id}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Phone Number</label>
+                  <label className="text-sm font-medium text-muted-foreground">Phone Number</label>
                   <p className="text-sm">{selectedUser.phoneNumber || 'N/A'}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Date of Birth</label>
+                  <label className="text-sm font-medium text-muted-foreground">Date of Birth</label>
                   <p className="text-sm">{selectedUser.dateOfBirth ? new Date(selectedUser.dateOfBirth).toLocaleDateString() : 'N/A'}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Institute User ID</label>
+                  <label className="text-sm font-medium text-muted-foreground">Institute User ID</label>
                   <p className="text-sm">{selectedUser.userIdByInstitute || 'N/A'}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Verified By</label>
+                  <label className="text-sm font-medium text-muted-foreground">Verified By</label>
                   <p className="text-sm">{selectedUser.verifiedBy || 'N/A'}</p>
                 </div>
               </div>
@@ -1212,18 +1167,18 @@ const InstituteUsers = () => {
                 <h4 className="text-lg font-medium mb-3">Address Information</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Address Line 1</label>
+                    <label className="text-sm font-medium text-muted-foreground">Address Line 1</label>
                     <p className="text-sm">{selectedUser.addressLine1 || 'N/A'}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Address Line 2</label>
+                    <label className="text-sm font-medium text-muted-foreground">Address Line 2</label>
                     <p className="text-sm">{selectedUser.addressLine2 || 'N/A'}</p>
                   </div>
                 </div>
               </div>
 
               {/* Family Information (Students only) */}
-              {activeTab === 'STUDENT' && (selectedUser.fatherId || selectedUser.motherId || selectedUser.guardianId) && <div>
+              {activeView === 'USERS' && selectedUserType === 'STUDENT' && (selectedUser.fatherId || selectedUser.motherId || selectedUser.guardianId) && <div>
                   <h4 className="text-lg font-medium mb-3">Family Information</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {selectedUser.fatherId && <div>
