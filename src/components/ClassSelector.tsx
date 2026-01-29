@@ -750,7 +750,7 @@ const ClassSelector = () => {
           </p>
         </div> : <>
           {/* Unified Card View - Same size on all devices */}
-          <div className="flex flex-wrap justify-center gap-6 pt-8 mb-8">
+          <div className={`grid gap-6 pt-8 mb-8 justify-items-center grid-cols-1 sm:grid-cols-2 ${sidebarCollapsed ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
             {filteredClasses.map(classItem => (
               <div key={classItem.id} className="relative flex w-80 flex-col rounded-xl bg-card bg-clip-border text-card-foreground shadow-md hover:shadow-lg transition-all duration-300">
                 {/* Verification Status Banner for Students */}
