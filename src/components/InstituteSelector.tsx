@@ -222,48 +222,49 @@ const InstituteSelector = ({
       navigateToPage('select-class');
     }
   };
-  return <div className="space-y-6">
-      <div className="text-center mb-16">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+  return <div className="space-y-2 sm:space-y-4 px-1 sm:px-3 md:px-0">
+      <div className="text-center mb-2 sm:mb-6">
+        <h1 className="text-base sm:text-lg md:text-2xl font-bold text-gray-900 dark:text-white mb-0.5 sm:mb-1">
           Select Institute
         </h1>
-        <p className="text-gray-600">
+        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto">
           Choose an institute to continue to your dashboard
         </p>
       </div>
 
-      {institutes.length === 0 && !isLoading && hasAutoLoaded && <div className="flex flex-col items-center justify-center py-12 px-4">
-          <p className="text-gray-600 mb-6 text-center">
-            No institutes found. Click the button below to retry.
+      {institutes.length === 0 && !isLoading && hasAutoLoaded && <div className="flex flex-col items-center justify-center py-6 sm:py-12 px-2">
+          <Building className="h-8 w-8 sm:h-12 sm:w-12 text-gray-300 dark:text-gray-600 mb-2 sm:mb-3" />
+          <p className="text-gray-600 dark:text-gray-400 mb-3 sm:mb-4 text-center text-xs sm:text-sm">
+            No institutes found. Click to retry.
           </p>
-          <Button onClick={handleLoadInstitutes} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Retry Loading
+          <Button onClick={handleLoadInstitutes} className="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-1.5 text-xs sm:text-sm h-7 sm:h-8">
+            <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
+            Retry
           </Button>
         </div>}
 
-      {isLoading && <div className="flex flex-col items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-600">Loading institutes...</p>
+      {isLoading && <div className="flex flex-col items-center justify-center py-6 sm:py-12">
+          <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-600 mb-2 sm:mb-3"></div>
+          <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">Loading institutes...</p>
         </div>}
 
       {institutes.length > 0 && <>
-          <div className="flex justify-between items-center mb-16">
-            <h2 className="text-xl font-semibold text-gray-900">
+          <div className="flex justify-between items-center mb-2 sm:mb-4">
+            <h2 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">
               Your Institutes ({institutes.length})
             </h2>
-            <Button onClick={handleLoadInstitutes} variant="outline" size="sm" disabled={isLoading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh
+            <Button onClick={handleLoadInstitutes} variant="outline" size="sm" disabled={isLoading} className="h-6 sm:h-7 text-[10px] sm:text-xs px-2 sm:px-2.5">
+              <RefreshCw className={`h-3 w-3 sm:h-3.5 sm:w-3.5 mr-0.5 sm:mr-1 ${isLoading ? 'animate-spin' : ''}`} />
+              <span className="hidden xs:inline">Refresh</span>
             </Button>
           </div>
 
-          <div className={`grid grid-cols-1 md:grid-cols-2 ${sidebarCollapsed ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-x-6 gap-y-16 mb-16`}>
+          <div className="flex flex-wrap justify-center gap-6 pt-8 mb-8">
             {institutes.map(institute => {
           const showSocial = expandedInstituteId === institute.id;
-          return <div key={institute.id} className="relative flex w-full flex-col rounded-xl bg-white dark:bg-gray-800 bg-clip-border text-gray-700 dark:text-gray-300 shadow-md transition-all duration-200 hover:shadow-lg hover:scale-[1.02]">
-                  {/* Institute Image - Gradient Header with -mt-6 offset */}
-                  <div className="relative mx-4 -mt-6 h-40 overflow-hidden rounded-xl bg-clip-border text-white shadow-lg shadow-blue-gray-500/40 bg-gradient-to-r from-blue-500 to-blue-600">
+          return <div key={institute.id} className="relative flex w-80 flex-col rounded-xl bg-card bg-clip-border text-card-foreground shadow-md hover:shadow-lg transition-all duration-300">
+                  {/* Institute Image - Gradient Header */}
+                  <div className="relative mx-4 -mt-6 h-40 overflow-hidden rounded-xl bg-clip-border text-white shadow-lg shadow-primary/40 bg-gradient-to-r from-primary to-primary/80">
                     {(institute.imageUrl || institute.logoUrl) ? (
                       <img 
                         src={resolveImageUrl(institute.imageUrl || institute.logoUrl)} 
@@ -274,47 +275,50 @@ const InstituteSelector = ({
                         }} 
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600">
-                        <Building className="w-16 h-16 text-white" />
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-r from-primary to-primary/80">
+                        <Building className="w-12 h-12 text-white" />
                       </div>
                     )}
                   </div>
 
                   <div className="p-6">
                     {/* Institute Name */}
-                    <h5 className="mb-2 block font-sans text-xl font-semibold leading-snug tracking-normal text-blue-gray-900 dark:text-white antialiased">
+                    <h5 className="mb-2 block font-sans text-xl font-semibold leading-snug tracking-normal text-foreground antialiased line-clamp-2">
                       {institute.name}
                     </h5>
                     
                     {/* Institute Type & Status */}
-                    <div className="flex items-center justify-start gap-2 mb-4">
-                      <Badge variant="outline" className="text-xs">
+                    <div className="flex items-center justify-start gap-2 mb-2 flex-wrap">
+                      <Badge variant="outline">
                         {institute.type}
                       </Badge>
-                      {institute.isActive && <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100 text-xs">
+                      {institute.isActive && <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100">
                           <CheckCircle className="h-3 w-3 mr-1" />
                           Active
                         </Badge>}
                     </div>
 
                     {/* Description */}
+                    <p className="block font-sans text-base font-light leading-relaxed text-muted-foreground antialiased line-clamp-2">
+                      {institute.address ? `${institute.address}, ${institute.city || ''}` : institute.type}
+                    </p>
                     
 
                     {/* Additional Details - Shown when View More is clicked */}
-                    {showSocial && <div className="mb-4 animate-in fade-in slide-in-from-top-2 duration-300 space-y-3">
+                    {showSocial && <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300 space-y-3">
                         {/* Social Media Links */}
-                        {(institute.websiteUrl || institute.facebookPageUrl || institute.youtubeChannelUrl) && <div className="flex gap-2 justify-start pb-3 border-b border-gray-200 dark:border-gray-700">
-                            {institute.websiteUrl && <Button variant="outline" size="icon" asChild className="hover:bg-blue-50 dark:hover:bg-blue-950">
+                        {(institute.websiteUrl || institute.facebookPageUrl || institute.youtubeChannelUrl) && <div className="flex gap-2 justify-start pb-3 border-b border-border">
+                            {institute.websiteUrl && <Button variant="outline" size="icon" asChild>
                                 <a href={institute.websiteUrl} target="_blank" rel="noopener noreferrer" aria-label="Visit website">
                                   <Globe className="h-4 w-4" />
                                 </a>
                               </Button>}
-                            {institute.facebookPageUrl && <Button variant="outline" size="icon" asChild className="hover:bg-blue-50 dark:hover:bg-blue-950">
+                            {institute.facebookPageUrl && <Button variant="outline" size="icon" asChild>
                                 <a href={institute.facebookPageUrl} target="_blank" rel="noopener noreferrer" aria-label="Visit Facebook page">
                                   <Facebook className="h-4 w-4" />
                                 </a>
                               </Button>}
-                            {institute.youtubeChannelUrl && <Button variant="outline" size="icon" asChild className="hover:bg-red-50 dark:hover:bg-red-950">
+                            {institute.youtubeChannelUrl && <Button variant="outline" size="icon" asChild>
                                 <a href={institute.youtubeChannelUrl} target="_blank" rel="noopener noreferrer" aria-label="Visit YouTube channel">
                                   <Youtube className="h-4 w-4" />
                                 </a>
@@ -324,49 +328,29 @@ const InstituteSelector = ({
                         {/* Institute Details */}
                         <div className="space-y-2 text-sm">
                           {institute.code && <div className="flex items-start gap-2">
-                              <span className="font-semibold text-gray-700 dark:text-gray-300 min-w-[80px]">Code:</span>
-                              <span className="text-gray-600 dark:text-gray-400">{institute.code}</span>
+                              <span className="font-semibold text-foreground min-w-[80px]">Code:</span>
+                              <span className="text-muted-foreground">{institute.code}</span>
                             </div>}
                           {institute.shortName && <div className="flex items-start gap-2">
-                              <span className="font-semibold text-gray-700 dark:text-gray-300 min-w-[80px]">Short Name:</span>
-                              <span className="text-gray-600 dark:text-gray-400">{institute.shortName}</span>
+                              <span className="font-semibold text-foreground min-w-[80px]">Short Name:</span>
+                              <span className="text-muted-foreground">{institute.shortName}</span>
                             </div>}
                           {institute.email && <div className="flex items-start gap-2">
-                              <Mail className="h-4 w-4 text-gray-500 mt-0.5" />
-                              <span className="text-gray-600 dark:text-gray-400 break-all">{institute.email}</span>
+                              <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
+                              <span className="text-muted-foreground break-all">{institute.email}</span>
                             </div>}
                           {institute.phone && <div className="flex items-start gap-2">
-                              <Phone className="h-4 w-4 text-gray-500 mt-0.5" />
-                              <span className="text-gray-600 dark:text-gray-400">{institute.phone}</span>
+                              <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
+                              <span className="text-muted-foreground">{institute.phone}</span>
                             </div>}
                           {institute.address && <div className="flex items-start gap-2">
-                              <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
-                              <span className="text-gray-600 dark:text-gray-400">
+                              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                              <span className="text-muted-foreground">
                                 {institute.address}
                                 {institute.city && `, ${institute.city}`}
                                 {institute.state && `, ${institute.state}`}
                                 {institute.country && `, ${institute.country}`}
                               </span>
-                            </div>}
-                          {(institute as any).district && <div className="flex items-start gap-2">
-                              <span className="font-semibold text-gray-700 dark:text-gray-300 min-w-[80px]">District:</span>
-                              <span className="text-gray-600 dark:text-gray-400">{(institute as any).district}</span>
-                            </div>}
-                          {(institute as any).province && <div className="flex items-start gap-2">
-                              <span className="font-semibold text-gray-700 dark:text-gray-300 min-w-[80px]">Province:</span>
-                              <span className="text-gray-600 dark:text-gray-400">{(institute as any).province}</span>
-                            </div>}
-                          {(institute as any).pinCode && <div className="flex items-start gap-2">
-                              <span className="font-semibold text-gray-700 dark:text-gray-300 min-w-[80px]">PIN Code:</span>
-                              <span className="text-gray-600 dark:text-gray-400">{(institute as any).pinCode}</span>
-                            </div>}
-                          {(institute as any).vision && <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                              <span className="font-semibold text-gray-700 dark:text-gray-300 block mb-1">Vision:</span>
-                              <p className="text-gray-600 dark:text-gray-400 text-xs">{(institute as any).vision}</p>
-                            </div>}
-                          {(institute as any).mission && <div>
-                              <span className="font-semibold text-gray-700 dark:text-gray-300 block mb-1">Mission:</span>
-                              <p className="text-gray-600 dark:text-gray-400 text-xs">{(institute as any).mission}</p>
                             </div>}
                         </div>
                       </div>}
@@ -374,11 +358,11 @@ const InstituteSelector = ({
 
                   {/* Action Buttons */}
                   <div className="p-6 pt-0 space-y-2">
-                    <button onClick={() => setExpandedInstituteId(showSocial ? null : institute.id)} className="select-none rounded-lg bg-gray-100 dark:bg-gray-700 py-3 px-6 w-full text-center align-middle font-sans text-xs font-bold uppercase text-gray-900 dark:text-white shadow-md transition-all hover:shadow-lg focus:opacity-[0.85] focus:shadow-none active:opacity-[0.85] active:shadow-none">
-                      {showSocial ? 'Hide Details' : 'Read More'}
+                    <button onClick={() => setExpandedInstituteId(showSocial ? null : institute.id)} className="w-full select-none rounded-lg bg-muted py-3 px-6 text-center align-middle font-sans text-xs font-bold uppercase text-foreground shadow-sm transition-all hover:shadow-md active:opacity-90">
+                      {showSocial ? 'Show Less' : 'Read More'}
                     </button>
                     
-                    <button onClick={() => handleSelectInstitute(institute)} className="select-none rounded-lg bg-blue-500 py-3 px-6 w-full text-center align-middle font-sans text-xs font-bold uppercase text-white shadow-md shadow-blue-500/20 transition-all hover:shadow-lg hover:shadow-blue-500/40 focus:opacity-[0.85] focus:shadow-none active:opacity-[0.85] active:shadow-none">
+                    <button onClick={() => handleSelectInstitute(institute)} className="w-full select-none rounded-lg bg-primary py-3 px-6 text-center align-middle font-sans text-xs font-bold uppercase text-primary-foreground shadow-md shadow-primary/20 transition-all hover:shadow-lg hover:shadow-primary/40 active:opacity-90">
                       Select Institute
                     </button>
                   </div>

@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { useContextUrlSync, extractPageFromUrl } from '@/utils/pageNavigation';
 import { useRouteContext } from '@/hooks/useRouteContext';
+import { useMobilePermissions } from '@/hooks/useMobilePermissions';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Building2, BookOpen, GraduationCap, User, Palette, Menu, X, ArrowLeft } from 'lucide-react';
@@ -100,6 +101,9 @@ const AppContent = ({ initialPage }: AppContentProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [hasNavigatedAfterLogin, setHasNavigatedAfterLogin] = React.useState(false);
+  
+  // 📱 Mobile permissions hook - handles permission prompts after login on mobile
+  const { isRequesting: isRequestingPermissions, permissionStatus } = useMobilePermissions();
   
   // Sync URL context with AuthContext and validate access (403 if unauthorized)
   const { isValidating, instituteId: urlInstituteId } = useRouteContext();
@@ -541,6 +545,9 @@ const AppContent = ({ initialPage }: AppContentProps) => {
           return <Profile />;
         case 'settings':
           return <Settings />;
+        case 'notifications':
+        case 'institute-notifications':
+          return <NotificationsPage />;
         default:
           return <Dashboard />;
       }
@@ -617,6 +624,9 @@ const AppContent = ({ initialPage }: AppContentProps) => {
           return <SubjectPaymentSubmissions />;
         case 'my-children':
           return <MyChildren />;
+        case 'notifications':
+        case 'institute-notifications':
+          return <NotificationsPage />;
         default:
           return <Dashboard />;
       }
@@ -670,6 +680,9 @@ const AppContent = ({ initialPage }: AppContentProps) => {
           return <ParentChildrenSelector />;
         case 'appearance':
           return <Appearance />;
+        case 'notifications':
+        case 'institute-notifications':
+          return <NotificationsPage />;
         default:
           return <ParentChildrenSelector />;
       }

@@ -1,37 +1,25 @@
 // src/hooks/usePushNotifications.ts
 import { useEffect, useState, useCallback } from 'react';
-import { pushNotificationService } from '../services/pushNotificationService';
+import { pushNotificationService, NotificationPayload } from '../services/pushNotificationService';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface PushNotificationPayload {
-  notification?: {
-    title?: string;
-    body?: string;
-    icon?: string;
-    image?: string;
-  };
-  data?: {
-    notificationId?: string;
-    actionUrl?: string;
-    scope?: string;
-    instituteId?: string;
-    [key: string]: string | undefined;
-  };
-}
 
 export const usePushNotifications = () => {
   const { user } = useAuth();
-  const [latestNotification, setLatestNotification] = useState<PushNotificationPayload | null>(null);
+  const [latestNotification, setLatestNotification] = useState<NotificationPayload | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
-  const [permissionStatus, setPermissionStatus] = useState<NotificationPermission | 'unsupported'>('default');
+  const [permissionStatus, setPermissionStatus] = useState<'granted' | 'denied' | 'default' | 'unsupported'>('default');
 
   // Check permission status on mount
   useEffect(() => {
-    setPermissionStatus(pushNotificationService.getPermissionStatus());
+    const checkPermission = async () => {
+      const status = await pushNotificationService.getPermissionStatus();
+      setPermissionStatus(status);
+    };
+    checkPermission();
   }, []);
 
-  // Register FCM token when user is logged in
+  // Register push token when user is logged in
   useEffect(() => {
     if (!user?.id) {
       setIsRegistered(false);
@@ -44,7 +32,7 @@ export const usePushNotifications = () => {
         if (result) {
           setIsRegistered(true);
           setPermissionStatus('granted');
-          console.log('✅ Push notifications registered successfully');
+          console.log(`✅ Push notifications registered successfully (${pushNotificationService.getPlatform()})`);
         }
       } catch (error) {
         console.error('Failed to register push notifications:', error);
@@ -52,7 +40,7 @@ export const usePushNotifications = () => {
     };
 
     // Only register if permission is granted or default (will prompt)
-    if (permissionStatus !== 'denied') {
+    if (permissionStatus !== 'denied' && permissionStatus !== 'unsupported') {
       registerToken();
     }
   }, [user?.id, permissionStatus]);
@@ -68,6 +56,22 @@ export const usePushNotifications = () => {
 
       // Auto-hide toast after 5 seconds
       setTimeout(() => setShowToast(false), 5000);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [user?.id]);
+
+  // Listen for notification clicks (native)
+  useEffect(() => {
+    if (!user?.id || !pushNotificationService.isNative()) return;
+
+    const unsubscribe = pushNotificationService.onNotificationClick((payload) => {
+      console.log('📱 Notification clicked:', payload);
+      if (payload.data?.actionUrl) {
+        window.location.href = payload.data.actionUrl;
+      }
     });
 
     return () => {
@@ -100,6 +104,8 @@ export const usePushNotifications = () => {
     isRegistered,
     permissionStatus,
     requestPermission,
-    isSupported: pushNotificationService.isSupported()
+    isSupported: pushNotificationService.isSupported(),
+    isNative: pushNotificationService.isNative(),
+    platform: pushNotificationService.getPlatform()
   };
 };

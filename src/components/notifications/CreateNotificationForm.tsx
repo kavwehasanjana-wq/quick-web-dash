@@ -1,5 +1,5 @@
 // src/components/notifications/CreateNotificationForm.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   adminNotificationService,
   NotificationScope,
@@ -26,9 +26,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { toast } from 'sonner';
-import { Loader2, Send, Clock, Bell } from 'lucide-react';
+import { Loader2, Send, Clock, Bell, ChevronsUpDown, Check } from 'lucide-react';
 import { apiClient } from '@/api/client';
+import { cn } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -80,14 +94,25 @@ export const CreateNotificationForm: React.FC<Props> = ({ open, onOpenChange, on
   const [loadingClasses, setLoadingClasses] = useState(false);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
 
-  // Fetch classes when scope requires it
+  // State for searchable dropdowns
+  const [classSearchOpen, setClassSearchOpen] = useState(false);
+  const [subjectSearchOpen, setSubjectSearchOpen] = useState(false);
+  const [classSearchQuery, setClassSearchQuery] = useState('');
+  const [subjectSearchQuery, setSubjectSearchQuery] = useState('');
+
+  // Fetch classes when scope requires it - NEW API: /institute-classes/institute/{instituteId}
   useEffect(() => {
     if ((scope === NotificationScope.CLASS || scope === NotificationScope.SUBJECT) && selectedInstitute?.id) {
       setLoadingClasses(true);
-      apiClient.get<any>(`/institutes/${selectedInstitute.id}/classes`)
+      setSelectedClassId('');
+      setSelectedSubjectId('');
+      apiClient.get<any>(`/institute-classes/institute/${selectedInstitute.id}`)
         .then((response) => {
           const classData = Array.isArray(response) ? response : response?.data || [];
-          setClasses(classData.map((c: any) => ({ id: c.id, name: c.name || c.className })));
+          setClasses(classData.map((c: any) => ({ 
+            id: c.id || c.classId, 
+            name: c.name || c.className || c.class?.name 
+          })));
         })
         .catch((error) => {
           console.error('Failed to fetch classes:', error);
@@ -97,16 +122,17 @@ export const CreateNotificationForm: React.FC<Props> = ({ open, onOpenChange, on
     }
   }, [scope, selectedInstitute?.id]);
 
-  // Fetch subjects when class is selected
+  // Fetch subjects when class is selected - NEW API: /institutes/{instituteId}/classes/{classId}/subjects
   useEffect(() => {
-    if (scope === NotificationScope.SUBJECT && selectedClassId) {
+    if (scope === NotificationScope.SUBJECT && selectedClassId && selectedInstitute?.id) {
       setLoadingSubjects(true);
-      apiClient.get<any>(`/classes/${selectedClassId}/subjects`)
+      setSelectedSubjectId('');
+      apiClient.get<any>(`/institutes/${selectedInstitute.id}/classes/${selectedClassId}/subjects`)
         .then((response) => {
           const subjectData = Array.isArray(response) ? response : response?.data || [];
           setSubjects(subjectData.map((s: any) => ({ 
-            id: s.id, 
-            name: s.name || s.subjectName,
+            id: s.subjectId || s.id, 
+            name: s.subject?.name || s.name || s.subjectName,
             classId: selectedClassId 
           })));
         })
@@ -116,7 +142,23 @@ export const CreateNotificationForm: React.FC<Props> = ({ open, onOpenChange, on
         })
         .finally(() => setLoadingSubjects(false));
     }
-  }, [scope, selectedClassId]);
+  }, [scope, selectedClassId, selectedInstitute?.id]);
+
+  // Filtered classes based on search
+  const filteredClasses = useMemo(() => {
+    if (!classSearchQuery) return classes;
+    return classes.filter(c => 
+      c.name?.toLowerCase().includes(classSearchQuery.toLowerCase())
+    );
+  }, [classes, classSearchQuery]);
+
+  // Filtered subjects based on search
+  const filteredSubjects = useMemo(() => {
+    if (!subjectSearchQuery) return subjects;
+    return subjects.filter(s => 
+      s.name?.toLowerCase().includes(subjectSearchQuery.toLowerCase())
+    );
+  }, [subjects, subjectSearchQuery]);
 
   // Available scopes based on user role
   const getAvailableScopes = (): { value: NotificationScope; label: string }[] => {
@@ -282,49 +324,121 @@ export const CreateNotificationForm: React.FC<Props> = ({ open, onOpenChange, on
             </Select>
           </div>
 
-          {/* Class Selection */}
+          {/* Class Selection with Search */}
           {(scope === NotificationScope.CLASS || scope === NotificationScope.SUBJECT) && (
             <div className="space-y-2">
               <Label>Select Class *</Label>
-              <Select 
-                value={selectedClassId} 
-                onValueChange={setSelectedClassId}
-                disabled={loadingClasses}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={loadingClasses ? "Loading..." : "Select a class"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {classes.map((cls) => (
-                    <SelectItem key={cls.id} value={cls.id}>
-                      {cls.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={classSearchOpen} onOpenChange={setClassSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={classSearchOpen}
+                    className="w-full justify-between"
+                    disabled={loadingClasses}
+                  >
+                    {loadingClasses 
+                      ? "Loading..." 
+                      : selectedClassId 
+                        ? classes.find(c => c.id === selectedClassId)?.name || "Select a class"
+                        : "Select a class"
+                    }
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput 
+                      placeholder="Search classes..." 
+                      value={classSearchQuery}
+                      onValueChange={setClassSearchQuery}
+                    />
+                    <CommandList>
+                      <CommandEmpty>No class found.</CommandEmpty>
+                      <CommandGroup>
+                        {filteredClasses.map((cls) => (
+                          <CommandItem
+                            key={cls.id}
+                            value={cls.name}
+                            onSelect={() => {
+                              setSelectedClassId(cls.id);
+                              setClassSearchOpen(false);
+                              setClassSearchQuery('');
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedClassId === cls.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {cls.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           )}
 
-          {/* Subject Selection */}
+          {/* Subject Selection with Search */}
           {scope === NotificationScope.SUBJECT && selectedClassId && (
             <div className="space-y-2">
               <Label>Select Subject *</Label>
-              <Select 
-                value={selectedSubjectId} 
-                onValueChange={setSelectedSubjectId}
-                disabled={loadingSubjects}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={loadingSubjects ? "Loading..." : "Select a subject"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {subjects.map((sub) => (
-                    <SelectItem key={sub.id} value={sub.id}>
-                      {sub.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={subjectSearchOpen} onOpenChange={setSubjectSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={subjectSearchOpen}
+                    className="w-full justify-between"
+                    disabled={loadingSubjects}
+                  >
+                    {loadingSubjects 
+                      ? "Loading..." 
+                      : selectedSubjectId 
+                        ? subjects.find(s => s.id === selectedSubjectId)?.name || "Select a subject"
+                        : "Select a subject"
+                    }
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput 
+                      placeholder="Search subjects..." 
+                      value={subjectSearchQuery}
+                      onValueChange={setSubjectSearchQuery}
+                    />
+                    <CommandList>
+                      <CommandEmpty>No subject found.</CommandEmpty>
+                      <CommandGroup>
+                        {filteredSubjects.map((sub) => (
+                          <CommandItem
+                            key={sub.id}
+                            value={sub.name}
+                            onSelect={() => {
+                              setSelectedSubjectId(sub.id);
+                              setSubjectSearchOpen(false);
+                              setSubjectSearchQuery('');
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedSubjectId === sub.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {sub.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           )}
 

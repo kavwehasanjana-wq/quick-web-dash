@@ -280,21 +280,22 @@ export const NotificationManagement: React.FC<NotificationManagementProps> = ({
   return (
     <>
       <Card>
-        <CardHeader className="space-y-4">
-          <div className="flex flex-row items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-3">
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                Notification Management
+        <CardHeader className="space-y-3 sm:space-y-4 p-3 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <CardTitle className="flex items-center gap-1 sm:gap-2 text-base sm:text-lg">
+                <Bell className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                <span className="truncate">Notification Management</span>
               </CardTitle>
-              <Badge variant="secondary">{total} total</Badge>
+              <Badge variant="secondary" className="text-xs">{total} total</Badge>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={loadNotifications}
                 disabled={loading}
+                className="h-8 w-8 p-0 sm:h-9 sm:w-9"
               >
                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               </Button>
@@ -307,11 +308,11 @@ export const NotificationManagement: React.FC<NotificationManagementProps> = ({
           </div>
 
           {/* Filters */}
-          <div className="flex flex-wrap gap-3">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            <div className="flex items-center gap-1 sm:gap-2">
+              <Filter className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
               <Select value={scopeFilter} onValueChange={(v) => { setScopeFilter(v); setPage(1); }}>
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger className="w-[100px] sm:w-[140px] h-8 sm:h-10 text-xs sm:text-sm">
                   <SelectValue placeholder="Scope" />
                 </SelectTrigger>
                 <SelectContent>
@@ -322,7 +323,7 @@ export const NotificationManagement: React.FC<NotificationManagementProps> = ({
               </Select>
             </div>
             <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[100px] sm:w-[140px] h-8 sm:h-10 text-xs sm:text-sm">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>

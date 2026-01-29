@@ -125,22 +125,23 @@ export const SystemNotifications: React.FC = () => {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <div className="flex items-center gap-3">
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 space-y-0 p-3 sm:p-6 pb-3 sm:pb-4">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <CardTitle className="flex items-center gap-1 sm:gap-2 text-base sm:text-lg">
+            <Bell className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
             Notifications
           </CardTitle>
           {unreadCount > 0 && (
-            <Badge variant="destructive">{unreadCount} unread</Badge>
+            <Badge variant="destructive" className="text-xs">{unreadCount} unread</Badge>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <Button
             variant="ghost"
             size="sm"
             onClick={handleRefresh}
             disabled={loading}
+            className="h-8 w-8 p-0 sm:h-9 sm:w-9"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
@@ -149,9 +150,11 @@ export const SystemNotifications: React.FC = () => {
               variant="outline"
               size="sm"
               onClick={handleMarkAllAsRead}
+              className="text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
             >
-              <CheckCheck className="h-4 w-4 mr-1" />
-              Mark all read
+              <CheckCheck className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+              <span className="hidden sm:inline">Mark all read</span>
+              <span className="sm:hidden">Read all</span>
             </Button>
           )}
         </div>

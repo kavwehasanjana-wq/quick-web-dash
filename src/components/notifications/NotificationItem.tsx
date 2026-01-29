@@ -72,20 +72,20 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
     <div
       onClick={handleClick}
       className={cn(
-        'flex gap-3 p-4 cursor-pointer transition-colors border-b last:border-b-0',
+        'flex gap-2 sm:gap-3 p-3 sm:p-4 cursor-pointer transition-colors border-b last:border-b-0',
         notification.isRead
           ? 'bg-background hover:bg-muted/50'
           : 'bg-primary/5 hover:bg-primary/10'
       )}
     >
       {/* Icon */}
-      <div className="flex-shrink-0 mt-1">
+      <div className="flex-shrink-0 mt-0.5 sm:mt-1">
         {notification.icon ? (
-          <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-            <Megaphone className="h-5 w-5 text-primary" />
+          <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-muted flex items-center justify-center">
+            <Megaphone className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           </div>
         ) : (
-          <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+          <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-muted flex items-center justify-center">
             <PriorityIcon priority={notification.priority} />
           </div>
         )}
@@ -93,53 +93,53 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start justify-between gap-1 sm:gap-2">
           <h4 className={cn(
-            'text-sm font-medium line-clamp-1',
+            'text-xs sm:text-sm font-medium line-clamp-2 sm:line-clamp-1',
             !notification.isRead && 'font-semibold'
           )}>
             {notification.title}
           </h4>
           {!notification.isRead && (
-            <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0 mt-1.5" />
+            <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-primary flex-shrink-0 mt-1 sm:mt-1.5" />
           )}
         </div>
         
-        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+        <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mt-0.5 sm:mt-1">
           {notification.body}
         </p>
 
         {/* Meta info */}
-        <div className="flex items-center gap-2 mt-2 flex-wrap">
-          <Badge variant="secondary" className={cn('text-xs', scopeColors[notification.scope])}>
+        <div className="flex items-center gap-1 sm:gap-2 mt-1.5 sm:mt-2 flex-wrap">
+          <Badge variant="secondary" className={cn('text-[10px] sm:text-xs px-1 sm:px-2 py-0 sm:py-0.5', scopeColors[notification.scope])}>
             {notification.scope}
           </Badge>
           
           {notification.priority !== 'NORMAL' && (
-            <Badge variant="secondary" className={cn('text-xs', priorityColors[notification.priority])}>
+            <Badge variant="secondary" className={cn('text-[10px] sm:text-xs px-1 sm:px-2 py-0 sm:py-0.5', priorityColors[notification.priority])}>
               {notification.priority}
             </Badge>
           )}
 
           {notification.targetClassName && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-[10px] sm:text-xs text-muted-foreground truncate max-w-[80px] sm:max-w-none">
               {notification.targetClassName}
             </span>
           )}
 
           {notification.targetSubjectName && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-[10px] sm:text-xs text-muted-foreground truncate max-w-[60px] sm:max-w-none">
               • {notification.targetSubjectName}
             </span>
           )}
 
-          <span className="text-xs text-muted-foreground ml-auto">
+          <span className="text-[10px] sm:text-xs text-muted-foreground ml-auto flex-shrink-0">
             {formatDate(notification.createdAt)}
           </span>
         </div>
 
         {notification.senderName && (
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 truncate">
             From: {notification.senderName}
           </p>
         )}
