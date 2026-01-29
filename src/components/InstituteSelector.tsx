@@ -259,7 +259,9 @@ const InstituteSelector = ({
             </Button>
           </div>
 
-          <div className={`grid gap-4 md:gap-6 pt-4 md:pt-8 mb-8 grid-cols-1 sm:grid-cols-2 ${sidebarCollapsed ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+          <div
+            className={`grid grid-cols-1 sm:grid-cols-2 ${sidebarCollapsed ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-x-4 gap-y-10 sm:gap-x-6 sm:gap-y-12 lg:gap-y-10 pt-4 md:pt-8 mb-10`}
+          >
             {institutes.map(institute => {
           const showSocial = expandedInstituteId === institute.id;
           return <div key={institute.id} className="relative flex w-full flex-col rounded-xl bg-card bg-clip-border text-card-foreground shadow-md hover:shadow-lg transition-all duration-300">
@@ -357,7 +359,7 @@ const InstituteSelector = ({
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="p-6 pt-0 space-y-2">
+                  <div className="p-6 pt-0 space-y-3">
                     <button onClick={() => setExpandedInstituteId(showSocial ? null : institute.id)} className="w-full select-none rounded-lg bg-muted py-3 px-6 text-center align-middle font-sans text-xs font-bold uppercase text-foreground shadow-sm transition-all hover:shadow-md active:opacity-90">
                       {showSocial ? 'Show Less' : 'Read More'}
                     </button>
