@@ -374,14 +374,14 @@ const SubjectSelector = () => {
           </p>
         </div> : <div>
           {/* Unified Card View - Same size on all devices */}
-          <div className={`grid gap-6 pt-8 mb-8 justify-items-center grid-cols-1 sm:grid-cols-2 ${sidebarCollapsed ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+          <div className={`grid gap-4 md:gap-6 pt-4 md:pt-8 mb-8 grid-cols-1 sm:grid-cols-2 ${sidebarCollapsed ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
             {subjectsData.map(subject => {
               const showMore = expandedSubjectId === subject.id;
               
               return (
                 <div 
                   key={subject.id} 
-                  className="relative flex w-80 flex-col rounded-xl bg-card bg-clip-border text-card-foreground shadow-md hover:shadow-lg transition-all duration-300"
+                  className="relative flex w-full flex-col rounded-xl bg-card bg-clip-border text-card-foreground shadow-md hover:shadow-lg transition-all duration-300"
                 >
                   {/* Subject Image - Gradient Header */}
                   <div className="relative mx-4 -mt-6 h-40 overflow-hidden rounded-xl bg-clip-border text-white shadow-lg shadow-primary/40 bg-gradient-to-r from-primary to-primary/80">
