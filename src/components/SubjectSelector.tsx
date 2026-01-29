@@ -374,7 +374,7 @@ const SubjectSelector = () => {
           </p>
         </div> : <div>
           {/* Unified Card View - Same size on all devices */}
-          <div className="flex flex-wrap justify-center gap-6 pt-8 mb-8">
+          <div className={`grid gap-6 pt-8 mb-8 justify-items-center grid-cols-1 sm:grid-cols-2 ${sidebarCollapsed ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
             {subjectsData.map(subject => {
               const showMore = expandedSubjectId === subject.id;
               
