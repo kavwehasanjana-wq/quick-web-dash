@@ -94,6 +94,8 @@ import TeacherEnrollmentManagement from '@/pages/TeacherEnrollmentManagement';
 import NotificationsPage from '@/pages/NotificationsPage';
 import CalendarManagementPage from '@/components/calendar/CalendarManagementPage';
 import AdminAttendancePage from '@/components/admin-attendance/AdminAttendancePage';
+import CalendarMonthView from '@/components/CalendarMonthView';
+import TodayDashboard from '@/components/TodayDashboard';
 
 interface AppContentProps {
   initialPage?: string;
@@ -703,6 +705,10 @@ const AppContent = ({ initialPage }: AppContentProps) => {
         case 'notifications':
         case 'institute-notifications':
           return <NotificationsPage />;
+        case 'calendar-view':
+          return <CalendarMonthView />;
+        case 'today-dashboard':
+          return <TodayDashboard />;
         case 'settings':
           return <Settings />;
         default:
@@ -864,6 +870,10 @@ const AppContent = ({ initialPage }: AppContentProps) => {
           return <SubjectPaymentSubmissions />;
         case 'enrollment-management':
           return <TeacherEnrollmentManagement />;
+        case 'calendar-view':
+          return <CalendarMonthView />;
+        case 'today-dashboard':
+          return <TodayDashboard />;
         case 'notifications':
         case 'institute-notifications':
           return <NotificationsPage />;
@@ -947,6 +957,8 @@ const AppContent = ({ initialPage }: AppContentProps) => {
       'notifications',
       'institute-notifications',
       'calendar-management',
+      'calendar-view',
+      'today-dashboard',
       'admin-attendance'
     ];
     
@@ -1106,6 +1118,10 @@ const AppContent = ({ initialPage }: AppContentProps) => {
         return <TeacherEnrollmentManagement />;
       case 'calendar-management':
         return <CalendarManagementPage />;
+      case 'calendar-view':
+        return <CalendarMonthView />;
+      case 'today-dashboard':
+        return <TodayDashboard />;
       case 'admin-attendance':
         return <AdminAttendancePage />;
       case 'my-children':

@@ -38,7 +38,9 @@ import {
   MessageSquare,
   Wifi,
   Lock,
-  Bell
+  Bell,
+  Calendar,
+  CalendarDays
 } from 'lucide-react';
 import surakshaLogoSidebar from '@/assets/suraksha-logo-sidebar.png';
 
@@ -1086,6 +1088,13 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     // Default attendance items for other roles
     const attendanceItems = [
       {
+        id: 'today-dashboard',
+        label: 'Today',
+        icon: CalendarDays,
+        permission: 'view-attendance',
+        alwaysShow: false
+      },
+      {
         id: 'daily-attendance',
         label: 'Daily Attendance',
         icon: UserCheck,
@@ -1105,6 +1114,13 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         icon: QrCode,
         permission: 'mark-attendance',
         alwaysShow: userRole === 'AttendanceMarker' // Always show for AttendanceMarker
+      },
+      {
+        id: 'calendar-view',
+        label: 'Calendar View',
+        icon: Calendar,
+        permission: 'view-attendance',
+        alwaysShow: false
       }
     ];
 

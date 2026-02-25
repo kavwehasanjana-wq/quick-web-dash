@@ -26,6 +26,8 @@ import {
   Bell,
   ImageIcon,
   Camera,
+  Calendar,
+  CalendarDays,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -106,6 +108,8 @@ const MobileDashboard = () => {
           title: 'Navigation',
           items: [
             { id: 'select-class', label: 'Select Class', icon: School, description: 'Choose your class', color: nextColor() },
+            { id: 'today-dashboard', label: 'Today', icon: CalendarDays, description: 'Today\'s schedule', color: nextColor() },
+            { id: 'calendar-view', label: 'Calendar', icon: Calendar, description: 'Month calendar', color: nextColor() },
             { id: 'my-attendance', label: 'My Attendance', icon: UserCheck, description: 'View attendance records', color: nextColor() },
             { id: 'institute-lectures', label: 'Institute Lectures', icon: Video, description: 'Watch lectures', color: nextColor() },
           ],
@@ -139,6 +143,8 @@ const MobileDashboard = () => {
             { id: 'institute-subjects', label: `Institute ${subjectLabel}s`, icon: BookOpen, description: `All ${subjectLabel.toLowerCase()}s`, color: nextColor() },
             { id: 'select-class', label: 'Select Class', icon: School, description: 'Choose a class', color: nextColor() },
             { id: 'select-subject', label: isTuitionInstitute ? 'Select Sub Class' : 'Select Subject', icon: BookOpen, description: `Choose a ${subjectLabel.toLowerCase()}`, color: nextColor() },
+            { id: 'today-dashboard', label: 'Today', icon: CalendarDays, description: 'Today\'s schedule', color: nextColor() },
+            { id: 'calendar-view', label: 'Calendar', icon: Calendar, description: 'Month calendar', color: nextColor() },
             { id: 'institute-lectures', label: 'Institute Lectures', icon: Video, description: 'All lectures', color: nextColor() },
           ],
         });
@@ -207,8 +213,10 @@ const MobileDashboard = () => {
         sections.push({
           title: 'Attendance',
           items: [
+            { id: 'today-dashboard', label: 'Today', icon: CalendarDays, description: 'Today\'s schedule', color: nextColor() },
             { id: 'daily-attendance', label: 'Daily Attendance', icon: UserCheck, description: 'Mark & view', color: nextColor() },
             { id: 'qr-attendance', label: 'Mark Attendance', icon: QrCode, description: 'QR code scan', color: nextColor() },
+            { id: 'calendar-view', label: 'Calendar', icon: Calendar, description: 'Month calendar', color: nextColor() },
           ],
         });
         sections.push({
