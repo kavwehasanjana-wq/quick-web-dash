@@ -24,6 +24,20 @@ export const useContextUrlSync = (currentPage: string) => {
 
   // Track if this is initial mount to avoid redirect loops
   const isInitialMount = React.useRef(true);
+  // Debounce ref to prevent rapid successive navigations
+  const lastNavigatedUrl = React.useRef(location.pathname);
+  // Prevent sync when useRouteContext is actively setting selections
+  const skipNextSync = React.useRef(false);
+
+  // Track previous selection IDs to only react to actual changes
+  const prevSelectionRef = React.useRef({
+    instituteId: selectedInstitute?.id,
+    classId: selectedClass?.id,
+    subjectId: selectedSubject?.id,
+    childId: selectedChild?.id,
+    organizationId: selectedOrganization?.id,
+    transportId: selectedTransport?.id
+  });
 
   useEffect(() => {
     // Skip on initial mount if URL already has context - let useRouteContext handle it
@@ -34,13 +48,13 @@ export const useContextUrlSync = (currentPage: string) => {
                          location.pathname.includes('/organization/') ||
                          location.pathname.includes('/transport/');
       if (hasContext) {
-        console.log('⏭️ [PageNav] Skipping initial URL sync - URL has context, letting useRouteContext load it');
         return;
       }
     }
 
-    // Build context from current selections
-    const context = {
+    // Check if selections actually changed (not just re-renders)
+    const prev = prevSelectionRef.current;
+    const currentIds = {
       instituteId: selectedInstitute?.id,
       classId: selectedClass?.id,
       subjectId: selectedSubject?.id,
@@ -48,45 +62,44 @@ export const useContextUrlSync = (currentPage: string) => {
       organizationId: selectedOrganization?.id,
       transportId: selectedTransport?.id
     };
+
+    const selectionChanged = 
+      prev.instituteId !== currentIds.instituteId ||
+      prev.classId !== currentIds.classId ||
+      prev.subjectId !== currentIds.subjectId ||
+      prev.childId !== currentIds.childId ||
+      prev.organizationId !== currentIds.organizationId ||
+      prev.transportId !== currentIds.transportId;
+
+    prevSelectionRef.current = currentIds;
+
+    // If selections didn't change, skip navigation
+    if (!selectionChanged) return;
+
+    const context = currentIds;
     
-    // Derive effective page from URL if needed
     const derivedPage = extractPageFromUrl(location.pathname);
     const effectivePage = (!currentPage || currentPage.includes('/')) ? derivedPage : currentPage;
+
+    // Skip selection step routes
+    if (
+      effectivePage.startsWith('select-') ||
+      location.pathname.includes('/select-institute') ||
+      location.pathname.includes('/select-class') ||
+      location.pathname.includes('/select-subject')
+    ) {
+      return;
+    }
     
-    // Build context-aware URL
     const contextUrl = buildSidebarUrl(effectivePage, context);
     
-    // Parse current URL context
-    const currentContext = parseContextIds(location.pathname);
-    
-    // Check if we need to update URL
-    const needsUpdate = 
-      currentContext.instituteId !== context.instituteId?.toString() ||
-      currentContext.classId !== context.classId?.toString() ||
-      currentContext.subjectId !== context.subjectId?.toString() ||
-      currentContext.childId !== context.childId?.toString() ||
-      currentContext.organizationId !== context.organizationId?.toString() ||
-      currentContext.transportId !== context.transportId?.toString();
-    
-    // Only update if context changed and URLs are different
-    if (needsUpdate && location.pathname !== contextUrl) {
-      // CRITICAL: Preserve ALL query params
+    // Only navigate if URL actually differs AND we haven't just navigated there
+    if (location.pathname !== contextUrl && lastNavigatedUrl.current !== contextUrl) {
       const searchParams = new URLSearchParams(location.search);
       const queryString = searchParams.toString();
       const fullUrl = contextUrl + (queryString ? `?${queryString}` : '');
       
-      console.log('🔗 [PageNav] Updating URL with context:', {
-        from: location.pathname,
-        to: fullUrl,
-        queryParams: Object.fromEntries(searchParams.entries()),
-        reason: 'Context changed',
-        context: {
-          institute: selectedInstitute?.name,
-          class: selectedClass?.name,
-          subject: selectedSubject?.name
-        }
-      });
-      
+      lastNavigatedUrl.current = contextUrl;
       navigate(fullUrl, { replace: true });
     }
   }, [
@@ -233,7 +246,7 @@ export const buildSidebarUrl = (
 
   // Pages that must ALWAYS be global (no institute/class/subject prefix)
   // These are dedicated top-level routes like "/id-cards".
-  const globalPages = new Set(['id-cards', 'card-demo']);
+  const globalPages = new Set(['id-cards', 'card-demo', 'profile']);
   if (globalPages.has(page)) {
     return `/${pagePath}`;
   }

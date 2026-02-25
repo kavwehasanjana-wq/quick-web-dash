@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Bell, CheckCheck, RefreshCw } from 'lucide-react';
 import { notificationApiService, Notification } from '@/services/notificationApiService';
-import { NotificationItem } from './NotificationItem';
+import { DateGroupedNotifications } from './DateGroupedNotifications';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +31,10 @@ export const SystemNotifications: React.FC = () => {
       });
       setNotifications(result.data || []);
       setTotalPages(result.totalPages || 1);
+      // Use unreadCount from response if available
+      if (result.unreadCount !== undefined) {
+        setUnreadCount(result.unreadCount);
+      }
     } catch (error) {
       console.error('Failed to load notifications:', error);
       toast({
@@ -167,16 +171,11 @@ export const SystemNotifications: React.FC = () => {
             <p className="text-muted-foreground">No notifications yet</p>
           </div>
         ) : (
-          <div className="divide-y">
-            {notifications.map((notification) => (
-              <NotificationItem
-                key={notification.id}
-                notification={notification}
-                onMarkAsRead={handleMarkAsRead}
-                onClick={handleNotificationClick}
-              />
-            ))}
-          </div>
+          <DateGroupedNotifications
+            notifications={notifications}
+            onMarkAsRead={handleMarkAsRead}
+            onClick={handleNotificationClick}
+          />
         )}
 
         {/* Pagination */}

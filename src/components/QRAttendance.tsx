@@ -14,9 +14,29 @@ import jsQR from 'jsqr';
 import { childAttendanceApi, MarkAttendanceByCardRequest, MarkAttendanceRequest } from '@/api/childAttendance.api';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { buildAttendanceAddress } from '@/utils/attendanceAddress';
+import { attendanceScanLog } from '@/utils/attendanceScanLog';
 import { AttendanceStatus, ALL_ATTENDANCE_STATUSES, ATTENDANCE_STATUS_CONFIG } from '@/types/attendance.types';
-import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
 import { Capacitor } from '@capacitor/core';
+import MobileScannerOverlay from '@/components/MobileScannerOverlay';
+
+// Dynamic import to avoid crash on web where the plugin isn't available
+let CapacitorBarcodeScanner: any = null;
+let CapacitorBarcodeScannerTypeHintALLOption: any = { ALL: 17 };
+let CapacitorBarcodeScannerCameraDirection: any = { BACK: 1 };
+
+const loadBarcodeScanner = async () => {
+  if (Capacitor.isNativePlatform() && !CapacitorBarcodeScanner) {
+    try {
+      const mod = await import('@capacitor/barcode-scanner');
+      CapacitorBarcodeScanner = mod.CapacitorBarcodeScanner;
+      CapacitorBarcodeScannerTypeHintALLOption = mod.CapacitorBarcodeScannerTypeHintALLOption;
+      CapacitorBarcodeScannerCameraDirection = mod.CapacitorBarcodeScannerCameraDirection;
+      console.log('✅ Barcode scanner plugin loaded');
+    } catch (e) {
+      console.warn('⚠️ Barcode scanner plugin not available:', e);
+    }
+  }
+};
 
 interface AttendanceAlert {
   id: string;
@@ -48,6 +68,7 @@ const QRAttendance = () => {
   const [isManualProcessing, setIsManualProcessing] = useState(false);
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [lastMarkedStudent, setLastMarkedStudent] = useState<{ name: string; status: AttendanceStatus } | null>(null);
+  const [isNativeScanning, setIsNativeScanning] = useState(false); // Track native scanner state
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -135,37 +156,47 @@ const QRAttendance = () => {
     setLocationLoading(true);
     console.log('Fetching location...');
     
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          console.log('GPS coordinates:', { latitude, longitude });
-          
-          try {
-            const address = await reverseGeocode(latitude, longitude);
-            setLocation({ latitude, longitude, address });
-            console.log('Location set:', { latitude, longitude, address });
-          } catch (error) {
-            console.log('Reverse geocoding failed, using coordinates');
-            const address = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-            setLocation({ latitude, longitude, address });
-          }
-          setLocationLoading(false);
-        },
-        (error) => {
-          console.log('Location access error:', error);
-          setLocation(null);
-          setLocationLoading(false);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 300000
-        }
-      );
-    } else {
-      console.log('Geolocation not supported');
+    try {
+      let latitude: number, longitude: number;
+      
+      if (Capacitor.isNativePlatform()) {
+        // Use Capacitor Geolocation on native
+        const { Geolocation } = await import('@capacitor/geolocation');
+        const permResult = await Geolocation.requestPermissions();
+        console.log('📱 Geolocation permission:', permResult);
+        const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 });
+        latitude = pos.coords.latitude;
+        longitude = pos.coords.longitude;
+      } else if (navigator.geolocation) {
+        // Use browser geolocation on web
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000
+          });
+        });
+        latitude = pos.coords.latitude;
+        longitude = pos.coords.longitude;
+      } else {
+        console.log('Geolocation not supported');
+        setLocation(null);
+        setLocationLoading(false);
+        return;
+      }
+      
+      console.log('GPS coordinates:', { latitude, longitude });
+      try {
+        const address = await reverseGeocode(latitude, longitude);
+        setLocation({ latitude, longitude, address });
+      } catch {
+        const address = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+        setLocation({ latitude, longitude, address });
+      }
+    } catch (error) {
+      console.log('Location access error:', error);
       setLocation(null);
+    } finally {
       setLocationLoading(false);
     }
   };
@@ -294,30 +325,50 @@ const QRAttendance = () => {
       
       // Use platform-aware camera access
       if (Capacitor.isNativePlatform()) {
-        // Mobile: Use Capacitor BarcodeScanner plugin
-        console.log('📱 Using Capacitor BarcodeScanner for mobile...');
+        // Mobile: Use @capacitor/barcode-scanner - opens native scanner
+        console.log('📱 Using @capacitor/barcode-scanner for mobile...');
+        await loadBarcodeScanner();
         
-        // Request camera permission
-        const status = await BarcodeScanner.checkPermission({ force: true });
-        
-        if (status.granted) {
-          // Hide background to show camera
-          document.body.classList.add('scanner-active');
-          await BarcodeScanner.hideBackground();
-          
-          // Start scanning
-          const result = await BarcodeScanner.startScan();
-          
-          if (result.hasContent) {
-            console.log('🎯 QR/Barcode detected:', result.content);
-            handleMarkAttendanceByCard(result.content.trim());
-            
-            // Continue scanning for next code
-            startCamera();
-          }
+        if (!CapacitorBarcodeScanner) {
+          console.warn('⚠️ Barcode scanner not available, falling back to web camera');
+          // Fall through to web camera below
         } else {
-          setCameraError('Camera permission denied. Please enable camera access in settings.');
-          console.log('❌ Camera permission denied');
+          setIsNativeScanning(true);
+          setIsScanning(true);
+          
+          // Start continuous scanning loop for native
+          const nativeScanLoop = async () => {
+            try {
+              while (true) {
+                const result = await CapacitorBarcodeScanner.scanBarcode({
+                  hint: CapacitorBarcodeScannerTypeHintALLOption.ALL,
+                  scanInstructions: 'Position QR code or barcode within the frame',
+                  scanButton: false,
+                  cameraDirection: CapacitorBarcodeScannerCameraDirection.BACK,
+                });
+                
+                if (result.ScanResult && result.ScanResult.trim()) {
+                  console.log('🎯 Native scan detected:', result.ScanResult);
+                  handleMarkAttendanceByCard(result.ScanResult.trim());
+                  
+                  // Brief pause, then scan again
+                  await new Promise(resolve => setTimeout(resolve, 1500));
+                } else {
+                  // User cancelled or empty result - stop scanning
+                  console.log('📱 Native scanner closed by user');
+                  break;
+                }
+              }
+            } catch (error) {
+              console.error('Native scan error:', error);
+            } finally {
+              setIsNativeScanning(false);
+              setIsScanning(false);
+            }
+          };
+          
+          nativeScanLoop();
+          return; // Don't continue to web camera setup
         }
       } else {
         // Web: Use getUserMedia API
@@ -411,11 +462,9 @@ const QRAttendance = () => {
       
       // Platform-specific cleanup
       if (Capacitor.isNativePlatform()) {
-        // Mobile: Stop BarcodeScanner and restore background
-        await BarcodeScanner.stopScan();
-        await BarcodeScanner.showBackground();
-        document.body.classList.remove('scanner-active');
-        console.log('✅ Capacitor BarcodeScanner stopped');
+        // Native scanner manages its own UI - just update state
+        setIsNativeScanning(false);
+        console.log('✅ Native scanner state cleared');
       } else {
         // Web: Stop media stream
         if (streamRef.current) {
@@ -432,6 +481,9 @@ const QRAttendance = () => {
       setIsScanning(false);
       setCameraError(null);
       console.log('✅ Camera stopped successfully');
+      
+      // Start 15-min auto-cleanup countdown for scan log
+      attendanceScanLog.endSession();
       
       addAlert({
         type: 'success',
@@ -505,6 +557,16 @@ const QRAttendance = () => {
         const timeStr = responseData.time || new Date().toLocaleTimeString();
         const attendanceStatus = responseData.status || request.status;
         
+        // Log to scan log for the overlay cards
+        attendanceScanLog.add({
+          success: true,
+          studentName,
+          studentId: studentIdFromResponse,
+          studentCardId: studentCardId.trim(),
+          imageUrl,
+          status: attendanceStatus,
+        });
+
         toast({
           title: attendanceStatus === 'present' ? 'Attendance Marked ✓' : 'Attendance Marked',
           description: `${studentName} - ${attendanceStatus.toUpperCase()} - ${dateStr} ${timeStr}`,
@@ -545,6 +607,13 @@ const QRAttendance = () => {
         errorMessage = error.message;
       }
       
+      // Log failure to scan log
+      attendanceScanLog.add({
+        success: false,
+        studentCardId: studentCardId.trim(),
+        errorMessage,
+      });
+
       addAlert({
         type: 'error',
         message: `❌ ${errorMessage}`
@@ -737,8 +806,9 @@ const QRAttendance = () => {
 
   return (
       <div className="min-h-screen bg-background">
+      
       {/* Attendance Alerts */}
-      <div className="fixed top-4 left-4 z-50 space-y-2 max-w-sm">
+      <div className="fixed top-4 left-4 z-50 space-y-2 max-w-sm pt-safe-top">
         {attendanceAlerts.map((alert) => (
           <Alert 
             key={alert.id}
@@ -1193,6 +1263,19 @@ const QRAttendance = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Scanner Overlay - renders on top when scanning */}
+      <MobileScannerOverlay
+        isActive={isScanning}
+        onClose={stopCamera}
+        scanMethod={selectedMethod}
+        status={status}
+        onStatusChange={(value) => setStatus(value)}
+        markedCount={markedCount}
+        videoRef={videoRef as React.RefObject<HTMLVideoElement>}
+        canvasRef={canvasRef as React.RefObject<HTMLCanvasElement>}
+        cameraError={cameraError}
+      />
     </div>
   );
 };

@@ -17,7 +17,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/hooks/use-toast';
 import { enhancedCachedClient } from '@/api/enhancedCachedClient';
 import { CACHE_TTL } from '@/config/cacheTTL';
-import { getBaseUrl } from '@/contexts/utils/auth.api';
+import { getBaseUrl, getApiHeadersAsync, getCredentialsMode } from '@/contexts/utils/auth.api';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { getImageUrl } from '@/utils/imageUrlHelper';
 
 interface UnverifiedStudent {
   id: string;
@@ -51,6 +53,20 @@ interface NewUnverifiedStudent {
   isActive: number;
 }
 
+interface SubjectUnverifiedStudent {
+  instituteId: string;
+  classId: string;
+  subjectId: string;
+  studentId: string;
+  studentFirstName: string;
+  studentLastName: string;
+  studentEmail: string;
+  studentImageUrl: string;
+  enrollmentMethod: string;
+  verificationStatus: string;
+  enrolledAt: any;
+}
+
 interface InstituteClassUnverifiedResponse {
   message: string;
   classId: string;
@@ -65,7 +81,7 @@ interface InstituteClassUnverifiedResponse {
 const UnverifiedStudents = () => {
   const { user, selectedInstitute, selectedClass, selectedSubject } = useAuth();
   const userRole = useInstituteRole();
-  const [students, setStudents] = useState<(UnverifiedStudent | NewUnverifiedStudent)[]>([]);
+  const [students, setStudents] = useState<(UnverifiedStudent | NewUnverifiedStudent | SubjectUnverifiedStudent)[]>([]);
   const [loading, setLoading] = useState(false);
   const [verifyingIds, setVerifyingIds] = useState<Set<string>>(new Set());
   const [hasData, setHasData] = useState(false);
@@ -74,6 +90,7 @@ const UnverifiedStudents = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [limit, setLimit] = useState(50);
   const [rowsPerPageOptions] = useState([25, 50, 100]);
+  const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null);
 
   const fetchUnverifiedStudents = async (page: number = 0, forceRefresh = false) => {
     if (!selectedInstitute || !selectedClass) return;
@@ -83,10 +100,8 @@ const UnverifiedStudents = () => {
       let endpoint = '';
       
       if (selectedSubject) {
-        // Fetch institute class subject unverified students - NEW API
-        endpoint = `/institutes/${selectedInstitute.id}/classes/${selectedClass.id}/students/unverified`;
+        endpoint = `/institute-class-subject-students/unverified-students/${selectedInstitute.id}/${selectedClass.id}/${selectedSubject.id}`;
       } else {
-        // Fetch institute class unverified students - NEW API with pagination
         endpoint = `/institute-classes/${selectedClass.id}/unverified-students?limit=${limit}&page=${page + 1}`;
       }
 
@@ -105,19 +120,17 @@ const UnverifiedStudents = () => {
       );
       
       if (selectedSubject) {
-        // For subject unverified students - use existing structure
-        setStudents(data);
-        setTotalCount(data.length);
+        const subjectStudents = Array.isArray(data) ? data : [];
+        setStudents(subjectStudents);
+        setTotalCount(subjectStudents.length);
         setTotalPages(1);
       } else {
-        // For institute class unverified students - use new structure
         const responseData = data as InstituteClassUnverifiedResponse;
-        // Filter only unverified students
         const unverifiedStudents = responseData.students.filter(student => student.isVerified === 0);
         setStudents(unverifiedStudents);
         setTotalCount(responseData.totalPendingVerifications);
         setTotalPages(Math.ceil(responseData.totalPendingVerifications / limit));
-        setCurrentPage(page - 1); // Convert to 0-based for MUI
+        setCurrentPage(page);
       }
       
       setHasData(true);
@@ -133,10 +146,9 @@ const UnverifiedStudents = () => {
     }
   };
 
-  // Auto-load data when context changes (uses cache if available)
   useEffect(() => {
     if (selectedInstitute && selectedClass) {
-      fetchUnverifiedStudents(0, false); // Load from cache
+      fetchUnverifiedStudents(0, false);
     }
   }, [selectedInstitute?.id, selectedClass?.id, selectedSubject?.id, limit]);
 
@@ -146,33 +158,38 @@ const UnverifiedStudents = () => {
     setVerifyingIds(prev => new Set(prev).add(studentIdentifier));
     
     try {
-      const token = localStorage.getItem('access_token');
+      const headers = await getApiHeadersAsync();
       let endpoint = '';
-      let requestBody = {};
+      let method = 'POST';
+      let requestBody: any = {};
       
       if (selectedSubject) {
-        endpoint = `${getBaseUrl()}/institute-class-subject-students/verify/${selectedInstitute.id}/${selectedClass.id}/${selectedSubject.id}/${studentIdentifier}`;
-        requestBody = {
-          isVerified: approve,
-          isActive: approve
-        };
+        const basePath = approve ? 'verify-enrollment' : 'reject-enrollment';
+        endpoint = `${getBaseUrl()}/institute-class-subject-students/${basePath}/${selectedInstitute.id}/${selectedClass.id}/${selectedSubject.id}/${studentIdentifier}`;
+        method = 'PATCH';
+        requestBody = {};
       } else {
-        // NEW API for institute class verification
-        endpoint = `${getBaseUrl()}/institute-classes/${selectedClass.id}/verify-student`;
+        endpoint = `${getBaseUrl()}/institutes/${selectedInstitute.id}/classes/${selectedClass.id}/students/verify-students`;
+        method = 'POST';
         requestBody = {
-          studentUserId: studentIdentifier,
-          approve: approve
+          verifications: [
+            {
+              studentUserId: studentIdentifier,
+              approve: approve,
+              notes: approve ? "Approved by admin" : "Rejected by admin"
+            }
+          ]
         };
       }
 
-      const response = await fetch(endpoint, {
-        method: selectedSubject ? 'PATCH' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(requestBody)
-      });
+      const fetchOptions: RequestInit = {
+        method,
+        headers,
+        credentials: getCredentialsMode(),
+        ...(Object.keys(requestBody).length > 0 ? { body: JSON.stringify(requestBody) } : {})
+      };
+
+      const response = await fetch(endpoint, fetchOptions);
 
       if (!response.ok) {
         throw new Error('Failed to verify student');
@@ -183,7 +200,6 @@ const UnverifiedStudents = () => {
         description: `Student has been ${approve ? 'approved' : 'rejected'} successfully`
       });
 
-      // Refresh the list
       fetchUnverifiedStudents(currentPage);
     } catch (error) {
       console.error('Error verifying student:', error);
@@ -201,35 +217,52 @@ const UnverifiedStudents = () => {
     }
   };
 
-  const getStudentKey = (student: UnverifiedStudent | NewUnverifiedStudent): string => {
+  const getStudentKey = (student: UnverifiedStudent | NewUnverifiedStudent | SubjectUnverifiedStudent): string => {
+    if ('studentId' in student && 'studentFirstName' in student) {
+      return student.studentId;
+    }
+    if ('studentUserId' in student && student.studentUserId) {
+      return student.studentUserId;
+    }
     return student.id;
   };
 
-  const getStudentId = (student: UnverifiedStudent | NewUnverifiedStudent): string => {
-    if ('studentId' in student) {
+  const getStudentId = (student: UnverifiedStudent | NewUnverifiedStudent | SubjectUnverifiedStudent): string => {
+    if ('studentFirstName' in student) {
       return student.studentId;
     }
-    return student.userIdByInstitute;
+    if ('userIdByInstitute' in student) {
+      return student.userIdByInstitute;
+    }
+    if ('studentId' in student) {
+      return (student as UnverifiedStudent).studentId;
+    }
+    return (student as any).id || '';
   };
 
-  const getStudentUser = (student: UnverifiedStudent | NewUnverifiedStudent) => {
+  const getStudentUser = (student: UnverifiedStudent | NewUnverifiedStudent | SubjectUnverifiedStudent) => {
+    if ('studentFirstName' in student) {
+      return {
+        firstName: student.studentFirstName,
+        lastName: student.studentLastName,
+        email: student.studentEmail || 'N/A',
+        phone: 'N/A',
+        imageUrl: student.studentImageUrl || ''
+      };
+    }
     if ('user' in student && student.user) {
       return student.user;
     }
-    // For NewUnverifiedStudent, parse name and return appropriate structure
     if ('name' in student) {
       const nameParts = student.name.split(' ');
-      const firstName = nameParts[0] || '';
-      const lastName = nameParts.slice(1).join(' ') || '';
       return {
-        firstName,
-        lastName,
+        firstName: nameParts[0] || '',
+        lastName: nameParts.slice(1).join(' ') || '',
         email: 'N/A',
         phone: student.phoneNumber || 'N/A',
         imageUrl: student.imageUrl || ''
       };
     }
-    // Fallback
     return {
       firstName: 'Unknown',
       lastName: 'Student',
@@ -248,107 +281,11 @@ const UnverifiedStudents = () => {
   };
 
   const getEnrollmentMethodBadge = (method: string) => {
-    if (method === 'self_enrollment') {
+    if (method === 'self_enrollment' || method === 'self_enrolled') {
       return <Badge variant="outline" className="text-blue-600 border-blue-200">Self Enrolled</Badge>;
     }
     return <Badge variant="outline" className="text-purple-600 border-purple-200">Teacher Assigned</Badge>;
   };
-
-  const columns = [
-    {
-      key: 'avatar',
-      header: 'Avatar',
-      render: (value: any, row: any) => {
-        const userData = getStudentUser(row);
-        return (
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={userData.imageUrl} alt={userData.firstName} />
-            <AvatarFallback>
-              {userData.firstName[0]}{userData.lastName[0]}
-            </AvatarFallback>
-          </Avatar>
-        );
-      }
-    },
-    {
-      key: 'name',
-      header: 'Name',
-      render: (value: any, row: any) => {
-        const userData = getStudentUser(row);
-        return (
-          <div>
-            <div className="font-medium">{userData.firstName} {userData.lastName}</div>
-            <div className="text-sm text-muted-foreground">ID: {getStudentId(row)}</div>
-          </div>
-        );
-      }
-    },
-    {
-      key: 'contact',
-      header: 'Contact',
-      render: (value: any, row: any) => {
-        const userData = getStudentUser(row);
-        const phone = 'phoneNumber' in row ? row.phoneNumber : userData.phone;
-        return (
-          <div>
-            <div className="text-sm">{userData.email}</div>
-            <div className="text-sm text-muted-foreground">{phone}</div>
-          </div>
-        );
-      }
-    },
-    {
-      key: 'enrollment',
-      header: 'Enrollment',
-      render: (value: any, row: any) => {
-        const isNewStudent = 'enrollmentDate' in row;
-        if (!isNewStudent) return <span>-</span>;
-        
-        return (
-          <div>
-            <div className="text-sm">{formatDate(row.enrollmentDate)}</div>
-            <div className="mt-1">{getEnrollmentMethodBadge(row.enrollmentMethod)}</div>
-          </div>
-        );
-      }
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      render: (value: any, row: any) => {
-        const isNewStudent = 'enrollmentDate' in row;
-        return (
-          <div>
-            <Badge variant="outline" className="text-orange-600 border-orange-200 mb-1">
-              Pending Verification
-            </Badge>
-            {isNewStudent && (
-              <div className="text-sm text-muted-foreground">
-                {row.isActive ? 'Active' : 'Inactive'}
-              </div>
-            )}
-          </div>
-        );
-      }
-    }
-  ];
-
-  const customActions = [
-    {
-      label: 'Approve',
-      action: (row: any) => handleVerifyStudent(getStudentKey(row), true),
-      icon: <UserCheck className="h-4 w-4" />,
-      variant: 'default' as const,
-      condition: (row: any) => !verifyingIds.has(getStudentKey(row))
-    },
-    {
-      label: 'Reject',
-      action: (row: any) => handleVerifyStudent(getStudentKey(row), false),
-      icon: <UserX className="h-4 w-4" />,
-      variant: 'outline' as const,
-      condition: (row: any) => !verifyingIds.has(getStudentKey(row))
-    }
-  ];
 
   const getContextTitle = () => {
     if (selectedSubject) {
@@ -392,7 +329,7 @@ const UnverifiedStudents = () => {
           </p>
         </div>
         <Button 
-          onClick={() => fetchUnverifiedStudents(0, true)} // Force refresh from backend
+          onClick={() => fetchUnverifiedStudents(0, true)}
           disabled={loading}
           className="flex items-center gap-2"
         >
@@ -409,80 +346,110 @@ const UnverifiedStudents = () => {
                 <TableRow>
                   <TableCell>Avatar</TableCell>
                   <TableCell>Name</TableCell>
-                  <TableCell>Contact</TableCell>
+                  <TableCell>Join Date</TableCell>
                   <TableCell>Enrollment</TableCell>
                   <TableCell>Status</TableCell>
+                  <TableCell>Verification</TableCell>
                   <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {students
-                  .slice(currentPage * limit, currentPage * limit + limit)
-                  .map((student) => {
+                {students.map((student) => {
                     const userData = getStudentUser(student);
                     const studentKey = getStudentKey(student);
                     const isNewStudent = 'enrollmentDate' in student;
-                    const phone = 'phoneNumber' in student ? student.phoneNumber : userData.phone;
+                    const isSubjectStudent = 'studentFirstName' in student;
                     
                     return (
                       <TableRow hover role="checkbox" tabIndex={-1} key={studentKey}>
+                        {/* Avatar - clickable */}
                         <TableCell>
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={userData.imageUrl} alt={userData.firstName} />
-                            <AvatarFallback>
-                              {userData.firstName[0]}{userData.lastName[0]}
-                            </AvatarFallback>
-                          </Avatar>
+                          <div 
+                            className="cursor-pointer"
+                            onClick={() => {
+                              const imgUrl = userData.imageUrl;
+                              if (imgUrl) {
+                                setPreviewImage({ 
+                                  url: getImageUrl(imgUrl), 
+                                  name: `${userData.firstName} ${userData.lastName}` 
+                                });
+                              }
+                            }}
+                          >
+                            <Avatar className="h-10 w-10 hover:ring-2 hover:ring-primary transition-all">
+                              <AvatarImage src={getImageUrl(userData.imageUrl)} alt={userData.firstName} />
+                              <AvatarFallback>
+                                {userData.firstName[0]}{userData.lastName[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                          </div>
                         </TableCell>
+                        {/* Name */}
                         <TableCell>
                           <div>
                             <div className="font-medium">{userData.firstName} {userData.lastName}</div>
                             <div className="text-sm text-muted-foreground">ID: {getStudentId(student)}</div>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="text-sm">{userData.email}</div>
-                            <div className="text-sm text-muted-foreground">{phone}</div>
-                          </div>
-                        </TableCell>
+                        {/* Join Date */}
                         <TableCell>
                           {isNewStudent ? (
-                            <div>
-                              <div className="text-sm">{formatDate(student.enrollmentDate)}</div>
-                              <div className="mt-1">{getEnrollmentMethodBadge(student.enrollmentMethod)}</div>
-                            </div>
+                            <div className="text-sm">{formatDate((student as NewUnverifiedStudent).enrollmentDate)}</div>
+                          ) : isSubjectStudent && (student as SubjectUnverifiedStudent).enrolledAt ? (
+                            <div className="text-sm">{formatDate((student as SubjectUnverifiedStudent).enrolledAt)}</div>
                           ) : (
-                            <span>-</span>
+                            <span className="text-sm text-muted-foreground">—</span>
                           )}
                         </TableCell>
+                        {/* Enrollment Method */}
                         <TableCell>
-                          <div>
-                            <Badge variant="outline" className="text-orange-600 border-orange-200 mb-1">
-                              Pending Verification
-                            </Badge>
-                            {isNewStudent && (
-                              <div className="text-sm text-muted-foreground">
-                                {student.isActive ? 'Active' : 'Inactive'}
-                              </div>
-                            )}
-                          </div>
+                          {isNewStudent ? (
+                            getEnrollmentMethodBadge((student as NewUnverifiedStudent).enrollmentMethod)
+                          ) : isSubjectStudent ? (
+                            getEnrollmentMethodBadge((student as SubjectUnverifiedStudent).enrollmentMethod)
+                          ) : (
+                            <span className="text-sm text-muted-foreground">—</span>
+                          )}
                         </TableCell>
+                        {/* Active/Inactive Status */}
+                        <TableCell>
+                          {isNewStudent ? (
+                            <Badge variant={(student as NewUnverifiedStudent).isActive ? 'default' : 'secondary'}>
+                              {(student as NewUnverifiedStudent).isActive ? 'Active' : 'Inactive'}
+                            </Badge>
+                          ) : 'isActive' in student ? (
+                            <Badge variant={(student as UnverifiedStudent).isActive ? 'default' : 'secondary'}>
+                              {(student as UnverifiedStudent).isActive ? 'Active' : 'Inactive'}
+                            </Badge>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        {/* Verification Status */}
+                        <TableCell>
+                          <Badge variant="outline" className="text-orange-600 border-orange-200">
+                            {isSubjectStudent ? (student as SubjectUnverifiedStudent).verificationStatus : 'Pending Verification'}
+                          </Badge>
+                        </TableCell>
+                        {/* Actions */}
                         <TableCell>
                           <div className="flex gap-2">
                             <Button
                               size="sm"
                               onClick={() => handleVerifyStudent(studentKey, true)}
                               disabled={verifyingIds.has(studentKey)}
+                              style={{ backgroundColor: '#28A158', color: 'white' }}
+                              className="hover:opacity-90"
                             >
                               <UserCheck className="h-4 w-4 mr-1" />
                               Approve
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
                               onClick={() => handleVerifyStudent(studentKey, false)}
                               disabled={verifyingIds.has(studentKey)}
+                              style={{ backgroundColor: '#CF0F0F', color: 'white' }}
+                              className="hover:opacity-90"
                             >
                               <UserX className="h-4 w-4 mr-1" />
                               Reject
@@ -494,7 +461,7 @@ const UnverifiedStudents = () => {
                   })}
                 {students.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} align="center">
+                    <TableCell colSpan={7} align="center">
                       <div className="text-center py-8 text-muted-foreground">
                         No unverified students found
                       </div>
@@ -511,7 +478,7 @@ const UnverifiedStudents = () => {
             rowsPerPage={limit}
             page={currentPage}
             onPageChange={(event: unknown, newPage: number) => {
-              fetchUnverifiedStudents(newPage); // MUI uses 0-based, API uses 1-based (converted in function)
+              fetchUnverifiedStudents(newPage);
             }}
             onRowsPerPageChange={(event: React.ChangeEvent<HTMLInputElement>) => {
               const newLimit = parseInt(event.target.value, 10);
@@ -526,6 +493,24 @@ const UnverifiedStudents = () => {
           Click "Load Students" to fetch unverified students
         </div>
       )}
+
+      {/* Avatar Image Preview Dialog */}
+      <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+        <DialogContent className="max-w-lg p-0">
+          <DialogHeader className="p-4 pb-0">
+            <DialogTitle>{previewImage?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="p-4">
+            {previewImage && (
+              <img 
+                src={previewImage.url} 
+                alt={previewImage.name}
+                className="w-full h-auto max-h-[60vh] object-contain rounded-lg"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -8,6 +8,7 @@ import { createTheme, ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
+// StatusBar imported dynamically to avoid browser module resolution errors
 import { useCapacitorConnection } from "@/hooks/useCapacitorConnection";
 import CapacitorConnectionError from "@/components/CapacitorConnectionError";
 import AppLoadingScreen from "@/components/AppLoadingScreen";
@@ -45,6 +46,8 @@ import ChildTransportPage from "@/pages/ChildTransportPage";
 import CardManagement from "@/pages/CardManagement";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import GoogleAuthCallback from "@/pages/GoogleAuthCallback";
+import ActiveSessionsPage from "@/pages/ActiveSessions";
+import ActivateAccount from "@/pages/ActivateAccount";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -91,22 +94,32 @@ const App = () => {
     root.classList.add('light');
     localStorage.setItem('theme', 'light');
     
-    // Hide splash screen after app is ready
+    // Configure native platform features
     if (Capacitor.isNativePlatform()) {
+      // Configure Status Bar (dynamic import to avoid browser errors)
+      import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
+        StatusBar.setStyle({ style: Style.Dark }).catch((err: any) => {
+          console.warn('StatusBar.setStyle not available:', err);
+        });
+        StatusBar.setBackgroundColor({ color: '#1976D2' }).catch((err: any) => {
+          console.warn('StatusBar.setBackgroundColor not available:', err);
+        });
+      }).catch((err) => {
+        console.warn('StatusBar module not available:', err);
+      });
+      
+      // Hide splash screen after app is ready
       import('@capacitor/splash-screen').then(({ SplashScreen }) => {
         setTimeout(() => {
           SplashScreen.hide();
         }, 500);
+      }).catch((err) => {
+        console.warn('SplashScreen module not available:', err);
       });
     }
   }, []);
 
-  // Show connection error page only when definitively offline (not during loading)
-  if (Capacitor.isNativePlatform() && !isLoading && !isOnline) {
-    return <CapacitorConnectionError onRetry={retry} />;
-  }
-
-  // Handle Android back button
+  // Handle Android back button - MUST be before any conditional return (Rules of Hooks)
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
       let listenerHandle: any = null;
@@ -132,6 +145,12 @@ const App = () => {
     }
   }, []);
 
+  // Show connection error page only when definitively offline (not during loading)
+  // IMPORTANT: This must be AFTER all hooks to comply with Rules of Hooks
+  if (Capacitor.isNativePlatform() && !isLoading && !isOnline) {
+    return <CapacitorConnectionError onRetry={retry} />;
+  }
+
   return (
     <ErrorBoundary>
       <ThemeProvider theme={muiTheme}>
@@ -147,14 +166,83 @@ const App = () => {
                 {/* Main Routes - All handled by Index/AppContent */}
                 <Route path="/" element={<Index />} />
 
-                {/* Google OAuth Callback */}
+                {/* Google Drive OAuth - backend redirects back here with query params */}
                 <Route path="/auth/google/callback" element={<GoogleAuthCallback />} />
+
+                {/* Activate Account Routes (First Login Flow) */}
+                <Route path="/activate/identify" element={<ActivateAccount />} />
+                <Route path="/activate/verify" element={<ActivateAccount />} />
+                <Route path="/activate/profile" element={<ActivateAccount />} />
 
                 {/* Hierarchical Routes with Context */}
                 <Route path="/institute/:instituteId/*" element={<Index />} />
                 <Route path="/organization/:organizationId/*" element={<Index />} />
                 <Route path="/child/:childId/*" element={<Index />} />
                 <Route path="/transport/:transportId/*" element={<Index />} />
+
+                {/* Common Routes handled by Index/AppContent */}
+                <Route path="/dashboard" element={<Index />} />
+                <Route path="/profile" element={<Index />} />
+                <Route path="/settings" element={<Index />} />
+                <Route path="/appearance" element={<Index />} />
+                <Route path="/institutes" element={<Index />} />
+                <Route path="/organizations" element={<Index />} />
+                <Route path="/qr-attendance" element={<Index />} />
+                <Route path="/rfid-attendance" element={<Index />} />
+                <Route path="/sms-history" element={<Index />} />
+                <Route path="/enrollment-management" element={<Index />} />
+                <Route path="/students" element={<Index />} />
+                <Route path="/teachers" element={<Index />} />
+                <Route path="/parents" element={<Index />} />
+                <Route path="/users" element={<Index />} />
+
+                {/* Selection Routes */}
+                <Route path="/select-institute" element={<Index />} />
+                <Route path="/select-class" element={<Index />} />
+                <Route path="/select-subject" element={<Index />} />
+
+                {/* Additional pages handled by AppContent */}
+                <Route path="/classes" element={<Index />} />
+                <Route path="/subjects" element={<Index />} />
+                <Route path="/attendance" element={<Index />} />
+                <Route path="/daily-attendance" element={<Index />} />
+                <Route path="/lectures" element={<Index />} />
+                <Route path="/free-lectures" element={<Index />} />
+                <Route path="/live-lectures" element={<Index />} />
+                <Route path="/institute-lectures" element={<Index />} />
+                <Route path="/homework" element={<Index />} />
+                <Route path="/homework-submissions" element={<Index />} />
+                <Route path="/exams" element={<Index />} />
+                <Route path="/results" element={<Index />} />
+                <Route path="/grades" element={<Index />} />
+                <Route path="/grading" element={<Index />} />
+                <Route path="/institute-details" element={<Index />} />
+                <Route path="/institute-profile" element={<Index />} />
+                <Route path="/institute-users" element={<Index />} />
+                <Route path="/institute-payments" element={<Index />} />
+                <Route path="/institute-subjects" element={<Index />} />
+                <Route path="/institute-organizations" element={<Index />} />
+                <Route path="/institute-mark-attendance" element={<Index />} />
+                <Route path="/subject-payments" element={<Index />} />
+                <Route path="/subject-submissions" element={<Index />} />
+                <Route path="/subject-pay-submission" element={<Index />} />
+                <Route path="/my-submissions" element={<Index />} />
+                <Route path="/sms" element={<Index />} />
+                <Route path="/notifications" element={<Index />} />
+                <Route path="/institute-notifications" element={<Index />} />
+                <Route path="/setup-guide" element={<Index />} />
+                <Route path="/verify-image" element={<Index />} />
+                <Route path="/enroll-class" element={<Index />} />
+                <Route path="/enroll-subject" element={<Index />} />
+                <Route path="/my-attendance" element={<Index />} />
+                <Route path="/attendance-markers" element={<Index />} />
+                <Route path="/unverified-students" element={<Index />} />
+                <Route path="/class-subjects" element={<Index />} />
+                <Route path="/teacher-students" element={<Index />} />
+                <Route path="/teacher-homework" element={<Index />} />
+                <Route path="/teacher-exams" element={<Index />} />
+                <Route path="/teacher-lectures" element={<Index />} />
+                <Route path="/calendar-management" element={<Index />} />
 
                 {/* Dedicated Page Routes (must be protected) */}
                 <Route
@@ -229,9 +317,17 @@ const App = () => {
                     </ProtectedRoute>
                   }
                 />
+                <Route
+                  path="/sessions"
+                  element={
+                    <ProtectedRoute>
+                      <ActiveSessionsPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-                {/* Catch-all - Everything else goes to Index/AppContent */}
-                <Route path="*" element={<Index />} />
+                {/* Catch-all - Show 404 for unknown paths */}
+                <Route path="*" element={<NotFound />} />
               </Routes>
             </AuthProvider>
           </BrowserRouter>

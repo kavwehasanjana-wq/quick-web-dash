@@ -13,6 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { organizationApi } from '@/api/organization.api';
 import { useToast } from '@/hooks/use-toast';
+import { uploadWithSignedUrl } from '@/utils/signedUploadHelper';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { ArrowLeft, BookOpen } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -92,7 +93,6 @@ const CreateCourseForm = ({ onSuccess, onCancel }: CreateCourseFormProps) => {
       
       // Step 1: Upload image if selected using signed URL
       if (selectedImage) {
-        const { uploadWithSignedUrl } = await import('@/utils/signedUploadHelper');
         imageRelativePath = await uploadWithSignedUrl(
           selectedImage,
           'institute-images'

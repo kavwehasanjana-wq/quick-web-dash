@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { uploadWithSignedUrl } from '@/utils/signedUploadHelper';
 import { MessageSquare, Send, Users, DollarSign, RefreshCw, Eye, Plus, Lock } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useTableData } from '@/hooks/useTableData';
@@ -239,7 +240,6 @@ const SMS = () => {
       setSubmitting(true);
       
       // Step 1: Upload payment slip using signed URL
-      const { uploadWithSignedUrl } = await import('@/utils/signedUploadHelper');
       const paymentSlipPath = await uploadWithSignedUrl(
         paymentForm.paymentSlip,
         'institute-payment-receipts'
@@ -977,7 +977,7 @@ const SMS = () => {
 
       {/* View Payment Details Dialog */}
       <Dialog open={viewPaymentDialogOpen} onOpenChange={setViewPaymentDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto mx-auto">
           <DialogHeader>
             <DialogTitle>Payment Submission Details</DialogTitle>
           </DialogHeader>
@@ -1122,7 +1122,7 @@ const SMS = () => {
 
       {/* New Payment Dialog */}
       <Dialog open={newPaymentOpen} onOpenChange={setNewPaymentOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto mx-auto">
           <DialogHeader>
             <DialogTitle>Submit Payment for SMS Credits</DialogTitle>
           </DialogHeader>

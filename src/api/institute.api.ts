@@ -148,16 +148,18 @@ class InstituteApi {
   ): Promise<ApiResponse<Class[]>> {
     console.log('Fetching institute classes:', instituteId, params, { forceRefresh });
     const endpoint = '/institute-classes';
-    const requestParams = { instituteId, ...params };
+    // Separate cache context fields from actual API query params
+    const { userId, role, ...apiParams } = params ?? {};
+    const requestParams = { instituteId, ...apiParams };
     
     return enhancedCachedClient.get<ApiResponse<Class[]>>(endpoint, requestParams, { 
       forceRefresh,
       ttl: 60,
       useStaleWhileRevalidate: true,
-      userId: params?.userId,
+      userId,
       instituteId,
-      classId: params?.classId,
-      role: params?.role
+      classId: apiParams?.classId,
+      role
     });
   }
 

@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import BottomNav from './BottomNav';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -62,9 +63,10 @@ const AppLayout = ({ children, currentPage: propCurrentPage, onPageChange }: App
         <div className="flex-shrink-0">
           <Header onMenuClick={handleMenuClick} />
         </div>
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto pb-16 lg:pb-0">
           {children}
         </main>
+        <BottomNav onMenuClick={handleMenuClick} />
       </div>
     </div>
   );

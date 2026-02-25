@@ -3,12 +3,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
 import { Building, Users, CheckCircle, RefreshCw, MapPin, Mail, Phone, Youtube, Facebook, Globe } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cachedApiClient } from '@/api/cachedClient';
 import { getBaseUrl } from '@/contexts/utils/auth.api';
+import ChildCurrentSelection from '@/components/ChildCurrentSelection';
 
 import { getImageUrl } from '@/utils/imageUrlHelper';
 
@@ -21,6 +23,8 @@ interface InstituteApiResponse {
   id: string;
   name: string;
   shortName?: string;
+  instituteId?: string;
+  instituteName?: string;
   code?: string;
   email: string;
   phone: string;
@@ -42,6 +46,16 @@ interface InstituteApiResponse {
   youtubeChannelUrl?: string;
   vision?: string;
   mission?: string;
+  // Parent institutes response fields
+  primaryColorCode?: string;
+  secondaryColorCode?: string;
+  role?: string;
+  enrollmentStatus?: boolean;
+  instituteUserId?: string;
+  studentInstituteImageUrl?: string;
+  isVerified?: boolean;
+  instituteUserStatus?: string;
+  isParentInstitute?: boolean;
 }
 interface InstituteSelectorProps {
   useChildId?: boolean;
@@ -52,8 +66,10 @@ const InstituteSelector = ({
   const {
     user,
     setSelectedInstitute,
-    selectedChild
+    selectedChild,
+    isViewingAsParent
   } = useAuth();
+  const navigate = useNavigate();
   const {
     toast
   } = useToast();
@@ -93,11 +109,18 @@ const InstituteSelector = ({
       return;
     }
     setIsLoading(true);
+    // Clear any stale rate limit before loading
+    cachedApiClient.clearRateLimit();
     try {
-      console.log('Loading institutes for user ID:', userId, useChildId ? '(child)' : '(user)');
 
-      // Try multiple possible endpoints to support different backends
-      const endpoints = useChildId ? [`/children/${userId}/institutes`, `/users/${userId}/institutes`] : [`/users/${userId}/institutes`];
+      // For parent selecting child's institutes, use ONLY the parent-institutes endpoint
+      // Do NOT fall back to /users/:id/institutes as it returns 403 for other users
+      const endpoints = useChildId
+        ? [
+            // ✅ Parent selecting institutes for child - use ONLY this endpoint
+            `/users/${userId}/parent-institutes`
+          ]
+        : [`/users/${userId}/institutes`];
       let result: InstituteApiResponse[] | null = null;
       let lastErr: any = null;
       for (const ep of endpoints) {
@@ -159,14 +182,14 @@ const InstituteSelector = ({
         createdAt: raw.createdAt || '',
         imageUrl: raw.imageUrl || '',
         logoUrl: raw.logoUrl || raw.instituteLogo || '',
-        userImageUrl: raw.instituteUserImageUrl || '',
+        userImageUrl: raw.instituteUserImageUrl || raw.studentInstituteImageUrl || '',
         websiteUrl: raw.websiteUrl || '',
         facebookPageUrl: raw.facebookPageUrl || '',
         youtubeChannelUrl: raw.youtubeChannelUrl || '',
         vision: raw.vision || '',
         mission: raw.mission || '',
-        instituteUserType: raw.instituteUserType || '',
-        userIdByInstitute: raw.userIdByInstitute || '',
+        instituteUserType: raw.instituteUserType || raw.role || '',
+        userIdByInstitute: raw.userIdByInstitute || raw.instituteUserId || '',
         status: raw.status || ''
       }));
 
@@ -197,16 +220,22 @@ const InstituteSelector = ({
       });
       return;
     }
+    // CRITICAL: When parent selects institute for child, force role to STUDENT
+    // because parent-institutes API returns role=PARENT (parent's relation) not the child's role
+    const effectiveRole = isViewingAsParent
+      ? 'STUDENT'
+      : ((institute as any).instituteUserType || (institute as any).role || '');
+    
     const selectedInstitute = {
       id: institute.id,
       name: institute.name,
       code: institute.id,
-      // Using id as code since it's not in the API response
       description: `${institute.address || ''}, ${institute.city || ''}`.trim(),
       isActive: institute.isActive,
-      type: institute.type,
-      userRole: (institute as any).instituteUserType || '',
-      userIdByInstitute: (institute as any).userIdByInstitute || '',
+      type: institute.type || '',
+      instituteUserType: effectiveRole,
+      userRole: effectiveRole,
+      userIdByInstitute: (institute as any).userIdByInstitute || (institute as any).instituteUserId || '',
       shortName: institute.shortName || institute.name,
       logo: institute.logoUrl || '',
       instituteUserImageUrl: institute.userImageUrl || institute.imageUrl || ''
@@ -217,17 +246,27 @@ const InstituteSelector = ({
       description: `Selected institute: ${selectedInstitute.name}`
     });
 
-    // After selecting an institute, go directly to class selection for non-parent roles
-    if (userRole && userRole !== 'Parent') {
-      navigateToPage('select-class');
+    // When parent is viewing child's data, navigate to child's class selection
+    if (isViewingAsParent && selectedChild) {
+      navigate(`/child/${selectedChild.id}/select-class`);
+      return;
     }
+
+    // After selecting an institute, always go to institute-scoped class selection.
+    // IMPORTANT: don't use navigateToPage here because it depends on selectedInstitute state
+    // which may not be updated yet (causes route to become /select-class and selection to be cleared).
+    navigate(`/institute/${selectedInstitute.id}/select-class`);
+    return;
   };
   return <div className="space-y-2 sm:space-y-4 px-1 sm:px-3 md:px-0">
-      <div className="text-center mb-2 sm:mb-6">
-        <h1 className="text-base sm:text-lg md:text-2xl font-bold text-gray-900 dark:text-white mb-0.5 sm:mb-1">
+      {/* Show Current Child Selection for Parent flow */}
+      {useChildId && <ChildCurrentSelection className="mb-4" />}
+
+      <div className="text-center mb-2 sm:mb-4">
+        <h1 className="text-sm sm:text-base md:text-lg font-semibold text-foreground mb-0.5">
           Select Institute
         </h1>
-        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto">
+        <p className="text-xs text-muted-foreground max-w-md mx-auto">
           Choose an institute to continue to your dashboard
         </p>
       </div>
@@ -260,13 +299,13 @@ const InstituteSelector = ({
           </div>
 
           <div
-            className={`grid grid-cols-1 sm:grid-cols-2 ${sidebarCollapsed ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-x-4 gap-y-10 sm:gap-x-6 sm:gap-y-12 lg:gap-y-10 pt-4 md:pt-8 mb-10`}
+            className={`grid grid-cols-1 sm:grid-cols-2 ${sidebarCollapsed ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-x-3 gap-y-8 sm:gap-x-4 sm:gap-y-10 pt-3 md:pt-6 mb-8`}
           >
             {institutes.map(institute => {
           const showSocial = expandedInstituteId === institute.id;
-          return <div key={institute.id} className="relative flex w-full flex-col rounded-xl bg-card bg-clip-border text-card-foreground shadow-md hover:shadow-lg transition-all duration-300">
+          return <div key={institute.id} className="relative flex w-full flex-col rounded-lg bg-card bg-clip-border text-card-foreground shadow-sm hover:shadow-md transition-all duration-300 border-2 border-primary/30 hover:border-primary/60">
                   {/* Institute Image - Gradient Header */}
-                  <div className="relative mx-4 -mt-6 h-40 overflow-hidden rounded-xl bg-clip-border text-white shadow-lg shadow-primary/40 bg-gradient-to-r from-primary to-primary/80">
+                  <div className="relative mx-3 -mt-5 h-28 overflow-hidden rounded-lg bg-clip-border text-white shadow-md shadow-primary/30 bg-gradient-to-r from-primary to-primary/80">
                     {(institute.imageUrl || institute.logoUrl) ? (
                       <img 
                         src={resolveImageUrl(institute.imageUrl || institute.logoUrl)} 
@@ -278,30 +317,30 @@ const InstituteSelector = ({
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gradient-to-r from-primary to-primary/80">
-                        <Building className="w-12 h-12 text-white" />
+                        <Building className="w-8 h-8 text-white" />
                       </div>
                     )}
                   </div>
 
-                  <div className="p-6">
+                  <div className="p-4">
                     {/* Institute Name */}
-                    <h5 className="mb-2 block font-sans text-xl font-semibold leading-snug tracking-normal text-foreground antialiased line-clamp-2">
+                    <h5 className="mb-1.5 block font-sans text-sm font-semibold leading-snug tracking-normal text-foreground antialiased line-clamp-2">
                       {institute.name}
                     </h5>
                     
                     {/* Institute Type & Status */}
-                    <div className="flex items-center justify-start gap-2 mb-2 flex-wrap">
-                      <Badge variant="outline">
+                    <div className="flex items-center justify-start gap-1.5 mb-1.5 flex-wrap">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                         {institute.type}
                       </Badge>
-                      {institute.isActive && <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100">
-                          <CheckCircle className="h-3 w-3 mr-1" />
+                      {institute.isActive && <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100 text-[10px] px-1.5 py-0">
+                          <CheckCircle className="h-2.5 w-2.5 mr-0.5" />
                           Active
                         </Badge>}
                     </div>
 
                     {/* Description */}
-                    <p className="block font-sans text-base font-light leading-relaxed text-muted-foreground antialiased line-clamp-2">
+                    <p className="block font-sans text-xs font-light leading-relaxed text-muted-foreground antialiased line-clamp-2">
                       {institute.address ? `${institute.address}, ${institute.city || ''}` : institute.type}
                     </p>
                     
@@ -359,12 +398,12 @@ const InstituteSelector = ({
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="p-6 pt-0 space-y-3">
-                    <button onClick={() => setExpandedInstituteId(showSocial ? null : institute.id)} className="w-full select-none rounded-lg bg-muted py-3 px-6 text-center align-middle font-sans text-xs font-bold uppercase text-foreground shadow-sm transition-all hover:shadow-md active:opacity-90">
+                  <div className="p-4 pt-0 space-y-2">
+                    <button onClick={() => setExpandedInstituteId(showSocial ? null : institute.id)} className="w-full select-none rounded-md bg-muted py-2 px-4 text-center align-middle font-sans text-[10px] font-semibold uppercase text-foreground shadow-sm transition-all hover:shadow active:opacity-90">
                       {showSocial ? 'Show Less' : 'Read More'}
                     </button>
                     
-                    <button onClick={() => handleSelectInstitute(institute)} className="w-full select-none rounded-lg bg-primary py-3 px-6 text-center align-middle font-sans text-xs font-bold uppercase text-primary-foreground shadow-md shadow-primary/20 transition-all hover:shadow-lg hover:shadow-primary/40 active:opacity-90">
+                    <button onClick={() => handleSelectInstitute(institute)} className="w-full select-none rounded-md bg-primary py-2 px-4 text-center align-middle font-sans text-[10px] font-semibold uppercase text-primary-foreground shadow-sm shadow-primary/20 transition-all hover:shadow-md hover:shadow-primary/30 active:opacity-90">
                       Select Institute
                     </button>
                   </div>

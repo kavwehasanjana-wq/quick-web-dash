@@ -128,18 +128,21 @@ class HomeworkApi {
   async getHomework(params?: HomeworkQueryParams, forceRefresh = false): Promise<ApiResponse<Homework[]>> {
     console.log('📚 Fetching homework with secure caching:', params, { forceRefresh });
     
+    // Separate cache context fields from actual API query params
+    const { userId, role, ...apiParams } = params ?? {};
+    
     return enhancedCachedClient.get<ApiResponse<Homework[]>>(
       this.basePath, 
-      params, 
+      Object.keys(apiParams).length > 0 ? apiParams : undefined, 
       {
         forceRefresh,
         ttl: 15,
         useStaleWhileRevalidate: true,
-        userId: params?.userId,
-        instituteId: params?.instituteId,
-        classId: params?.classId,
-        subjectId: params?.subjectId,
-        role: params?.role
+        userId,
+        instituteId: apiParams?.instituteId,
+        classId: apiParams?.classId,
+        subjectId: apiParams?.subjectId,
+        role
       }
     );
   }
@@ -255,14 +258,16 @@ class HomeworkApi {
    * Check if homework is cached
    */
   async hasHomeworkCached(params?: HomeworkQueryParams): Promise<boolean> {
+    const { userId, role, ...apiParams } = params ?? {};
     return enhancedCachedClient.hasCache(
       this.basePath, 
-      params,
+      Object.keys(apiParams).length > 0 ? apiParams : undefined,
       {
-        userId: params?.userId,
-        instituteId: params?.instituteId,
-        classId: params?.classId,
-        subjectId: params?.subjectId
+        userId,
+        instituteId: apiParams?.instituteId,
+        classId: apiParams?.classId,
+        subjectId: apiParams?.subjectId,
+        role
       }
     );
   }
@@ -271,14 +276,16 @@ class HomeworkApi {
    * Get cached homework only (no API call)
    */
   async getCachedHomework(params?: HomeworkQueryParams): Promise<ApiResponse<Homework[]> | null> {
+    const { userId, role, ...apiParams } = params ?? {};
     return enhancedCachedClient.getCachedOnly<ApiResponse<Homework[]>>(
       this.basePath, 
-      params,
+      Object.keys(apiParams).length > 0 ? apiParams : undefined,
       {
-        userId: params?.userId,
-        instituteId: params?.instituteId,
-        classId: params?.classId,
-        subjectId: params?.subjectId
+        userId,
+        instituteId: apiParams?.instituteId,
+        classId: apiParams?.classId,
+        subjectId: apiParams?.subjectId,
+        role
       }
     );
   }
@@ -287,15 +294,17 @@ class HomeworkApi {
    * Preload homework data for faster navigation
    */
   async preloadHomework(params?: HomeworkQueryParams): Promise<void> {
+    const { userId, role, ...apiParams } = params ?? {};
     await enhancedCachedClient.preload<ApiResponse<Homework[]>>(
       this.basePath, 
-      params, 
+      Object.keys(apiParams).length > 0 ? apiParams : undefined, 
       {
         ttl: 15,
-        userId: params?.userId,
-        instituteId: params?.instituteId,
-        classId: params?.classId,
-        subjectId: params?.subjectId
+        userId,
+        instituteId: apiParams?.instituteId,
+        classId: apiParams?.classId,
+        subjectId: apiParams?.subjectId,
+        role
       }
     );
   }

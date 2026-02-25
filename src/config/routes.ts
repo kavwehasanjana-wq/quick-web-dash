@@ -16,6 +16,9 @@ export const ROUTE_PATTERNS = {
   ROOT: '/',
   DASHBOARD: '/dashboard',
   LOGIN: '/login',
+  ACTIVATE_IDENTIFY: '/activate/identify',
+  ACTIVATE_VERIFY: '/activate/verify',
+  ACTIVATE_PROFILE: '/activate/profile',
   
   // Institute Hierarchy
   INSTITUTES: '/institutes',
@@ -89,6 +92,7 @@ export const ROUTE_PATTERNS = {
   // Settings & Profile
   PROFILE: '/profile',
   SETTINGS: '/settings',
+  SESSIONS: '/sessions',
   APPEARANCE: '/appearance',
   
   // Special Routes
@@ -202,6 +206,7 @@ export const ROUTES = {
   // Profile & Settings
   profile: () => '/profile',
   settings: () => '/settings',
+  sessions: () => '/sessions',
   appearance: () => '/appearance',
   
   // Special

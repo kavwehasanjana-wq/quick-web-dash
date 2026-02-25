@@ -6,11 +6,13 @@ import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { useContextUrlSync, extractPageFromUrl } from '@/utils/pageNavigation';
 import { useRouteContext } from '@/hooks/useRouteContext';
 import { useMobilePermissions } from '@/hooks/useMobilePermissions';
+import { apiClient } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Building2, BookOpen, GraduationCap, User, Palette, Menu, X, ArrowLeft } from 'lucide-react';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
+import BottomNav from '@/components/layout/BottomNav';
 import Dashboard from '@/components/Dashboard';
 import Users from '@/components/Users';
 import Students from '@/components/Students';
@@ -90,13 +92,15 @@ import CreateExamResults from '@/pages/CreateExamResults';
 import InstituteSubjects from '@/pages/InstituteSubjects';
 import TeacherEnrollmentManagement from '@/pages/TeacherEnrollmentManagement';
 import NotificationsPage from '@/pages/NotificationsPage';
+import CalendarManagementPage from '@/components/calendar/CalendarManagementPage';
+import AdminAttendancePage from '@/components/admin-attendance/AdminAttendancePage';
 
 interface AppContentProps {
   initialPage?: string;
 }
 
 const AppContent = ({ initialPage }: AppContentProps) => {
-  const { user, login, selectedInstitute, selectedClass, selectedSubject, selectedChild, selectedOrganization, setSelectedOrganization, currentInstituteId } = useAuth();
+  const { user, login, selectedInstitute, selectedClass, selectedSubject, selectedChild, selectedOrganization, setSelectedOrganization, currentInstituteId, isViewingAsParent } = useAuth();
   const { navigateToPage, getPageFromPath } = useAppNavigation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -111,7 +115,7 @@ const AppContent = ({ initialPage }: AppContentProps) => {
   // Institute-specific role - always uses selectedInstitute.userRole
   const userRole = useInstituteRole();
   
-  console.log('🎯 AppContent - Role:', userRole, 'Institute UserType:', selectedInstitute?.userRole, 'isValidating:', isValidating);
+  
   
   // Derive current page from URL pathname
   const currentPage = React.useMemo(() => {
@@ -133,6 +137,22 @@ const AppContent = ({ initialPage }: AppContentProps) => {
     if (/\/exam\/[^\/]+\/create-results/.test(path)) {
       return 'exam-create-results';
     }
+    // child/:id/select-institute - Parent selecting institute for child
+    if (/\/child\/[^\/]+\/select-institute/.test(path)) {
+      return 'child-select-institute';
+    }
+    // child/:id/select-class - Parent selecting class for child
+    if (/\/child\/[^\/]+\/select-class/.test(path)) {
+      return 'child-select-class';
+    }
+    // child/:id/select-subject - Parent selecting subject for child
+    if (/\/child\/[^\/]+\/select-subject/.test(path)) {
+      return 'child-select-subject';
+    }
+    // child/:id/dashboard - Child dashboard after selecting institute
+    if (/\/child\/[^\/]+\/dashboard/.test(path)) {
+      return 'child-dashboard';
+    }
     // child/:id/child-results
     if (/\/child\/[^\/]+\/child-results/.test(path)) {
       return 'child-results';
@@ -145,6 +165,22 @@ const AppContent = ({ initialPage }: AppContentProps) => {
     if (/\/child\/[^\/]+\/child-transport/.test(path)) {
       return 'child-transport';
     }
+    // child/:id/homework - Parent viewing child's homework
+    if (/\/child\/[^\/]+\/homework/.test(path)) {
+      return 'child-homework';
+    }
+    // child/:id/lectures - Parent viewing child's lectures
+    if (/\/child\/[^\/]+\/lectures/.test(path)) {
+      return 'child-lectures';
+    }
+    // child/:id/exams - Parent viewing child's exams
+    if (/\/child\/[^\/]+\/exams/.test(path)) {
+      return 'child-exams';
+    }
+    // child/:id/results - Parent viewing child's results
+    if (/\/child\/[^\/]+\/results/.test(path)) {
+      return 'child-results-page';
+    }
     return null;
   }, [location.pathname]);
   
@@ -155,9 +191,21 @@ const AppContent = ({ initialPage }: AppContentProps) => {
   
   // Check if we're loading context from URL (direct navigation)
   const isLoadingContextFromUrl = urlInstituteId && !selectedInstitute && isValidating;
+
+  // If we were redirected to login, React Router stores the original destination in location.state.from
+  const intendedPath = (location.state as any)?.from as string | undefined;
   
   // Auto-navigate to Select Institute page after login (only if not loading from URL)
   React.useEffect(() => {
+    // ✅ If user was redirected to login from a deep link, go back there immediately after login.
+    // This is what enables: open /institute/.../subject/... while logged out → login → land on that page.
+    if (user && !hasNavigatedAfterLogin && intendedPath && intendedPath !== '/' && intendedPath !== location.pathname) {
+      console.log('🔁 Post-login redirect to intended route:', intendedPath);
+      setHasNavigatedAfterLogin(true);
+      navigate(intendedPath, { replace: true, state: {} });
+      return;
+    }
+
     // Don't auto-navigate if we have an institute ID in URL (direct navigation)
     if (urlInstituteId) {
       console.log('🔗 Direct URL navigation detected, waiting for context to load...');
@@ -169,7 +217,7 @@ const AppContent = ({ initialPage }: AppContentProps) => {
       setHasNavigatedAfterLogin(true);
       navigate('/select-institute');
     }
-  }, [user, hasNavigatedAfterLogin, selectedInstitute, location.pathname, navigate, urlInstituteId]);
+  }, [user, hasNavigatedAfterLogin, intendedPath, selectedInstitute, location.pathname, navigate, urlInstituteId]);
   
   // Reset the flag when user logs out and navigate to root
   React.useEffect(() => {
@@ -201,9 +249,7 @@ const AppContent = ({ initialPage }: AppContentProps) => {
     setSelectedOrganization(organization);
     
     // Switch to using baseUrl2 for organization-specific API calls
-    import('@/api/client').then(({ apiClient }) => {
-      apiClient.setUseBaseUrl2(true);
-    });
+    apiClient.setUseBaseUrl2(true);
     
     setCurrentPage('dashboard');
   };
@@ -217,9 +263,7 @@ const AppContent = ({ initialPage }: AppContentProps) => {
     setSelectedOrganization(null);
     
     // Switch back to using baseUrl for main API calls
-    import('@/api/client').then(({ apiClient }) => {
-      apiClient.setUseBaseUrl2(false);
-    });
+    apiClient.setUseBaseUrl2(false);
     
     navigateToPage('dashboard');
   };
@@ -285,35 +329,6 @@ const AppContent = ({ initialPage }: AppContentProps) => {
       setOrganizationCurrentPage(pageId);
       setIsSidebarOpen(false); // Close mobile sidebar after navigation
     };
-
-    const SidebarSection = ({ title, items }: { title: string; items: any[] }) => {
-      if (items.length === 0) return null;
-
-      return (
-        <div className="mb-4 sm:mb-6">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-3">
-            {title}
-          </h3>
-          <div className="space-y-1">
-            {items.map((item) => (
-              <Button
-                key={item.id}
-                variant={organizationCurrentPage === item.id ? "secondary" : "ghost"}
-                className={`w-full justify-start h-9 sm:h-10 px-3 text-sm ${
-                  organizationCurrentPage === item.id 
-                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-r-2 border-blue-500' 
-                    : 'text-foreground/70 hover:bg-muted hover:text-foreground'
-                }`}
-                onClick={() => handleNavigation(item.id)}
-              >
-                <item.icon className="mr-3 h-4 w-4 flex-shrink-0" />
-                {item.title}
-              </Button>
-            ))}
-          </div>
-        </div>
-      );
-    };
     
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -352,7 +367,7 @@ const AppContent = ({ initialPage }: AppContentProps) => {
             w-72 sm:w-80 md:w-64 lg:w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700
             transform transition-transform duration-300 ease-in-out md:transform-none
             ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-            flex flex-col h-screen
+            flex flex-col h-dvh
             overflow-hidden
           `}>
             {/* Header */}
@@ -403,7 +418,28 @@ const AppContent = ({ initialPage }: AppContentProps) => {
             <ScrollArea className="flex-1 px-2 sm:px-3 py-3 sm:py-4">
               <div className="space-y-2">
                 {/* Main navigation items */}
-                <SidebarSection title="Quick Access" items={navigationItems.filter(item => item.visible)} />
+                <div className="mb-4 sm:mb-6">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-3">
+                    Quick Access
+                  </h3>
+                  <div className="space-y-1">
+                    {navigationItems.filter(item => item.visible).map((item) => (
+                      <Button
+                        key={item.id}
+                        variant={organizationCurrentPage === item.id ? "secondary" : "ghost"}
+                        className={`w-full justify-start h-9 sm:h-10 px-3 text-sm ${
+                          organizationCurrentPage === item.id 
+                            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-r-2 border-blue-500' 
+                            : 'text-foreground/70 hover:bg-muted hover:text-foreground'
+                        }`}
+                        onClick={() => handleNavigation(item.id)}
+                      >
+                        <item.icon className="mr-3 h-4 w-4 flex-shrink-0" />
+                        {item.title}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </ScrollArea>
 
@@ -451,7 +487,7 @@ const AppContent = ({ initialPage }: AppContentProps) => {
     // CRITICAL: Show loading state when loading context from direct URL navigation
     if (isLoadingContextFromUrl) {
       return (
-        <div className="flex items-center justify-center h-screen">
+        <div className="flex items-center justify-center h-dvh">
           <div className="flex flex-col items-center gap-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
             <p className="text-muted-foreground">Loading institute data...</p>
@@ -460,8 +496,48 @@ const AppContent = ({ initialPage }: AppContentProps) => {
       );
     }
     
-    // CRITICAL: Handle child routes FIRST - regardless of user role
-    // When a child is selected and URL matches child routes, render the child pages
+    // CRITICAL: Handle parent viewing child routes FIRST - regardless of user role
+    // When isViewingAsParent is true and child is selected, show student UI in view-only mode
+    if (isViewingAsParent && selectedChild && nestedRouteComponent) {
+      // Child institute selection
+      if (nestedRouteComponent === 'child-select-institute') {
+        return <InstituteSelector useChildId={true} />;
+      }
+      // Child class selection
+      if (nestedRouteComponent === 'child-select-class') {
+        return <ClassSelector />;
+      }
+      // Child subject selection
+      if (nestedRouteComponent === 'child-select-subject') {
+        return <SubjectSelector />;
+      }
+      // Child dashboard (after selecting institute)
+      if (nestedRouteComponent === 'child-dashboard') {
+        return <Dashboard />;
+      }
+      // Child homework (view-only - isViewingAsParent checked in component)
+      if (nestedRouteComponent === 'child-homework') {
+        return <Homework />;
+      }
+      // Child lectures (view-only)
+      if (nestedRouteComponent === 'child-lectures') {
+        return <Lectures />;
+      }
+      // Child exams (view-only)
+      if (nestedRouteComponent === 'child-exams') {
+        return <Exams />;
+      }
+      // Child results page
+      if (nestedRouteComponent === 'child-results-page') {
+        return <Results />;
+      }
+      // Legacy child routes
+      if (nestedRouteComponent === 'child-results') return <ChildResults />;
+      if (nestedRouteComponent === 'child-attendance') return <ChildAttendancePage />;
+      if (nestedRouteComponent === 'child-transport') return <ChildTransportPage />;
+    }
+    
+    // Non-parent-viewing child routes
     if (selectedChild && nestedRouteComponent) {
       if (nestedRouteComponent === 'child-results') return <ChildResults />;
       if (nestedRouteComponent === 'child-attendance') return <ChildAttendancePage />;
@@ -565,7 +641,7 @@ const AppContent = ({ initialPage }: AppContentProps) => {
       }
       
       // Only redirect to InstituteSelector if no institute AND not loading from URL
-      if (!selectedInstitute && !urlInstituteId && currentPage !== 'institutes' && currentPage !== 'select-institute') {
+      if (!selectedInstitute && !urlInstituteId && currentPage !== 'institutes' && currentPage !== 'select-institute' && currentPage !== 'settings' && currentPage !== 'appearance') {
         return <InstituteSelector />;
       }
 
@@ -611,7 +687,7 @@ const AppContent = ({ initialPage }: AppContentProps) => {
         case 'institute-profile':
           return <InstituteProfile />;
         case 'organizations':
-          return renderComponent();
+          return <Organizations />;
         case 'institute-payments':
           return <InstitutePayments />;
         case 'subject-payments':
@@ -627,6 +703,8 @@ const AppContent = ({ initialPage }: AppContentProps) => {
         case 'notifications':
         case 'institute-notifications':
           return <NotificationsPage />;
+        case 'settings':
+          return <Settings />;
         default:
           return <Dashboard />;
       }
@@ -643,7 +721,7 @@ const AppContent = ({ initialPage }: AppContentProps) => {
         return <ParentChildrenSelector />;
       }
 
-      if (!selectedChild && currentPage !== 'parents' && currentPage !== 'profile' && currentPage !== 'appearance') {
+      if (!selectedChild && currentPage !== 'parents' && currentPage !== 'profile' && currentPage !== 'appearance' && currentPage !== 'settings') {
         return <ParentChildrenSelector />;
       }
 
@@ -680,6 +758,8 @@ const AppContent = ({ initialPage }: AppContentProps) => {
           return <ParentChildrenSelector />;
         case 'appearance':
           return <Appearance />;
+        case 'settings':
+          return <Settings />;
         case 'notifications':
         case 'institute-notifications':
           return <NotificationsPage />;
@@ -691,7 +771,7 @@ const AppContent = ({ initialPage }: AppContentProps) => {
     // For Teacher role
     if (userRole === 'Teacher') {
       // Only redirect to InstituteSelector if no institute AND not loading from URL
-      if (!selectedInstitute && !urlInstituteId && currentPage !== 'institutes' && currentPage !== 'select-institute') {
+      if (!selectedInstitute && !urlInstituteId && currentPage !== 'institutes' && currentPage !== 'select-institute' && currentPage !== 'settings' && currentPage !== 'appearance') {
         return <InstituteSelector />;
       }
 
@@ -759,7 +839,7 @@ const AppContent = ({ initialPage }: AppContentProps) => {
         case 'live-lectures':
           return <LiveLectures />;
         case 'homework':
-          return userRole === 'Teacher' ? <TeacherHomework /> : <Homework />;
+          return <Homework />;
         case 'homework-submissions':
           return <StudentHomeworkSubmissions />;
         case 'exams':
@@ -787,6 +867,8 @@ const AppContent = ({ initialPage }: AppContentProps) => {
         case 'notifications':
         case 'institute-notifications':
           return <NotificationsPage />;
+        case 'settings':
+          return <Settings />;
         default:
           return <Dashboard />;
       }
@@ -795,7 +877,7 @@ const AppContent = ({ initialPage }: AppContentProps) => {
     // For AttendanceMarker role
     if (userRole === 'AttendanceMarker') {
       // Only redirect to InstituteSelector if no institute AND not loading from URL
-      if (!selectedInstitute && !urlInstituteId && currentPage !== 'select-institute') {
+      if (!selectedInstitute && !urlInstituteId && currentPage !== 'select-institute' && currentPage !== 'settings' && currentPage !== 'appearance') {
         return <InstituteSelector />;
       }
 
@@ -848,6 +930,8 @@ const AppContent = ({ initialPage }: AppContentProps) => {
     // Pages that don't require class/subject selection
     const pagesWithoutClassRequirement = [
       'profile',
+      'settings',
+      'appearance',
       'transport', 
       'parent-transport', 
       'transport-selection', 
@@ -861,7 +945,9 @@ const AppContent = ({ initialPage }: AppContentProps) => {
       'subject-payments',
       'my-submissions',
       'notifications',
-      'institute-notifications'
+      'institute-notifications',
+      'calendar-management',
+      'admin-attendance'
     ];
     
     console.log('🔍 Student Role - Debug:', { 
@@ -1018,6 +1104,10 @@ const AppContent = ({ initialPage }: AppContentProps) => {
         return <SubjectPaymentSubmissions />;
       case 'enrollment-management':
         return <TeacherEnrollmentManagement />;
+      case 'calendar-management':
+        return <CalendarManagementPage />;
+      case 'admin-attendance':
+        return <AdminAttendancePage />;
       case 'my-children':
         return <MyChildren />;
       case 'child/:childId/dashboard':
@@ -1040,9 +1130,9 @@ const AppContent = ({ initialPage }: AppContentProps) => {
     }} loginFunction={login} />;
   }
 
-  // 🛡️ CRITICAL: Show loading state while validating context from URL
-  // This MUST happen BEFORE any institute/class/subject checks
-  if (isValidating) {
+  // 🛡️ Show loading state while validating context from URL (only for context-heavy routes)
+  // isValidating is now only true when there are actual context IDs in the URL
+  if (isValidating && (urlInstituteId || location.pathname.startsWith('/child/') || location.pathname.startsWith('/organization/') || location.pathname.startsWith('/transport/'))) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -1060,19 +1150,20 @@ const AppContent = ({ initialPage }: AppContentProps) => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-      <div className="flex w-full h-screen">
+      <div className="flex w-full h-dvh">
         <Sidebar 
           isOpen={isSidebarOpen}
           onClose={handleSidebarClose}
         />
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           <Header onMenuClick={handleMenuClick} />
-          <main className="flex-1 overflow-auto p-3 sm:p-4 lg:p-6">
+          <main className="flex-1 overflow-auto p-3 sm:p-4 lg:p-6 pb-20 lg:pb-6">
             <div className="max-w-full">
               {renderComponent()}
             </div>
           </main>
           <ModalRouter />
+          <BottomNav onMenuClick={handleMenuClick} />
         </div>
       </div>
     </div>

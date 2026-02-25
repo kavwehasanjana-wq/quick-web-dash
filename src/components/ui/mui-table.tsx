@@ -104,10 +104,13 @@ export default function MUITable({
       <Paper sx={{
       width: '100%',
       overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
       height: 'calc(100vh - 96px)'
     }}>
         <TableContainer sx={{
-        height: 'calc(100% - 56px)'
+        flex: 1,
+        overflow: 'auto'
       }}>
           <Table stickyHeader aria-label="sticky table">
             <TableHead>
@@ -215,7 +218,7 @@ export default function MUITable({
             </TableBody>
           </Table>
         </TableContainer>
-        <TablePagination rowsPerPageOptions={rowsPerPageOptions} component="div" count={totalCount} rowsPerPage={rowsPerPage} page={page} onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage} />
+        <TablePagination rowsPerPageOptions={rowsPerPageOptions} component="div" count={totalCount} rowsPerPage={rowsPerPage} page={page} onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage} sx={{ flexShrink: 0, borderTop: '1px solid hsl(var(--border))' }} />
       </Paper>
     </div>;
 }

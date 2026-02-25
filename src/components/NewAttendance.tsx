@@ -9,7 +9,7 @@ import { RefreshCw, Search, Filter, Calendar, User, Clock, CheckCircle, MapPin, 
 import { useAuth } from '@/contexts/AuthContext';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { useToast } from '@/hooks/use-toast';
-import { getAttendanceUrl, getBaseUrl } from '@/contexts/utils/auth.api';
+import { getAttendanceUrl, getBaseUrl, getApiHeadersAsync } from '@/contexts/utils/auth.api';
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
 interface AttendanceRecord {
@@ -195,16 +195,6 @@ const NewAttendance = () => {
 
   const { hasPermission, endpoint, title } = getPermissionAndEndpoint();
 
-  const getApiHeaders = () => {
-    const token = localStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('authToken');
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json'
-    };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    return headers;
-  };
 
   const loadAttendanceData = async () => {
     if (!hasPermission) {
@@ -227,7 +217,7 @@ const NewAttendance = () => {
 
     setIsLoading(true);
     try {
-      const headers = getApiHeaders();
+      const headers = await getApiHeadersAsync();
       const params = new URLSearchParams({
         startDate,
         endDate,

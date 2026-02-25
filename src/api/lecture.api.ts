@@ -65,27 +65,31 @@ export interface LectureQueryParams {
 class LectureApi {
   async getLectures(params?: LectureQueryParams, forceRefresh = false): Promise<ApiResponse<Lecture[]>> {
     console.log('📚 Fetching lectures with secure caching:', params, { forceRefresh });
-    return enhancedCachedClient.get<ApiResponse<Lecture[]>>('/institute-class-subject-lectures', params, {
+    // Separate cache context fields from actual API query params
+    const { userId, role, ...apiParams } = params ?? {};
+    return enhancedCachedClient.get<ApiResponse<Lecture[]>>('/institute-class-subject-lectures', Object.keys(apiParams).length > 0 ? apiParams : undefined, {
       forceRefresh,
       ttl: 10, // Cache lectures for 10 minutes (they change frequently)
       useStaleWhileRevalidate: true,
-      userId: params?.userId,
-      instituteId: params?.instituteId,
-      classId: params?.classId,
-      subjectId: params?.subjectId,
-      role: params?.role
+      userId,
+      instituteId: apiParams?.instituteId,
+      classId: apiParams?.classId,
+      subjectId: apiParams?.subjectId,
+      role
     });
   }
 
   async getInstituteLectures(params?: LectureQueryParams, forceRefresh = false): Promise<ApiResponse<Lecture[]>> {
     console.log('📚 Fetching institute lectures with secure caching:', params, { forceRefresh });
-    return enhancedCachedClient.get<ApiResponse<Lecture[]>>('/institute-lectures', params, {
+    // Separate cache context fields from actual API query params
+    const { userId, role, ...apiParams } = params ?? {};
+    return enhancedCachedClient.get<ApiResponse<Lecture[]>>('/institute-lectures', Object.keys(apiParams).length > 0 ? apiParams : undefined, {
       forceRefresh,
       ttl: 10,
       useStaleWhileRevalidate: true,
-      userId: params?.userId,
-      instituteId: params?.instituteId,
-      role: params?.role
+      userId,
+      instituteId: apiParams?.instituteId,
+      role
     });
   }
 
@@ -137,30 +141,36 @@ class LectureApi {
   }
 
   async hasLecturesCached(params?: LectureQueryParams): Promise<boolean> {
-    return enhancedCachedClient.hasCache('/institute-class-subject-lectures', params, {
-      userId: params?.userId,
-      instituteId: params?.instituteId,
-      classId: params?.classId,
-      subjectId: params?.subjectId
+    const { userId, role, ...apiParams } = params ?? {};
+    return enhancedCachedClient.hasCache('/institute-class-subject-lectures', Object.keys(apiParams).length > 0 ? apiParams : undefined, {
+      userId,
+      instituteId: apiParams?.instituteId,
+      classId: apiParams?.classId,
+      subjectId: apiParams?.subjectId,
+      role
     });
   }
 
   async getCachedLectures(params?: LectureQueryParams): Promise<ApiResponse<Lecture[]> | null> {
-    return enhancedCachedClient.getCachedOnly<ApiResponse<Lecture[]>>('/institute-class-subject-lectures', params, {
-      userId: params?.userId,
-      instituteId: params?.instituteId,
-      classId: params?.classId,
-      subjectId: params?.subjectId
+    const { userId, role, ...apiParams } = params ?? {};
+    return enhancedCachedClient.getCachedOnly<ApiResponse<Lecture[]>>('/institute-class-subject-lectures', Object.keys(apiParams).length > 0 ? apiParams : undefined, {
+      userId,
+      instituteId: apiParams?.instituteId,
+      classId: apiParams?.classId,
+      subjectId: apiParams?.subjectId,
+      role
     });
   }
 
   async preloadLectures(params?: LectureQueryParams): Promise<void> {
-    await enhancedCachedClient.preload<ApiResponse<Lecture[]>>('/institute-class-subject-lectures', params, {
+    const { userId, role, ...apiParams } = params ?? {};
+    await enhancedCachedClient.preload<ApiResponse<Lecture[]>>('/institute-class-subject-lectures', Object.keys(apiParams).length > 0 ? apiParams : undefined, {
       ttl: 10,
-      userId: params?.userId,
-      instituteId: params?.instituteId,
-      classId: params?.classId,
-      subjectId: params?.subjectId
+      userId,
+      instituteId: apiParams?.instituteId,
+      classId: apiParams?.classId,
+      subjectId: apiParams?.subjectId,
+      role
     });
   }
 }

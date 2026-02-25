@@ -118,8 +118,10 @@ export interface Organization {
 }
 
 export interface LoginCredentials {
-  email: string;
+  identifier: string;  // Email, Phone, System ID, or Birth Certificate
   password?: string;
+  /** When true, backend should issue long-lived refresh token (e.g. 30 days) */
+  rememberMe?: boolean;
 }
 
 export interface AuthContextType {
@@ -138,12 +140,13 @@ export interface AuthContextType {
   currentChildId: string | null;
   currentOrganizationId: string | null;
   currentTransportId: string | null;
+  isViewingAsParent: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => void;
   setSelectedInstitute: (institute: Institute | null) => void;
   setSelectedClass: (classData: Class | null) => void;
   setSelectedSubject: (subject: Subject | null) => void;
-  setSelectedChild: (child: Child | null) => void;
+  setSelectedChild: (child: Child | null, viewAsParent?: boolean) => void;
   setSelectedOrganization: (organization: Organization | null) => void;
   setSelectedTransport: (transport: { id: string; vehicleNumber: string; bookhireId: string } | null) => void;
   loadUserInstitutes: () => Promise<Institute[]>;

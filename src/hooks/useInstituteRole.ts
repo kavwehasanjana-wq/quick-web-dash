@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/utils/permissions';
 
@@ -8,26 +9,24 @@ import { UserRole } from '@/utils/permissions';
  * Usage: Replace all instances of user?.role with this hook
  */
 export const useInstituteRole = (): UserRole => {
-  const { user, selectedInstitute, selectedOrganization } = useAuth();
+  const { user, selectedInstitute, selectedOrganization, isViewingAsParent } = useAuth();
 
-  // Priority 1: Institute-specific role (from instituteUserType in API)
-  const instituteUserType = selectedInstitute?.instituteUserType || selectedInstitute?.userRole;
-  if (instituteUserType) {
-    const mappedRole = mapInstituteUserType(instituteUserType);
-    console.log('🔐 Using institute role:', instituteUserType, '→', mappedRole);
-    return mappedRole;
-  }
+  return useMemo(() => {
+    if (isViewingAsParent) {
+      return 'Student';
+    }
 
-  // Priority 2: Organization role (only when no institute is selected)
-  if (selectedOrganization?.userRole) {
-    console.log('🔐 Using organization role: OrganizationManager');
-    return 'OrganizationManager';
-  }
+    const instituteUserType = selectedInstitute?.instituteUserType || selectedInstitute?.userRole;
+    if (instituteUserType) {
+      return mapInstituteUserType(instituteUserType);
+    }
 
-  // Priority 3: Global user role (fallback)
-  const globalRole = (user?.role || 'Student') as UserRole;
-  console.log('🔐 Using global role:', globalRole);
-  return globalRole;
+    if (selectedOrganization?.userRole) {
+      return 'OrganizationManager';
+    }
+
+    return (user?.role || 'Student') as UserRole;
+  }, [isViewingAsParent, selectedInstitute?.instituteUserType, selectedInstitute?.userRole, selectedOrganization?.userRole, user?.role]);
 };
 
 /**
@@ -45,6 +44,10 @@ function mapInstituteUserType(instituteUserType: string): UserRole {
       return 'AttendanceMarker';
     case 'PARENT':
       return 'Parent';
+    case 'ORGANIZATION_MANAGER':
+      return 'OrganizationManager';
+    case 'SYSTEM_ADMIN':
+      return 'InstituteAdmin'; // SystemAdmin gets full admin access at institute level
     default:
       console.warn('⚠️ Unknown instituteUserType:', instituteUserType);
       return 'Student';

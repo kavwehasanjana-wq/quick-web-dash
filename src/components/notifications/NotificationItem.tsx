@@ -133,15 +133,30 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
             </span>
           )}
 
-          <span className="text-[10px] sm:text-xs text-muted-foreground ml-auto flex-shrink-0">
-            {formatDate(notification.createdAt)}
-          </span>
+          {(notification.sentAt || notification.createdAt) && (
+            <span className="text-[10px] sm:text-xs text-muted-foreground ml-auto flex-shrink-0">
+              {formatDate(notification.sentAt || notification.createdAt || '')}
+            </span>
+          )}
         </div>
 
         {notification.senderName && (
           <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 truncate">
             From: {notification.senderName}
           </p>
+        )}
+
+        {/* Notification Image */}
+        {notification.imageUrl && (
+          <div className="mt-2 rounded-lg overflow-hidden">
+            <img 
+              src={notification.imageUrl} 
+              alt="" 
+              className="w-full h-24 sm:h-32 object-cover rounded-lg"
+              loading="lazy"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+            />
+          </div>
         )}
       </div>
     </div>

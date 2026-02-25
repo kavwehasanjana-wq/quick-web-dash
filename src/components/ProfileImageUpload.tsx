@@ -6,6 +6,8 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Camera, Upload, User, X, Check } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { Camera as CapCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import ReactCrop, { Crop, PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { fileUploader, UploadProgress } from '@/utils/uploadHelper';
@@ -64,21 +66,21 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       
-      // Check file type
-      if (!file.type.includes('png')) {
+      // Check file type - accept PNG and JPEG
+      if (!file.type.startsWith('image/')) {
         toast({
           title: "Invalid file type",
-          description: "Only PNG files are supported.",
+          description: "Please select an image file (PNG, JPG, etc.).",
           variant: "destructive"
         });
         return;
       }
 
-      // Check file size (1MB = 1048576 bytes)
-      if (file.size > 1048576) {
+      // Check file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
         toast({
           title: "File too large",
-          description: "Maximum file size is 1MB.",
+          description: "Maximum file size is 5MB.",
           variant: "destructive"
         });
         return;
@@ -245,7 +247,35 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
               size="sm"
               variant="outline"
               className="absolute -bottom-2 -right-2 rounded-full h-8 w-8 p-0"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={async () => {
+                if (Capacitor.isNativePlatform()) {
+                  try {
+                    const photo = await CapCamera.getPhoto({
+                      source: CameraSource.Prompt,
+                      resultType: CameraResultType.Uri,
+                      quality: 90,
+                    });
+                    if (photo.webPath) {
+                      const resp = await fetch(photo.webPath);
+                      const blob = await resp.blob();
+                      const ext = blob.type?.includes('png') ? 'png' : 'jpg';
+                      const file = new File([blob], `camera-${Date.now()}.${ext}`, { type: blob.type || 'image/jpeg' });
+                      setSelectedFile(file);
+                      const reader = new FileReader();
+                      reader.addEventListener('load', () => {
+                        setImageSrc(reader.result?.toString() || '');
+                        setShowUploadDialog(true);
+                      });
+                      reader.readAsDataURL(file);
+                    }
+                  } catch (e) {
+                    console.error('Native camera failed:', e);
+                    fileInputRef.current?.click();
+                  }
+                } else {
+                  fileInputRef.current?.click();
+                }
+              }}
             >
               <Camera className="h-4 w-4" />
             </Button>
@@ -281,7 +311,7 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
       <input
         ref={fileInputRef}
         type="file"
-        accept=".png,image/png"
+        accept="image/*"
         onChange={onSelectFile}
         className="hidden"
       />

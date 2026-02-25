@@ -55,47 +55,52 @@ export interface ExamResultsResponse {
 class ExamResultsApi {
   async getExamResults(params?: ExamResultsQueryParams, forceRefresh = false): Promise<ExamResultsResponse> {
     console.log('Fetching exam results:', params, { forceRefresh });
-    return enhancedCachedClient.get<ExamResultsResponse>('/institute-class-subject-resaults', params, {
+    // Separate cache context fields from actual API query params
+    const { userId, role, ...apiParams } = params ?? {};
+    return enhancedCachedClient.get<ExamResultsResponse>('/institute-class-subject-resaults', Object.keys(apiParams).length > 0 ? apiParams : undefined, {
       forceRefresh,
       ttl: 30,
       useStaleWhileRevalidate: true,
-      userId: params?.userId,
-      instituteId: params?.instituteId,
-      classId: params?.classId,
-      subjectId: params?.subjectId,
-      role: params?.role
+      userId,
+      instituteId: apiParams?.instituteId,
+      classId: apiParams?.classId,
+      subjectId: apiParams?.subjectId,
+      role
     });
   }
 
   // Utility methods
   hasResultsCached(params?: ExamResultsQueryParams): Promise<boolean> {
-    return enhancedCachedClient.hasCache('/institute-class-subject-resaults', params, {
-      userId: params?.userId,
-      instituteId: params?.instituteId,
-      classId: params?.classId,
-      subjectId: params?.subjectId,
-      role: params?.role
+    const { userId, role, ...apiParams } = params ?? {};
+    return enhancedCachedClient.hasCache('/institute-class-subject-resaults', Object.keys(apiParams).length > 0 ? apiParams : undefined, {
+      userId,
+      instituteId: apiParams?.instituteId,
+      classId: apiParams?.classId,
+      subjectId: apiParams?.subjectId,
+      role
     });
   }
 
   getCachedResults(params?: ExamResultsQueryParams): Promise<ExamResultsResponse | null> {
-    return enhancedCachedClient.getCachedOnly<ExamResultsResponse>('/institute-class-subject-resaults', params, {
-      userId: params?.userId,
-      instituteId: params?.instituteId,
-      classId: params?.classId,
-      subjectId: params?.subjectId,
-      role: params?.role
+    const { userId, role, ...apiParams } = params ?? {};
+    return enhancedCachedClient.getCachedOnly<ExamResultsResponse>('/institute-class-subject-resaults', Object.keys(apiParams).length > 0 ? apiParams : undefined, {
+      userId,
+      instituteId: apiParams?.instituteId,
+      classId: apiParams?.classId,
+      subjectId: apiParams?.subjectId,
+      role
     });
   }
 
   async preloadResults(params?: ExamResultsQueryParams): Promise<void> {
-    await enhancedCachedClient.get<ExamResultsResponse>('/institute-class-subject-resaults', params, {
+    const { userId, role, ...apiParams } = params ?? {};
+    await enhancedCachedClient.get<ExamResultsResponse>('/institute-class-subject-resaults', Object.keys(apiParams).length > 0 ? apiParams : undefined, {
       ttl: 30,
-      userId: params?.userId,
-      instituteId: params?.instituteId,
-      classId: params?.classId,
-      subjectId: params?.subjectId,
-      role: params?.role
+      userId,
+      instituteId: apiParams?.instituteId,
+      classId: apiParams?.classId,
+      subjectId: apiParams?.subjectId,
+      role
     });
   }
 

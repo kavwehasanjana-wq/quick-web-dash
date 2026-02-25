@@ -4,18 +4,22 @@ const config: CapacitorConfig = {
   appId: 'lk.suraksha.lms',
   appName: 'Suraksha LMS',
   webDir: 'dist',
-  // For development with live reload:
+  // For production:
   server: {
-    url: 'http://192.168.56.1:8080',
-    cleartext: true
+    url: 'https://lms.suraksha.lk',
+    cleartext: false
   },
   plugins: {
     SplashScreen: {
       launchShowDuration: 1000,
       launchAutoHide: true,
-      backgroundColor: "#ffffff",
+      backgroundColor: "#1976D2",
       androidScaleType: "CENTER_CROP",
       showSpinner: false
+    },
+    StatusBar: {
+      style: 'dark',
+      backgroundColor: '#1976D2'
     },
     PushNotifications: {
       // Android: presentationOptions determine how notifications appear when app is in foreground

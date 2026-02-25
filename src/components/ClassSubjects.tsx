@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getImageUrl } from '@/utils/imageUrlHelper';
 
-import { RefreshCw, Filter, UserPlus, UserMinus, Settings, Copy, Lock, Unlock } from 'lucide-react';
+import { RefreshCw, Filter, UserPlus, UserMinus, Settings, Copy, Lock, Unlock, KeyRound } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -264,6 +264,39 @@ const ClassSubjects = () => {
     }
   };
 
+  // Enrollment key dialog state
+  const [enrollmentKeyDialog, setEnrollmentKeyDialog] = useState<{
+    open: boolean;
+    loading: boolean;
+    subjectName: string;
+    data: { subjectId: string; enrollmentEnabled: boolean; enrollmentKey: string } | null;
+  }>({ open: false, loading: false, subjectName: '', data: null });
+
+  const handleFetchEnrollmentKey = async (subject: SubjectData) => {
+    const instituteId = subject.instituteId || currentInstituteId;
+    const classId = subject.classId || currentClassId;
+    const subjectId = subject.subjectId || subject.id;
+
+    setEnrollmentKeyDialog({ open: true, loading: true, subjectName: subject.name, data: null });
+
+    try {
+      const { tokenStorageService } = await import('@/services/tokenStorageService');
+      const token = await tokenStorageService.getAccessToken();
+      const { getBaseUrl } = await import('@/contexts/utils/auth.api');
+      const response = await fetch(
+        `${getBaseUrl()}/institutes/${instituteId}/classes/${classId}/subjects/${subjectId}/enrollment-key`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      if (!response.ok) throw new Error('Failed to fetch enrollment key');
+      const data = await response.json();
+      setEnrollmentKeyDialog(prev => ({ ...prev, loading: false, data }));
+    } catch (error) {
+      console.error('Error fetching enrollment key:', error);
+      toast({ title: "Error", description: "Failed to fetch enrollment key", variant: "destructive" });
+      setEnrollmentKeyDialog(prev => ({ ...prev, open: false, loading: false }));
+    }
+  };
+
   const subjectsColumns = [
     {
       id: 'imgUrl',
@@ -379,38 +412,19 @@ const ClassSubjects = () => {
       )
     },
     {
-      key: 'enrollmentEnabled',
-      header: 'Enrollment',
-      format: (value: boolean, row: SubjectData) => (
-        <div className="flex flex-col gap-1 min-w-[120px]">
-          <div className="flex items-center gap-1">
-            {value ? (
-              row.enrollmentKey ? (
-                <>
-                  <Lock className="h-3 w-3 text-amber-600" />
-                  <Badge variant="secondary" className="text-xs">Key Required</Badge>
-                </>
-              ) : (
-                <>
-                  <Unlock className="h-3 w-3 text-green-600" />
-                  <Badge variant="default" className="text-xs">Open</Badge>
-                </>
-              )
-            ) : (
-              <Badge variant="outline" className="text-xs text-muted-foreground">Disabled</Badge>
-            )}
-          </div>
-          {value && row.enrollmentKey && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 px-2 text-xs"
-              onClick={() => copyEnrollmentKey(row.enrollmentKey!)}
-            >
-              <Copy className="h-3 w-3 mr-1" />
-              {row.enrollmentKey.substring(0, 8)}...
-            </Button>
-          )}
+      key: 'enrollmentKey',
+      header: 'Enrollment Key',
+      format: (value: any, row: SubjectData) => (
+        <div className="min-w-[100px]">
+          <Button
+            size="sm"
+            className="h-8 px-3 hover:opacity-90"
+            style={{ backgroundColor: '#28A158', color: 'white' }}
+            onClick={() => handleFetchEnrollmentKey(row)}
+          >
+            <KeyRound className="h-4 w-4 mr-1" />
+            Code
+          </Button>
         </div>
       )
     },
@@ -452,16 +466,6 @@ const ClassSubjects = () => {
               {isAssigningTeacher && selectedSubjectForTeacher?.subjectId === (row.subjectId || row.id) ? 'Assigning...' : 'Assign'}
             </Button>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleManageEnrollment(row)}
-            className="h-8 px-3"
-            title="Manage enrollment"
-          >
-            <Settings className="h-4 w-4 mr-1" />
-            Enrollment
-          </Button>
         </div>
       )
     }] : [])
@@ -679,6 +683,46 @@ const ClassSubjects = () => {
               />
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Enrollment Key Dialog */}
+      <Dialog open={enrollmentKeyDialog.open} onOpenChange={(open) => !open && setEnrollmentKeyDialog(prev => ({ ...prev, open: false }))}>
+        <DialogContent className="max-w-sm p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Enrollment Key - {enrollmentKeyDialog.subjectName}</DialogTitle>
+          </DialogHeader>
+          {enrollmentKeyDialog.loading ? (
+            <div className="flex items-center justify-center py-8">
+              <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : enrollmentKeyDialog.data ? (
+            <div className="space-y-4 mt-2">
+              <div className="p-5 bg-muted/60 border border-border rounded-2xl text-center">
+                <div className="text-sm text-muted-foreground mb-3">Subject Enrollment Key</div>
+                <div className="text-4xl font-extrabold font-mono tracking-[0.2em]">
+                  {enrollmentKeyDialog.data.enrollmentKey || '—'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between py-3 px-4 border-l-4 border-primary bg-muted/30 rounded-lg">
+                  <span className="text-sm font-medium text-muted-foreground">Subject ID</span>
+                  <span className="text-sm font-bold">{enrollmentKeyDialog.data.subjectId}</span>
+                </div>
+                <div className="flex items-center justify-between py-3 px-4 border-l-4 border-primary bg-muted/30 rounded-lg">
+                  <span className="text-sm font-medium text-muted-foreground">Enrollment Enabled</span>
+                  <Badge variant={enrollmentKeyDialog.data.enrollmentEnabled ? 'default' : 'secondary'} className="text-xs px-3 py-1">
+                    {enrollmentKeyDialog.data.enrollmentEnabled ? 'Yes' : 'No'}
+                  </Badge>
+                </div>
+              </div>
+              {enrollmentKeyDialog.data.enrollmentKey && (
+                <Button onClick={() => copyEnrollmentKey(enrollmentKeyDialog.data!.enrollmentKey)} className="w-full" size="lg">
+                  Copy Code
+                </Button>
+              )}
+            </div>
+          ) : null}
         </DialogContent>
       </Dialog>
     </div>

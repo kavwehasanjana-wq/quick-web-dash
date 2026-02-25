@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { X, Save, Video, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getBaseUrl2 } from '@/contexts/utils/auth.api';
+import { uploadWithSignedUrl } from '@/utils/signedUploadHelper';
 
 interface UpdateOrganizationLectureFormProps {
   lecture: any;
@@ -71,8 +72,6 @@ const UpdateOrganizationLectureForm = ({ lecture, onClose, onSuccess }: UpdateOr
       // Step 1: Upload documents using signed URL
       const documentPaths: string[] = [];
       if (documents.length > 0) {
-        const { uploadWithSignedUrl } = await import('@/utils/signedUploadHelper');
-        
         for (const file of documents) {
           const relativePath = await uploadWithSignedUrl(
             file,

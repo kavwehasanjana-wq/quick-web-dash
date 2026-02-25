@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Bell, CheckCheck, RefreshCw, Building2 } from 'lucide-react';
 import { notificationApiService, Notification } from '@/services/notificationApiService';
-import { NotificationItem } from './NotificationItem';
+import { DateGroupedNotifications } from './DateGroupedNotifications';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -264,16 +264,11 @@ export const InstituteNotifications: React.FC<InstituteNotificationsProps> = ({
             </p>
           </div>
         ) : (
-          <div className="divide-y">
-            {notifications.map((notification) => (
-              <NotificationItem
-                key={notification.id}
-                notification={notification}
-                onMarkAsRead={handleMarkAsRead}
-                onClick={handleNotificationClick}
-              />
-            ))}
-          </div>
+          <DateGroupedNotifications
+            notifications={notifications}
+            onMarkAsRead={handleMarkAsRead}
+            onClick={handleNotificationClick}
+          />
         )}
 
         {/* Pagination */}

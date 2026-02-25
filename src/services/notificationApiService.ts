@@ -5,14 +5,16 @@ export interface Notification {
   id: string;
   title: string;
   body: string;
-  imageUrl?: string;
-  icon?: string;
-  actionUrl?: string;
+  imageUrl?: string | null;
+  icon?: string | null;
+  actionUrl?: string | null;
+  dataPayload?: any | null;
   scope: 'GLOBAL' | 'INSTITUTE' | 'CLASS' | 'SUBJECT';
   priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+  senderRole?: string;
   isRead: boolean;
-  createdAt: string;
   sentAt?: string;
+  createdAt?: string;
   senderName?: string;
   targetClassName?: string;
   targetSubjectName?: string;
@@ -24,6 +26,7 @@ export interface PaginatedNotifications {
   page: number;
   limit: number;
   totalPages: number;
+  unreadCount?: number;
 }
 
 export interface UnreadCount {

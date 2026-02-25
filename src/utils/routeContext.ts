@@ -50,7 +50,6 @@ export const buildContextUrl = (
   // Append base path
   url += basePath;
   
-  console.log('🔗 Built context URL:', { basePath, context, result: url });
   return url;
 };
 
@@ -97,12 +96,6 @@ export const useContextNavigation = () => {
     
     const contextUrl = buildContextUrl(path, context);
     
-    console.log('🚀 Navigating with context:', {
-      originalPath: path,
-      contextUrl,
-      context
-    });
-    
     navigate(contextUrl, options);
   };
   
@@ -130,17 +123,14 @@ export const useSyncUrlWithContext = () => {
     
     // If URL has context but auth doesn't, update auth
     if (urlContext.instituteId && !selectedInstitute) {
-      console.log('🔄 Syncing institute from URL to context:', urlContext.instituteId);
       // Would need to fetch institute data here
     }
     
     if (urlContext.classId && !selectedClass) {
-      console.log('🔄 Syncing class from URL to context:', urlContext.classId);
       // Would need to fetch class data here
     }
     
     if (urlContext.subjectId && !selectedSubject) {
-      console.log('🔄 Syncing subject from URL to context:', urlContext.subjectId);
       // Would need to fetch subject data here
     }
     
@@ -159,7 +149,6 @@ export const useSyncUrlWithContext = () => {
       const newUrl = buildContextUrl(currentPath, context);
       
       if (newUrl !== currentPath) {
-        console.log('🔄 Syncing context to URL:', { from: currentPath, to: newUrl });
         navigate(newUrl, { replace: true });
       }
     }

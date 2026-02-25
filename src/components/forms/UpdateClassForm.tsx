@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { instituteClassesApi, InstituteClassCreateData } from '@/api/instituteClasses.api';
+import { uploadWithSignedUrl } from '@/utils/signedUploadHelper';
 import { Loader2, Upload } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -139,8 +140,6 @@ const UpdateClassForm: React.FC<UpdateClassFormProps> = ({ classData, onSubmit, 
       // Optional: upload image if selected using signed URL
       if (selectedImage) {
         console.log('Uploading image:', selectedImage.name);
-        
-        const { uploadWithSignedUrl } = await import('@/utils/signedUploadHelper');
         
         // Step 1: Upload to S3 using signed URL
         const relativePath = await uploadWithSignedUrl(

@@ -7,6 +7,7 @@ import { DataCardView } from '@/components/ui/data-card-view';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth, type UserRole } from '@/contexts/AuthContext';
 import { School, Users, BookOpen, Clock, RefreshCw, User, Search, Filter, Image, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { getBaseUrl } from '@/contexts/utils/auth.api';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { instituteClassesApi, type EnrollClassData } from '@/api/instituteClasses.api';
+import ChildCurrentSelection from '@/components/ChildCurrentSelection';
+
 const enrollFormSchema = z.object({
   classId: z.string().min(1, 'Class ID is required'),
   enrollmentCode: z.string().min(1, 'Enrollment code is required')
@@ -135,8 +138,11 @@ const ClassSelector = () => {
     user,
     selectedInstitute,
     setSelectedClass,
-    currentInstituteId
+    currentInstituteId,
+    isViewingAsParent,
+    selectedChild
   } = useAuth();
+  const navigate = useNavigate();
   const {
     toast
   } = useToast();
@@ -190,14 +196,16 @@ const ClassSelector = () => {
       page,
       limit,
       forceRefresh,
-      dataLoaded
+      dataLoaded,
+      isViewingAsParent
     });
     try {
       let endpoint = '';
       let params: Record<string, any> = {};
       if (effectiveRole === 'Student') {
-        // Use the new student-specific endpoint
-        endpoint = `/institute-classes/${currentInstituteId}/student/${user?.id}`;
+        // CRITICAL: When parent views as child, use the CHILD's ID, not the parent's
+        const studentUserId = isViewingAsParent && selectedChild ? selectedChild.id : user?.id;
+        endpoint = `/institute-classes/${currentInstituteId}/student/${studentUserId}`;
         params = {
           page: page,
           limit: limit
@@ -453,6 +461,14 @@ const ClassSelector = () => {
       grade: 0,
       specialty: classData.specialty || 'General'
     });
+
+    // When parent is viewing child's data, navigate to child's subject selection
+    if (isViewingAsParent && selectedChild) {
+      console.log('Parent viewing child - navigating to child subject selection');
+      navigate(`/child/${selectedChild.id}/select-subject`);
+      return;
+    }
+
     const shouldNavigateToSubject =
       effectiveRole === 'AttendanceMarker' ||
       effectiveRole === 'Teacher' ||
@@ -461,7 +477,14 @@ const ClassSelector = () => {
 
     if (shouldNavigateToSubject) {
       console.log(`${effectiveRole} detected - auto-navigating to select subject`);
-      navigateToPage('select-subject');
+      // IMPORTANT: navigate directly using IDs to avoid using stale selection state
+      // (stale state caused /institute/:id/select-subject or /select-subject and then auto-clearing).
+      const instituteId = currentInstituteId || selectedInstitute?.id;
+      if (instituteId) {
+        navigate(`/institute/${instituteId}/class/${classData.id}/select-subject`);
+      } else {
+        navigate('/select-institute');
+      }
     }
 
     // Explicitly log that no further API calls should happen
@@ -595,15 +618,18 @@ const ClassSelector = () => {
     fetchClassesByRole(1, pageSize, false);
   };
   return <div className="space-y-2 sm:space-y-3 p-1 sm:p-2 md:p-3">
+      {/* Show Current Child Selection for Parent flow */}
+      {isViewingAsParent && <ChildCurrentSelection className="mb-3" />}
+      
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1.5 sm:gap-2 mb-2 sm:mb-4">
         <div className="flex-1">
-          <h1 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 dark:text-white mb-0.5">
+          <h1 className="text-sm sm:text-base md:text-lg font-semibold text-foreground mb-0.5">
             Select Class
           </h1>
-          <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">
             Choose a class to manage lectures and attendance
           </p>
-          {selectedInstitute && <p className="text-[9px] sm:text-[10px] text-blue-600 mt-0.5">
+          {selectedInstitute && <p className="text-[9px] sm:text-[10px] text-primary mt-0.5">
               Institute: {selectedInstitute.name}
             </p>}
           {effectiveRole === 'Student' && <Button onClick={handleOpenEnrollDialog} variant="default" size="sm" className="mt-1.5 w-full sm:w-auto h-6 sm:h-7 text-[10px] sm:text-xs">
@@ -748,22 +774,22 @@ const ClassSelector = () => {
           <p className="text-muted-foreground">
             {searchTerm || gradeFilter !== 'all' || specialtyFilter !== 'all' || classTypeFilter !== 'all' || academicYearFilter !== 'all' || statusFilter !== 'all' ? 'No classes match your current filters.' : 'No enrolled classes found.'}
           </p>
-        </div> : <>
+        </div> : <div className="flex flex-col min-h-[calc(100vh-180px)]">
           {/* Unified Card View - Same size on all devices */}
           <div
-            className={`grid grid-cols-1 sm:grid-cols-2 ${sidebarCollapsed ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-x-4 gap-y-10 sm:gap-x-6 sm:gap-y-12 lg:gap-y-10 pt-4 md:pt-8 mb-10`}
+            className={`grid grid-cols-1 sm:grid-cols-2 ${sidebarCollapsed ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-x-3 gap-y-8 sm:gap-x-4 sm:gap-y-10 pt-3 md:pt-6 mb-8`}
           >
             {filteredClasses.map(classItem => (
-              <div key={classItem.id} className="relative flex w-full flex-col rounded-xl bg-card bg-clip-border text-card-foreground shadow-md hover:shadow-lg transition-all duration-300">
+              <div key={classItem.id} className="relative flex w-full flex-col rounded-lg bg-card bg-clip-border text-card-foreground shadow-sm hover:shadow-md transition-all duration-300 border-2 border-primary/30 hover:border-primary/60">
                 {/* Verification Status Banner for Students */}
                 {effectiveRole === 'Student' && classItem.isVerified === false && (
-                  <div className="absolute top-0 left-0 right-0 z-10 bg-amber-500/90 text-white text-xs font-medium py-1 px-2 rounded-t-xl text-center">
+                  <div className="absolute top-0 left-0 right-0 z-10 bg-amber-500/90 text-white text-[10px] font-medium py-0.5 px-2 rounded-t-lg text-center">
                     ⏳ Pending Verification
                   </div>
                 )}
                 
                 {/* Class Image - Gradient Header */}
-                <div className={`relative mx-4 ${effectiveRole === 'Student' && classItem.isVerified === false ? 'mt-2' : '-mt-6'} h-40 overflow-hidden rounded-xl bg-clip-border text-white shadow-lg shadow-primary/40 bg-gradient-to-r from-primary to-primary/80`}>
+                <div className={`relative mx-3 ${effectiveRole === 'Student' && classItem.isVerified === false ? 'mt-2' : '-mt-5'} h-28 overflow-hidden rounded-lg bg-clip-border text-white shadow-md shadow-primary/30 bg-gradient-to-r from-primary to-primary/80`}>
                   {classItem.imageUrl ? (
                     <img 
                       src={getImageUrl(classItem.imageUrl)} 
@@ -775,53 +801,53 @@ const ClassSelector = () => {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-r from-primary to-primary/80">
-                      <School className="w-12 h-12 text-white" />
+                      <School className="w-8 h-8 text-white" />
                     </div>
                   )}
                 </div>
 
-                <div className="p-6">
+                <div className="p-4">
                   {/* Class Name */}
-                  <h5 className="mb-2 block font-sans text-xl font-semibold leading-snug tracking-normal text-foreground antialiased line-clamp-2">
+                  <h5 className="mb-1.5 block font-sans text-sm font-semibold leading-snug tracking-normal text-foreground antialiased line-clamp-2">
                     {classItem.name}
                   </h5>
                   
                   {/* Info badges */}
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    <Badge variant="outline">
+                  <div className="flex flex-wrap gap-1.5 mb-1.5">
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                       {classItem.specialty}
                     </Badge>
-                    <Badge variant="secondary">
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                       {classItem.academicYear}
                     </Badge>
                   </div>
 
                   {/* Description */}
-                  <p className="block font-sans text-base font-light leading-relaxed text-muted-foreground antialiased line-clamp-2">
+                  <p className="block font-sans text-xs font-light leading-relaxed text-muted-foreground antialiased line-clamp-2">
                     {classItem.description || `${classItem.classType} class`}
                   </p>
 
                   {/* Additional Details - Shown when Read More is clicked */}
                   {expandedIds[classItem.id] && (
-                    <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300 space-y-2 border-t border-border pt-3">
-                      <div className="text-sm">
+                    <div className="mt-3 animate-in fade-in slide-in-from-top-2 duration-300 space-y-1.5 border-t border-border pt-2">
+                      <div className="text-xs">
                         <span className="font-semibold text-foreground">Code:</span>
-                        <span className="text-muted-foreground ml-2">{classItem.code}</span>
+                        <span className="text-muted-foreground ml-1.5">{classItem.code}</span>
                       </div>
-                      <div className="text-sm">
+                      <div className="text-xs">
                         <span className="font-semibold text-foreground">Type:</span>
-                        <span className="text-muted-foreground ml-2">{classItem.classType}</span>
+                        <span className="text-muted-foreground ml-1.5">{classItem.classType}</span>
                       </div>
-                      <div className="text-sm">
+                      <div className="text-xs">
                         <span className="font-semibold text-foreground">Capacity:</span>
-                        <span className="text-muted-foreground ml-2">{classItem.capacity || 'N/A'}</span>
+                        <span className="text-muted-foreground ml-1.5">{classItem.capacity || 'N/A'}</span>
                       </div>
                     </div>
                   )}
                 </div>
 
                 {/* Action Buttons */}
-                <div className="p-6 pt-0 space-y-3">
+                <div className="p-4 pt-0 space-y-2">
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
@@ -830,15 +856,15 @@ const ClassSelector = () => {
                         [classItem.id]: !prev[classItem.id]
                       }));
                     }}
-                    className="w-full select-none rounded-lg bg-muted py-3 px-6 text-center align-middle font-sans text-xs font-bold uppercase text-foreground shadow-sm transition-all hover:shadow-md active:opacity-90"
+                    className="w-full select-none rounded-md bg-muted py-2 px-4 text-center align-middle font-sans text-[10px] font-semibold uppercase text-foreground shadow-sm transition-all hover:shadow active:opacity-90"
                   >
                     {expandedIds[classItem.id] ? 'Show Less' : 'Read More'}
                   </button>
                   
                   {/* Show Select button only for verified classes (or non-student roles) */}
                   {classItem.isVerified === false ? (
-                    <div className="w-full select-none rounded-lg bg-amber-100 dark:bg-amber-900/30 py-3 px-6 text-center align-middle font-sans text-xs font-bold uppercase text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700">
-                      <Clock className="h-4 w-4 inline-block mr-2" />
+                    <div className="w-full select-none rounded-md bg-amber-100 dark:bg-amber-900/30 py-2 px-4 text-center align-middle font-sans text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700">
+                      <Clock className="h-3 w-3 inline-block mr-1" />
                       Pending
                     </div>
                   ) : (
@@ -847,7 +873,7 @@ const ClassSelector = () => {
                         e.stopPropagation();
                         handleSelectClass(classItem);
                       }}
-                      className="w-full select-none rounded-lg bg-primary py-3 px-6 text-center align-middle font-sans text-xs font-bold uppercase text-primary-foreground shadow-md shadow-primary/20 transition-all hover:shadow-lg hover:shadow-primary/40 active:opacity-90"
+                      className="w-full select-none rounded-md bg-primary py-2 px-4 text-center align-middle font-sans text-[10px] font-semibold uppercase text-primary-foreground shadow-sm shadow-primary/20 transition-all hover:shadow-md hover:shadow-primary/30 active:opacity-90"
                     >
                       Select Class
                     </button>
@@ -857,49 +883,54 @@ const ClassSelector = () => {
             ))}
           </div>
 
-          {/* Pagination */}
-          <div className="flex flex-col items-center gap-4 mt-6 pb-6 px-4">
-            <div className="flex items-center gap-3">
-              <Button 
-                variant="outline" 
-                onClick={() => handlePageChange(currentPage - 1)} 
-                disabled={currentPage <= 1 || isLoading}
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Prev
-              </Button>
-              
-              <span className="text-sm text-muted-foreground font-medium">
-                Page {currentPage} of {totalPages}
-              </span>
-              
-              <Button 
-                variant="outline" 
-                onClick={() => handlePageChange(currentPage + 1)} 
-                disabled={currentPage >= totalPages || isLoading}
-              >
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
+          {/* Pagination - Always at bottom */}
+          <div className="mt-auto bg-background border-t border-border py-2 sm:py-3 px-2 sm:px-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-1.5 sm:gap-2">
+              <span className="text-[10px] sm:text-xs text-muted-foreground">
                 {totalItems} classes total
               </span>
+              
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)} 
+                  disabled={currentPage <= 1 || isLoading}
+                  className="h-6 sm:h-7 text-[10px] sm:text-xs px-1.5 sm:px-2"
+                >
+                  <ChevronLeft className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-0.5" />
+                  Prev
+                </Button>
+                
+                <span className="text-[10px] sm:text-xs text-muted-foreground font-medium">
+                  {currentPage} / {totalPages}
+                </span>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)} 
+                  disabled={currentPage >= totalPages || isLoading}
+                  className="h-6 sm:h-7 text-[10px] sm:text-xs px-1.5 sm:px-2"
+                >
+                  Next
+                  <ChevronRight className="h-3 w-3 sm:h-3.5 sm:w-3.5 ml-0.5" />
+                </Button>
+              </div>
+
               <Select value={pageSize.toString()} onValueChange={value => handlePageSizeChange(parseInt(value, 10))}>
-                <SelectTrigger className="w-[120px]">
+                <SelectTrigger className="w-[80px] sm:w-[100px] h-6 sm:h-7 text-[10px] sm:text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="10">10 per page</SelectItem>
-                  <SelectItem value="50">50 per page</SelectItem>
-                  <SelectItem value="100">100 per page</SelectItem>
+                  <SelectItem value="10">10 / page</SelectItem>
+                  <SelectItem value="50">50 / page</SelectItem>
+                  <SelectItem value="100">100 / page</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
-        </>}
+        </div>}
 
       {/* Enrollment Dialog */}
       <Dialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen}>

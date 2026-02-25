@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useMemo, useCallback, useRef } from 'react';
 import { 
   User, 
   Institute, 
@@ -10,27 +10,28 @@ import {
   LoginCredentials, 
   AuthContextType 
 } from './types/auth.types';
-import { loginUser, validateToken, logoutUser, getAccessTokenAsync } from './utils/auth.api';
+import { loginUser, validateToken, logoutUser } from './utils/auth.api';
 import { mapUserData } from './utils/user.utils';
 import { Institute as ApiInstitute } from '@/api/institute.api';
 import { cachedApiClient } from '@/api/cachedClient';
 import { apiCache } from '@/utils/apiCache';
+import { useAuthAutoRefresh } from '@/hooks/useAuthAutoRefresh';
+import { secureCache } from '@/utils/secureCache';
+import { attendanceDuplicateChecker } from '@/utils/attendanceDuplicateCheck';
+import { attendanceApiClient } from '@/api/attendanceClient';
+import { enhancedCachedClient } from '@/api/enhancedCachedClient';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
-  console.log('useAuth hook called');
   const context = useContext(AuthContext);
-  console.log('AuthContext value:', context);
   if (context === undefined) {
-    console.error('AuthContext is undefined - useAuth must be used within an AuthProvider');
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  console.log('AuthProvider component is rendering');
   const [user, setUser] = useState<User | null>(null);
   const [selectedInstitute, setSelectedInstituteState] = useState<Institute | null>(null);
   const [selectedClass, setSelectedClassState] = useState<Class | null>(null);
@@ -42,6 +43,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [selectedClassGrade, setSelectedClassGrade] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true); // Start with true to show loading on init
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isViewingAsParent, setIsViewingAsParentState] = useState(false); // Parent viewing child's data
+
+  // ✅ Keep session alive (web + mobile) by refreshing access token before expiry.
+  useAuthAutoRefresh(isInitialized && !!user);
 
   // Public variables for current IDs - no localStorage sync
   const [currentInstituteId, setCurrentInstituteId] = useState<string | null>(null);
@@ -51,6 +56,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [currentOrganizationId, setCurrentOrganizationId] = useState<string | null>(null);
   const [currentTransportId, setCurrentTransportId] = useState<string | null>(null);
 
+  // Use ref to access latest user in event handlers without re-subscribing
+  const userRef = useRef(user);
+  userRef.current = user;
+
   // Listen for token refresh events from API clients
   React.useEffect(() => {
     const handleRefreshSuccess = (event: Event) => {
@@ -58,25 +67,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { user: refreshedUser } = customEvent.detail;
       console.log('🔄 Token refreshed, updating AuthContext user data');
       
-      // Update user state with refreshed data (using new nameWithInitials format)
-      if (refreshedUser && user) {
-        const updatedUser = {
-          ...user,
-          nameWithInitials: refreshedUser.nameWithInitials || user.nameWithInitials,
-          name: refreshedUser.nameWithInitials || user.name,
-          email: refreshedUser.email || user.email,
-          imageUrl: refreshedUser.imageUrl || user.imageUrl,
-          userType: refreshedUser.userType || user.userType,
-        };
-        setUser(updatedUser);
+      const currentUser = userRef.current;
+      if (refreshedUser && currentUser) {
+        setUser(prev => prev ? {
+          ...prev,
+          nameWithInitials: refreshedUser.nameWithInitials || prev.nameWithInitials,
+          name: refreshedUser.nameWithInitials || prev.name,
+          email: refreshedUser.email || prev.email,
+          imageUrl: refreshedUser.imageUrl || prev.imageUrl,
+          userType: refreshedUser.userType || prev.userType,
+        } : prev);
         console.log('✅ AuthContext user updated after token refresh (nameWithInitials)');
       }
     };
     
     const handleRefreshFailed = () => {
       console.error('❌ Token refresh failed, logging out...');
-      if (user) {
-        logout();
+      if (userRef.current) {
+        logoutUser().then(() => {
+          apiCache.clearAllCache();
+          setUser(null);
+        });
       }
     };
     
@@ -87,7 +98,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       window.removeEventListener('auth:refresh-success', handleRefreshSuccess);
       window.removeEventListener('auth:refresh-failed', handleRefreshFailed);
     };
-  }, [user]);
+  }, []); // Stable effect — uses refs for latest state
 
   const fetchUserInstitutes = async (userId: string, forceRefresh = false): Promise<Institute[]> => {
     try {
@@ -152,12 +163,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const data = await loginUser(credentials);
       console.log('Login response received:', data);
 
-      // Ensure token is properly stored
-      if (data.access_token) {
-        localStorage.setItem('access_token', data.access_token);
-        console.log('Access token stored successfully');
-      }
-
       // Map user data WITHOUT fetching institutes (lazy load later)
       console.log('✅ User logged in successfully');
       const mappedUser = mapUserData(data.user, []); // Empty institutes initially
@@ -216,19 +221,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await apiCache.clearAllCache();
     
     // Clear secureCache (IndexedDB) used by enhancedCachedClient
-    const { secureCache } = await import('@/utils/secureCache');
     await secureCache.clearAllCache();
     console.log('✅ SecureCache (IndexedDB) cleared');
     
     // Clear attendance duplicate records
-    const { attendanceDuplicateChecker } = await import('@/utils/attendanceDuplicateCheck');
     attendanceDuplicateChecker.clearAll();
     
     // Clear all pending API requests (regular + attendance + enhanced)
     cachedApiClient.clearPendingRequests();
-    const { attendanceApiClient } = await import('@/api/attendanceClient');
     attendanceApiClient.clearPendingRequests();
-    const { enhancedCachedClient } = await import('@/api/enhancedCachedClient');
     enhancedCachedClient.clearPendingRequests();
     
     console.log('✅ All cache, pending requests, and duplicate records cleared');
@@ -254,7 +255,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log('✅ User logged out successfully and cache cleared');
   };
 
-  const setSelectedInstitute = (institute: Institute | any | null) => {
+  const setSelectedInstitute = useCallback((institute: Institute | any | null) => {
     const previousInstituteId = currentInstituteId;
 
     // Normalize various possible payload shapes into our Institute type
@@ -303,9 +304,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setSelectedClassGrade(null);
     setCurrentClassId(null);
     setCurrentSubjectId(null);
-  };
+  }, [currentInstituteId]);
 
-  const setSelectedClass = (classData: Class | null) => {
+  const setSelectedClass = useCallback((classData: Class | null) => {
     setSelectedClassState(classData);
     setCurrentClassId(classData?.id || null);
     setSelectedClassGrade(classData?.grade ?? null);
@@ -313,27 +314,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Clear dependent selections
     setSelectedSubjectState(null);
     setCurrentSubjectId(null);
-  };
+  }, []);
 
-  const setSelectedSubject = (subject: Subject | null) => {
+  const setSelectedSubject = useCallback((subject: Subject | null) => {
     setSelectedSubjectState(subject);
     setCurrentSubjectId(subject?.id || null);
-  };
+  }, []);
 
-  const setSelectedChild = (child: Child | null) => {
+  const setSelectedChild = useCallback((child: Child | null, viewAsParent = false) => {
     setSelectedChildState(child);
     setCurrentChildId(child?.id || null);
-  };
+    setIsViewingAsParentState(viewAsParent);
+    
+    // Clear dependent selections when selecting a child for parent viewing
+    if (viewAsParent && child) {
+      setSelectedInstituteState(null);
+      setSelectedClassState(null);
+      setSelectedSubjectState(null);
+      setCurrentInstituteId(null);
+      setCurrentClassId(null);
+      setCurrentSubjectId(null);
+    }
+  }, []);
 
-  const setSelectedOrganization = (organization: Organization | null) => {
+  const setSelectedOrganization = useCallback((organization: Organization | null) => {
     setSelectedOrganizationState(organization);
     setCurrentOrganizationId(organization?.id || null);
-  };
+  }, []);
 
-  const setSelectedTransport = (transport: { id: string; vehicleNumber: string; bookhireId: string } | null) => {
+  const setSelectedTransport = useCallback((transport: { id: string; vehicleNumber: string; bookhireId: string } | null) => {
     setSelectedTransportState(transport);
     setCurrentTransportId(transport?.id || null);
-  };
+  }, []);
 
   // Method to refresh user data from backend - only called manually
   const refreshUserData = async (forceRefresh = true) => {
@@ -378,63 +390,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   // 🔐 CRITICAL: Auto-restore session on mount
+  // On web, access token is memory-only, so we ALWAYS attempt a cookie-based
+  // refresh to restore the session after page load / browser restart.
   React.useEffect(() => {
     const initializeAuth = async () => {
-      console.log('🔐 ========================================');
-      console.log('🔐 INITIALIZING AUTHENTICATION...');
-      console.log('🔐 ========================================');
-      
-      const token = await getAccessTokenAsync();
-      console.log('🔑 Token check:', {
-        tokenExists: !!token,
-        tokenLength: token?.length || 0,
-        tokenPreview: token ? `${token.substring(0, 20)}...` : 'none'
-      });
-      
-      if (!token) {
-        console.log('⚠️ No token found - user needs to login');
-        setIsLoading(false);
-        setIsInitialized(true);
-        return;
-      }
-      
       try {
-        console.log('🔍 Token found - validating with backend...');
+        // validateToken will try memory token first, then cookie refresh
         const userData = await validateToken();
-        console.log('📦 User data received:', {
-          id: userData.id,
-          email: userData.email,
-          role: userData.role
-        });
-        
-        // Automatically fetch institutes after token validation
-        console.log('🏢 Fetching user institutes after token validation...');
         const institutes = await fetchUserInstitutes(userData.id, true);
         const mappedUser = mapUserData(userData, institutes);
-        console.log('👤 User restored with', institutes.length, 'institutes');
         setUser(mappedUser);
-        console.log('✅ ========================================');
-        console.log('✅ SESSION RESTORED SUCCESSFULLY!');
-        console.log('✅ ========================================');
-      } catch (error) {
-        console.error('❌ ========================================');
-        console.error('❌ SESSION RESTORATION FAILED!');
-        console.error('❌ Error:', error);
-        console.error('❌ ========================================');
-        // Clear invalid token
-        localStorage.removeItem('access_token');
-        console.log('🧹 Invalid token cleared from localStorage');
+      } catch {
+        // No valid session — user needs to login
       } finally {
         setIsLoading(false);
         setIsInitialized(true);
-        console.log('🏁 Auth initialization complete');
       }
     };
-    
+
     initializeAuth();
+
+    // Listen for logout from other tabs (BroadcastChannel)
+    const handleOtherTabLogout = () => {
+      setUser(null);
+    };
+    window.addEventListener('auth:logged-out-other-tab', handleOtherTabLogout);
+    return () => {
+      window.removeEventListener('auth:logged-out-other-tab', handleOtherTabLogout);
+    };
   }, []); // Run once on mount
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     selectedInstitute,
     selectedClass,
@@ -450,6 +436,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     currentChildId,
     currentOrganizationId,
     currentTransportId,
+    isViewingAsParent,
     login,
     logout,
     setSelectedInstitute,
@@ -464,13 +451,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     isAuthenticated: !!user,
     isLoading,
     isInitialized
-  };
+  }), [
+    user, selectedInstitute, selectedClass, selectedSubject,
+    selectedChild, selectedOrganization, selectedTransport,
+    selectedInstituteType, selectedClassGrade,
+    currentInstituteId, currentClassId, currentSubjectId,
+    currentChildId, currentOrganizationId, currentTransportId,
+    isViewingAsParent, isLoading, isInitialized,
+    setSelectedInstitute, setSelectedClass, setSelectedSubject,
+    setSelectedChild, setSelectedOrganization, setSelectedTransport
+  ]);
 
   // Show loading state during initialization
   if (!isInitialized) {
     return (
       <AuthContext.Provider value={value}>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground">Loading...</p>

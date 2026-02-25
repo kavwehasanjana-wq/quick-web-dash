@@ -97,7 +97,8 @@ const VerifyImage = () => {
   const fetchUnverifiedImages = async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('access_token');
+      const { tokenStorageService } = await import('@/services/tokenStorageService');
+      const token = await tokenStorageService.getAccessToken();
       const response = await fetch(
         `${getBaseUrl()}/institute-users/institute/${currentInstituteId}/users/unverified-with-images?page=${page}&limit=${limit}`,
         {
@@ -423,7 +424,7 @@ const VerifyImage = () => {
 
       {/* View Details Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto mx-auto">
           <DialogHeader>
             <DialogTitle>User Details</DialogTitle>
             <DialogDescription>

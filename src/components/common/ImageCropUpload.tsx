@@ -1,8 +1,10 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Upload, ImageIcon, Loader2 } from 'lucide-react';
+import { Upload, ImageIcon, Loader2, Camera as CameraIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Capacitor } from '@capacitor/core';
+import { Camera as CapCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import ReactCrop, { 
   type Crop, 
   type PixelCrop,
@@ -60,36 +62,64 @@ const ImageCropUpload: React.FC<ImageCropUploadProps> = ({
   const hiddenFileInput = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  const handleSelectedFile = useCallback((file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select an image file (PNG, JPG, etc.)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please select an image smaller than 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedFile(file);
+    setCrop(undefined);
+    const reader = new FileReader();
+    reader.addEventListener('load', () =>
+      setImgSrc(reader.result?.toString() || ''),
+    );
+    reader.readAsDataURL(file);
+    setOpen(true);
+  }, [toast]);
+
   const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
-      
-      if (!file.type.startsWith('image/')) {
-        toast({
-          title: "Invalid file type",
-          description: "Please select an image file (PNG, JPG, etc.)",
-          variant: "destructive",
-        });
-        return;
-      }
+      handleSelectedFile(e.target.files[0]);
+    }
+  };
 
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "File too large",
-          description: "Please select an image smaller than 5MB.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setSelectedFile(file);
-      setCrop(undefined);
-      const reader = new FileReader();
-      reader.addEventListener('load', () =>
-        setImgSrc(reader.result?.toString() || ''),
-      );
-      reader.readAsDataURL(file);
-      setOpen(true);
+  const handleNativeCamera = async () => {
+    if (!Capacitor.isNativePlatform()) return;
+    try {
+      const photo = await CapCamera.getPhoto({
+        source: CameraSource.Camera,
+        resultType: CameraResultType.Uri,
+        quality: 90,
+      });
+      if (!photo.webPath) throw new Error('No photo captured');
+      const resp = await fetch(photo.webPath);
+      const blob = await resp.blob();
+      const ext = blob.type?.includes('png') ? 'png' : 'jpg';
+      const file = new File([blob], `camera-${Date.now()}.${ext}`, {
+        type: blob.type || 'image/jpeg',
+      });
+      handleSelectedFile(file);
+    } catch (error) {
+      console.error('Native camera failed:', error);
+      toast({
+        title: 'Camera unavailable',
+        description: 'Please allow camera permission and try again.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -247,6 +277,18 @@ const ImageCropUpload: React.FC<ImageCropUploadProps> = ({
             <Upload className="h-4 w-4" />
             {currentImageUrl ? 'Change Image' : 'Upload Image'}
           </Button>
+          
+          {Capacitor.isNativePlatform() && (
+            <Button 
+              type="button"
+              variant="outline"
+              onClick={handleNativeCamera}
+              className="flex items-center gap-2 w-full sm:w-auto"
+            >
+              <CameraIcon className="h-4 w-4" />
+              Camera
+            </Button>
+          )}
           
           {currentImageUrl && (
             <Button 

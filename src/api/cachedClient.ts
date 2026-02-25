@@ -25,7 +25,7 @@ class CachedApiClient {
   
   // Global rate limit tracking
   private rateLimitedUntil: number = 0;
-  private readonly RATE_LIMIT_BACKOFF = 60000; // 60 seconds default backoff
+  private readonly RATE_LIMIT_BACKOFF = 10000; // 10 seconds default backoff (reduced from 60s)
 
   constructor() {
     this.baseUrl = getBaseUrl();
@@ -48,9 +48,16 @@ class CachedApiClient {
    * Set global rate limit (called when 429 error received)
    */
   private setRateLimited(retryAfterSeconds?: number): void {
-    const backoffMs = (retryAfterSeconds || 60) * 1000;
+    const backoffMs = (retryAfterSeconds || 10) * 1000;
     this.rateLimitedUntil = Date.now() + backoffMs;
     console.warn(`🛑 CachedClient: Rate limited! Pausing requests for ${backoffMs / 1000}s`);
+  }
+
+  /**
+   * Clear rate limit state (useful after page reload or manual retry)
+   */
+  public clearRateLimit(): void {
+    this.rateLimitedUntil = 0;
   }
 
   /**

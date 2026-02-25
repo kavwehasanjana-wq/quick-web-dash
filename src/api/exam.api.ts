@@ -65,15 +65,17 @@ export interface ExamQueryParams {
 class ExamApi {
   async getExams(params?: ExamQueryParams, forceRefresh = false): Promise<ApiResponse<Exam[]>> {
     console.log('📝 Fetching exams with secure caching:', params, { forceRefresh });
-    return enhancedCachedClient.get<ApiResponse<Exam[]>>('/institute-class-subject-exams', params, {
+    // Separate cache context fields from actual API query params
+    const { userId, role, ...apiParams } = params ?? {};
+    return enhancedCachedClient.get<ApiResponse<Exam[]>>('/institute-class-subject-exams', Object.keys(apiParams).length > 0 ? apiParams : undefined, {
       forceRefresh,
       ttl: 30, // Cache exams for 30 minutes
       useStaleWhileRevalidate: true,
-      userId: params?.userId,
-      instituteId: params?.instituteId,
-      classId: params?.classId,
-      subjectId: params?.subjectId,
-      role: params?.role
+      userId,
+      instituteId: apiParams?.instituteId,
+      classId: apiParams?.classId,
+      subjectId: apiParams?.subjectId,
+      role
     });
   }
 
@@ -111,30 +113,36 @@ class ExamApi {
   }
 
   async hasExamsCached(params?: ExamQueryParams): Promise<boolean> {
-    return enhancedCachedClient.hasCache('/institute-class-subject-exams', params, {
-      userId: params?.userId,
-      instituteId: params?.instituteId,
-      classId: params?.classId,
-      subjectId: params?.subjectId
+    const { userId, role, ...apiParams } = params ?? {};
+    return enhancedCachedClient.hasCache('/institute-class-subject-exams', Object.keys(apiParams).length > 0 ? apiParams : undefined, {
+      userId,
+      instituteId: apiParams?.instituteId,
+      classId: apiParams?.classId,
+      subjectId: apiParams?.subjectId,
+      role
     });
   }
 
   async getCachedExams(params?: ExamQueryParams): Promise<ApiResponse<Exam[]> | null> {
-    return enhancedCachedClient.getCachedOnly<ApiResponse<Exam[]>>('/institute-class-subject-exams', params, {
-      userId: params?.userId,
-      instituteId: params?.instituteId,
-      classId: params?.classId,
-      subjectId: params?.subjectId
+    const { userId, role, ...apiParams } = params ?? {};
+    return enhancedCachedClient.getCachedOnly<ApiResponse<Exam[]>>('/institute-class-subject-exams', Object.keys(apiParams).length > 0 ? apiParams : undefined, {
+      userId,
+      instituteId: apiParams?.instituteId,
+      classId: apiParams?.classId,
+      subjectId: apiParams?.subjectId,
+      role
     });
   }
 
   async preloadExams(params?: ExamQueryParams): Promise<void> {
-    await enhancedCachedClient.preload<ApiResponse<Exam[]>>('/institute-class-subject-exams', params, {
+    const { userId, role, ...apiParams } = params ?? {};
+    await enhancedCachedClient.preload<ApiResponse<Exam[]>>('/institute-class-subject-exams', Object.keys(apiParams).length > 0 ? apiParams : undefined, {
       ttl: 30,
-      userId: params?.userId,
-      instituteId: params?.instituteId,
-      classId: params?.classId,
-      subjectId: params?.subjectId
+      userId,
+      instituteId: apiParams?.instituteId,
+      classId: apiParams?.classId,
+      subjectId: apiParams?.subjectId,
+      role
     });
   }
 }

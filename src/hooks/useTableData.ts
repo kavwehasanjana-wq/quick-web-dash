@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { usePagination, UsePaginationReturn } from './usePagination';
 import { cachedApiClient } from '@/api/cachedClient';
 
@@ -52,16 +52,31 @@ export const useTableData = <T = any>(config: TableDataConfig): UseTableDataRetu
     lastRefresh: null
   });
 
+  // Stabilize dependencies to prevent infinite effect re-fires
+  const depsKey = useMemo(
+    () => JSON.stringify(config.dependencies || []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    config.dependencies || []
+  );
+
+  // Keep a stable reference to defaultParams
+  const defaultParamsRef = useRef(config.defaultParams);
+  defaultParamsRef.current = config.defaultParams;
+
+  // Track the latest request to prevent stale responses from overwriting newer ones
+  const requestIdRef = useRef(0);
+
   const buildParams = useCallback(() => {
     const apiParams = pagination.getApiParams();
     return {
-      ...config.defaultParams,
+      ...defaultParamsRef.current,
       ...filters,
       ...apiParams
     };
-  }, [filters, pagination, config.defaultParams]);
+  }, [filters, pagination]);
 
   const loadData = useCallback(async (forceRefresh = false) => {
+    const currentRequestId = ++requestIdRef.current;
     setState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
@@ -81,6 +96,12 @@ export const useTableData = <T = any>(config: TableDataConfig): UseTableDataRetu
           subjectId: config.cacheOptions?.subjectId
         }
       );
+
+      // Discard stale responses - only use the latest request's result
+      if (currentRequestId !== requestIdRef.current) {
+        console.log(`🚫 Discarding stale response for ${config.endpoint} (request ${currentRequestId}, latest ${requestIdRef.current})`);
+        return;
+      }
 
       console.log('✅ Table data loaded successfully:', result);
       
@@ -150,7 +171,7 @@ useEffect(() => {
   if (!config.endpoint) return;
   loadData(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, config.autoLoad !== false ? [config.endpoint, pagination.pagination.page, pagination.pagination.limit, ...(config.dependencies || [])] : []);
+}, config.autoLoad !== false ? [config.endpoint, pagination.pagination.page, pagination.pagination.limit, depsKey] : []);
 
   return {
     ...pagination,
