@@ -12,13 +12,11 @@ import CalendarDayAttendanceView from './CalendarDayAttendanceView';
 import StudentAttendanceLookup from './StudentAttendanceLookup';
 import ExportReporting from './ExportReporting';
 import AttendanceAlerts from './AttendanceAlerts';
-import ClassDailyAttendance from './ClassDailyAttendance';
-import SubjectDailyAttendance from './SubjectDailyAttendance';
 import { cn } from '@/lib/utils';
 import {
   BarChart3, TrendingUp, Sparkles, CalendarDays, PartyPopper,
   Eye, Users, GitBranch, GraduationCap, Download,
-  Bell, ChevronRight, AlertTriangle, Activity, BookOpen, School
+  Bell, ChevronRight, AlertTriangle, Activity
 } from 'lucide-react';
 
 const tabGroups = [
@@ -28,13 +26,6 @@ const tabGroups = [
       { id: 'overview', label: 'Overview', icon: BarChart3, description: 'Summary dashboard' },
       { id: 'analytics', label: 'Analytics', icon: TrendingUp, description: 'Charts & trends' },
       { id: 'advanced', label: 'Advanced', icon: Sparkles, description: 'Deep analytics' },
-    ],
-  },
-  {
-    label: 'Daily',
-    tabs: [
-      { id: 'class-daily', label: 'Class', icon: School, description: 'Class daily attendance' },
-      { id: 'subject-daily', label: 'Subject', icon: BookOpen, description: 'Subject daily attendance' },
     ],
   },
   {
@@ -175,8 +166,6 @@ const AdminAttendancePage: React.FC = () => {
       {visitedTabs.has('overview') && <div className={activeTab === 'overview' ? '' : 'hidden'}><AdminAttendanceOverview /></div>}
       {visitedTabs.has('analytics') && <div className={activeTab === 'analytics' ? '' : 'hidden'}><AdminDashboardCharts /></div>}
       {visitedTabs.has('advanced') && <div className={activeTab === 'advanced' ? '' : 'hidden'}><EnhancedAnalyticsCharts /></div>}
-      {visitedTabs.has('class-daily') && <div className={activeTab === 'class-daily' ? '' : 'hidden'}><ClassDailyAttendance /></div>}
-      {visitedTabs.has('subject-daily') && <div className={activeTab === 'subject-daily' ? '' : 'hidden'}><SubjectDailyAttendance /></div>}
       {visitedTabs.has('calendar') && <div className={activeTab === 'calendar' ? '' : 'hidden'}><CalendarAttendanceOverlay /></div>}
       {visitedTabs.has('events') && <div className={activeTab === 'events' ? '' : 'hidden'}><EventAttendanceView /></div>}
       {visitedTabs.has('day-view') && <div className={activeTab === 'day-view' ? '' : 'hidden'}><CalendarDayAttendanceView /></div>}
