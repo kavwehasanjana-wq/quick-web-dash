@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { ArrowLeft, ArrowRight, Plus, Trash2, Rocket, AlertTriangle } from 'lucide-react';
+import ResponsiveDatePicker from './ResponsiveDatePicker';
 
 // Sri Lanka 2026 public holidays preset
 const SRI_LANKA_2026_HOLIDAYS: PublicHoliday[] = [
@@ -49,14 +50,12 @@ const GenerateCalendarWizard: React.FC = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [result, setResult] = useState<any>(null);
 
-  // Form state
   const [academicYear, setAcademicYear] = useState(new Date().getFullYear().toString());
   const [startDate, setStartDate] = useState(`${new Date().getFullYear()}-01-06`);
   const [endDate, setEndDate] = useState(`${new Date().getFullYear()}-12-20`);
   const [publicHolidays, setPublicHolidays] = useState<PublicHoliday[]>([]);
   const [termBreaks, setTermBreaks] = useState<TermBreak[]>([]);
 
-  // Validation
   const validateStep1 = () => {
     if (!/^\d{4}$/.test(academicYear)) { toast.error('Academic year must be 4 digits'); return false; }
     if (!startDate || !endDate) { toast.error('Start and end date required'); return false; }
@@ -112,11 +111,7 @@ const GenerateCalendarWizard: React.FC = () => {
     setGenerating(true);
 
     const payload: GenerateCalendarPayload = {
-      academicYear,
-      startDate,
-      endDate,
-      publicHolidays,
-      termBreaks,
+      academicYear, startDate, endDate, publicHolidays, termBreaks,
     };
 
     try {
@@ -134,14 +129,13 @@ const GenerateCalendarWizard: React.FC = () => {
     }
   };
 
-  // Estimate
   const totalDays = startDate && endDate ? Math.max(0, Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000) + 1) : 0;
 
   if (result) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base text-green-600">✅ Calendar Generated!</CardTitle>
+          <CardTitle className="text-base text-green-600">Calendar Generated!</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
@@ -192,14 +186,18 @@ const GenerateCalendarWizard: React.FC = () => {
               <Label className="text-xs">Academic Year</Label>
               <Input value={academicYear} onChange={e => setAcademicYear(e.target.value)} placeholder="2026" className="mt-1" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">Start Date</Label>
-                <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="mt-1" />
+                <div className="mt-1">
+                  <ResponsiveDatePicker value={startDate} onChange={setStartDate} placeholder="Select start date" />
+                </div>
               </div>
               <div>
                 <Label className="text-xs">End Date</Label>
-                <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="mt-1" />
+                <div className="mt-1">
+                  <ResponsiveDatePicker value={endDate} onChange={setEndDate} placeholder="Select end date" />
+                </div>
               </div>
             </div>
             <p className="text-xs text-muted-foreground">Estimated {totalDays} days will be generated.</p>
@@ -217,17 +215,19 @@ const GenerateCalendarWizard: React.FC = () => {
             <div className="flex items-center justify-between flex-wrap gap-2">
               <CardTitle className="text-base">Step 2: Public Holidays</CardTitle>
               <Button variant="outline" size="sm" className="text-xs" onClick={() => setPublicHolidays(SRI_LANKA_2026_HOLIDAYS)}>
-                📋 Load Sri Lanka 2026
+                Load Sri Lanka 2026
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">These dates will be marked as PUBLIC_HOLIDAY. No attendance expected.</p>
           </CardHeader>
           <CardContent className="space-y-3">
             {publicHolidays.map((h, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <Input type="date" value={h.date} onChange={e => updateHoliday(i, 'date', e.target.value)} className="w-36 text-xs" />
-                <Input value={h.title} onChange={e => updateHoliday(i, 'title', e.target.value)} placeholder="Holiday name" className="flex-1 text-xs" />
-                <Button variant="ghost" size="sm" onClick={() => removeHoliday(i)} className="text-destructive h-8 w-8 p-0">
+              <div key={i} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="w-full sm:w-44">
+                  <ResponsiveDatePicker value={h.date} onChange={(v) => updateHoliday(i, 'date', v)} placeholder="Holiday date" />
+                </div>
+                <Input value={h.title} onChange={e => updateHoliday(i, 'title', e.target.value)} placeholder="Holiday name" className="flex-1 text-xs h-9" />
+                <Button variant="ghost" size="sm" onClick={() => removeHoliday(i)} className="text-destructive h-9 w-9 p-0 flex-shrink-0 self-end sm:self-auto">
                   <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
@@ -257,12 +257,17 @@ const GenerateCalendarWizard: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-3">
             {termBreaks.map((tb, i) => (
-              <div key={i} className="flex items-center gap-2 flex-wrap">
-                <Input type="date" value={tb.startDate} onChange={e => updateTermBreak(i, 'startDate', e.target.value)} className="w-36 text-xs" />
-                <span className="text-xs text-muted-foreground">to</span>
-                <Input type="date" value={tb.endDate} onChange={e => updateTermBreak(i, 'endDate', e.target.value)} className="w-36 text-xs" />
-                <Input value={tb.title} onChange={e => updateTermBreak(i, 'title', e.target.value)} placeholder="Break name" className="flex-1 min-w-[120px] text-xs" />
-                <Button variant="ghost" size="sm" onClick={() => removeTermBreak(i)} className="text-destructive h-8 w-8 p-0">
+              <div key={i} className="space-y-2 sm:space-y-0 sm:flex sm:items-center sm:gap-2 border rounded-lg p-2 sm:border-0 sm:p-0">
+                <div className="grid grid-cols-2 gap-2 sm:contents">
+                  <div className="sm:w-40">
+                    <ResponsiveDatePicker value={tb.startDate} onChange={(v) => updateTermBreak(i, 'startDate', v)} placeholder="Start" />
+                  </div>
+                  <div className="sm:w-40">
+                    <ResponsiveDatePicker value={tb.endDate} onChange={(v) => updateTermBreak(i, 'endDate', v)} placeholder="End" />
+                  </div>
+                </div>
+                <Input value={tb.title} onChange={e => updateTermBreak(i, 'title', e.target.value)} placeholder="Break name" className="flex-1 min-w-[120px] text-xs h-9" />
+                <Button variant="ghost" size="sm" onClick={() => removeTermBreak(i)} className="text-destructive h-9 w-9 p-0 flex-shrink-0 self-end sm:self-auto">
                   <Trash2 className="h-3 w-3" />
                 </Button>
               </div>

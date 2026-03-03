@@ -5,25 +5,15 @@ import calendarApi from '@/api/calendar.api';
 import type { CalendarDay } from '@/types/calendar.types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, Calendar, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { getDayTypeMeta } from '@/components/calendar/calendarTheme';
 
 interface CalendarDayWithAttendance extends CalendarDay {
   attendanceCount: number;
   presentCount: number;
   attendanceRate: number | null;
 }
-
-const DAY_TYPE_DOTS: Record<string, string> = {
-  REGULAR: '🟢',
-  HALF_DAY: '🟡',
-  EXAM_DAY: '🟣',
-  WEEKEND: '🔵',
-  PUBLIC_HOLIDAY: '🔴',
-  INSTITUTE_HOLIDAY: '🔴',
-  CANCELLED: '⛔',
-};
 
 const CalendarAttendanceOverlay: React.FC = () => {
   const { currentInstituteId } = useAuth();
@@ -41,26 +31,36 @@ const CalendarAttendanceOverlay: React.FC = () => {
       const lastDay = new Date(year, month, 0).getDate();
       const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
 
-      const [calendarRes, records] = await Promise.allSettled([
+      const [calendarRes, dailySummaries] = await Promise.allSettled([
         calendarApi.getDays(currentInstituteId, { startDate, endDate, limit: 400 }),
-        adminAttendanceApi.getInstituteAttendanceRange(currentInstituteId, startDate, endDate, { ttl: 120 }),
+        adminAttendanceApi.getInstituteDailySummaries(currentInstituteId, startDate, endDate, { ttl: 120 }),
       ]);
 
       const calDays = calendarRes.status === 'fulfilled' ? (calendarRes.value?.data || []) : [];
-      const attRecords = records.status === 'fulfilled' ? (records.value || []) : [];
+      const dailyResults = dailySummaries.status === 'fulfilled' ? (dailySummaries.value || []) : [];
 
-      // Group by date
-      const byDate = new Map<string, typeof attRecords>();
-      for (const r of attRecords) {
-        const d = r.date || r.markedAt?.split('T')[0] || '';
-        if (!byDate.has(d)) byDate.set(d, []);
-        byDate.get(d)!.push(r);
-      }
+      // Build a map of date -> summary
+      const summaryMap = new Map(dailyResults.map(r => [r.date, r]));
 
       const overlay: CalendarDayWithAttendance[] = calDays.map(day => {
-        const dayRecords = byDate.get(day.calendarDate) || [];
-        const present = dayRecords.filter(r => r.status === 'present').length;
-        const total = dayRecords.length;
+        const dayResult = summaryMap.get(day.calendarDate);
+        const records = dayResult?.records || [];
+        const summary = dayResult?.summary;
+        
+        let present: number, total: number;
+        
+        if (records.length > 0) {
+          present = records.filter(r => r.status === 'present').length;
+          total = records.length;
+        } else if (summary && (summary.totalPresent > 0 || summary.totalAbsent > 0)) {
+          present = summary.totalPresent;
+          total = summary.totalPresent + summary.totalAbsent + summary.totalLate + 
+            summary.totalLeft + summary.totalLeftEarly + summary.totalLeftLately;
+        } else {
+          present = 0;
+          total = 0;
+        }
+        
         return {
           ...day,
           attendanceCount: total,
@@ -114,7 +114,7 @@ const CalendarAttendanceOverlay: React.FC = () => {
           <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Calendar className="h-4 w-4 text-primary" />
-              📅 Calendar + Attendance — {monthLabel}
+              Calendar + Attendance — {monthLabel}
             </CardTitle>
             <div className="flex items-center gap-1">
               <Button variant="outline" size="sm" onClick={() => shiftMonth(-1)} disabled={loading}>
@@ -166,7 +166,7 @@ const CalendarAttendanceOverlay: React.FC = () => {
                       <span className="text-xs font-medium">{dayNum}</span>
                       {day && (
                         <>
-                          <span className="text-[10px]">{DAY_TYPE_DOTS[day.dayType] || '⚪'}</span>
+                          <span className={`w-2 h-2 rounded-full ${getDayTypeMeta(day.dayType).dot}`} />
                           {day.attendanceRate !== null && (
                             <span className="text-[10px] font-semibold">{day.attendanceRate}%</span>
                           )}
@@ -212,7 +212,7 @@ const CalendarAttendanceOverlay: React.FC = () => {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
               <div className="p-2 bg-muted rounded">
                 <div className="text-xs text-muted-foreground">Type</div>
-                <div className="text-sm font-medium">{DAY_TYPE_DOTS[selectedDay.dayType]} {selectedDay.dayType.replace(/_/g, ' ')}</div>
+                <div className="text-sm font-medium flex items-center justify-center gap-1"><span className={`w-2.5 h-2.5 rounded-full ${getDayTypeMeta(selectedDay.dayType).dot}`} /> {getDayTypeMeta(selectedDay.dayType).label}</div>
               </div>
               <div className="p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded">
                 <div className="text-xs text-muted-foreground">Present</div>

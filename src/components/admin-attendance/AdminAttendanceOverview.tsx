@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import adminAttendanceApi, { AdminAttendanceRecord } from '@/api/adminAttendance.api';
+import adminAttendanceApi from '@/api/adminAttendance.api';
+import type { DailySummaryResult } from '@/api/adminAttendance.api';
 import calendarApi from '@/api/calendar.api';
 import type { CalendarDay } from '@/types/calendar.types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,8 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts';
-import { ChevronLeft, ChevronRight, RefreshCw, TrendingUp, Users, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
+import { getDayTypeMeta } from '@/components/calendar/calendarTheme';
 
 interface AdminDayOverview {
   date: string;
@@ -22,18 +24,6 @@ interface AdminDayOverview {
   total: number;
   rate: number;
 }
-
-const DAY_TYPE_ICONS: Record<string, string> = {
-  REGULAR: '🟢',
-  HALF_DAY: '🟡',
-  EXAM_DAY: '🟣',
-  WEEKEND: '🔵',
-  PUBLIC_HOLIDAY: '🔴',
-  INSTITUTE_HOLIDAY: '🔴',
-  CANCELLED: '⛔',
-  STAFF_ONLY: '🟠',
-  SPECIAL_EVENT: '🩷',
-};
 
 const AdminAttendanceOverview: React.FC = () => {
   const { currentInstituteId, selectedInstitute } = useAuth();
@@ -56,21 +46,13 @@ const AdminAttendanceOverview: React.FC = () => {
     setLoading(true);
     try {
       const endDate = getWeekEnd(weekStart);
-      const [calendarRes, records] = await Promise.allSettled([
+      const [calendarRes, dailySummaries] = await Promise.allSettled([
         calendarApi.getDays(currentInstituteId, { startDate: weekStart, endDate, limit: 10 }),
-        adminAttendanceApi.getInstituteAttendanceRange(currentInstituteId, weekStart, endDate),
+        adminAttendanceApi.getInstituteDailySummaries(currentInstituteId, weekStart, endDate, { ttl: 10 }),
       ]);
 
       const calDays: CalendarDay[] = calendarRes.status === 'fulfilled' ? (calendarRes.value?.data || []) : [];
-      const attRecords: AdminAttendanceRecord[] = records.status === 'fulfilled' ? (records.value || []) : [];
-
-      // Group attendance by date
-      const byDate = new Map<string, AdminAttendanceRecord[]>();
-      for (const r of attRecords) {
-        const date = r.date || r.markedAt?.split('T')[0] || '';
-        if (!byDate.has(date)) byDate.set(date, []);
-        byDate.get(date)!.push(r);
-      }
+      const dailyResults: DailySummaryResult[] = dailySummaries.status === 'fulfilled' ? (dailySummaries.value || []) : [];
 
       // Build overview for each day of the week
       const overview: AdminDayOverview[] = [];
@@ -79,23 +61,39 @@ const AdminAttendanceOverview: React.FC = () => {
         d.setDate(d.getDate() + i);
         const dateStr = d.toISOString().split('T')[0];
         const calDay = calDays.find(c => c.calendarDate === dateStr);
-        const dayRecords = byDate.get(dateStr) || [];
-        const present = dayRecords.filter(r => r.status === 'present').length;
-        const absent = dayRecords.filter(r => r.status === 'absent').length;
-        const late = dayRecords.filter(r => r.status === 'late').length;
-        const left = dayRecords.filter(r => ['left', 'left_early', 'left_lately'].includes(r.status)).length;
-        const total = dayRecords.length;
+        const dayResult = dailyResults.find(r => r.date === dateStr);
+        
+        // Use summary data from API (works even when data[] is empty)
+        const summary = dayResult?.summary;
+        const records = dayResult?.records || [];
+        
+        let present: number, absent: number, late: number, left: number, total: number, rate: number;
+        
+        if (records.length > 0) {
+          // If we have individual records, count from them
+          present = records.filter(r => r.status === 'present').length;
+          absent = records.filter(r => r.status === 'absent').length;
+          late = records.filter(r => r.status === 'late').length;
+          left = records.filter(r => ['left', 'left_early', 'left_lately'].includes(r.status)).length;
+          total = records.length;
+          rate = total > 0 ? Math.round((present / total) * 1000) / 10 : 0;
+        } else if (summary && (summary.totalPresent > 0 || summary.totalAbsent > 0 || summary.totalLate > 0)) {
+          // Fall back to summary data from API
+          present = summary.totalPresent;
+          absent = summary.totalAbsent;
+          late = summary.totalLate;
+          left = summary.totalLeft + summary.totalLeftEarly + summary.totalLeftLately;
+          total = present + absent + late + left;
+          rate = summary.attendanceRate;
+        } else {
+          present = 0; absent = 0; late = 0; left = 0; total = 0; rate = 0;
+        }
 
         overview.push({
           date: dateStr,
           dayType: calDay?.dayType || (d.getDay() === 0 || d.getDay() === 6 ? 'WEEKEND' : 'REGULAR'),
           isAttendanceExpected: calDay?.isAttendanceExpected ?? (d.getDay() !== 0 && d.getDay() !== 6),
-          present,
-          absent,
-          late,
-          left,
-          total,
-          rate: total > 0 ? Math.round((present / total) * 1000) / 10 : 0,
+          present, absent, late, left, total, rate,
         });
       }
 
@@ -143,7 +141,7 @@ const AdminAttendanceOverview: React.FC = () => {
           <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="text-base flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-primary" />
-              🏫 Institute Attendance — {weekLabel}
+              Institute Attendance — {weekLabel}
             </CardTitle>
             <div className="flex items-center gap-1">
               <Button variant="outline" size="sm" onClick={() => shiftWeek(-1)} disabled={loading}>
@@ -175,6 +173,7 @@ const AdminAttendanceOverview: React.FC = () => {
                       <TableHead className="text-xs text-center">Present</TableHead>
                       <TableHead className="text-xs text-center">Absent</TableHead>
                       <TableHead className="text-xs text-center">Late</TableHead>
+                      <TableHead className="text-xs text-center">Left</TableHead>
                       <TableHead className="text-xs text-center">Rate</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -185,8 +184,10 @@ const AdminAttendanceOverview: React.FC = () => {
                           {new Date(d.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                         </TableCell>
                         <TableCell className="text-xs">
-                          <span className="mr-1">{DAY_TYPE_ICONS[d.dayType] || '⚪'}</span>
-                          {d.dayType.replace(/_/g, ' ')}
+                          <span className="flex items-center gap-1.5">
+                            <span className={`w-2.5 h-2.5 rounded-full ${getDayTypeMeta(d.dayType).dot}`} />
+                            {getDayTypeMeta(d.dayType).label}
+                          </span>
                         </TableCell>
                         <TableCell className="text-xs text-center font-medium text-emerald-600">
                           {d.isAttendanceExpected ? d.present : '—'}
@@ -196,6 +197,9 @@ const AdminAttendanceOverview: React.FC = () => {
                         </TableCell>
                         <TableCell className="text-xs text-center font-medium text-amber-500">
                           {d.isAttendanceExpected ? d.late : '—'}
+                        </TableCell>
+                        <TableCell className="text-xs text-center font-medium text-purple-500">
+                          {d.isAttendanceExpected ? d.left : '—'}
                         </TableCell>
                         <TableCell className="text-xs text-center">
                           {d.isAttendanceExpected && d.total > 0 ? (

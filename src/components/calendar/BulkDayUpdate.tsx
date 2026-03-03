@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Zap, AlertTriangle } from 'lucide-react';
+import ResponsiveDatePicker from './ResponsiveDatePicker';
 
 const DAY_TYPES: CalendarDayType[] = ['REGULAR', 'HALF_DAY', 'EXAM_DAY', 'STAFF_ONLY', 'SPECIAL_EVENT', 'CANCELLED', 'PUBLIC_HOLIDAY', 'INSTITUTE_HOLIDAY'];
 
@@ -27,36 +28,23 @@ const BulkDayUpdate: React.FC = () => {
   const [results, setResults] = useState<Array<{ date: string; success: boolean; error?: string }>>([]);
 
   const loadPreview = async () => {
-    if (!currentInstituteId || !startDate || !endDate) {
-      toast.error('Select a date range');
-      return;
-    }
-    if (new Date(startDate) > new Date(endDate)) {
-      toast.error('Start date must be before end date');
-      return;
-    }
+    if (!currentInstituteId || !startDate || !endDate) { toast.error('Select a date range'); return; }
+    if (new Date(startDate) > new Date(endDate)) { toast.error('Start date must be before end date'); return; }
     setLoading(true);
     try {
       const res = await calendarApi.getDays(currentInstituteId, { startDate, endDate, limit: 400 });
       let days = Array.isArray(res?.data) ? res.data : [];
-      
       if (applyTo === 'REGULAR') days = days.filter(d => d.dayType === 'REGULAR');
       else if (applyTo === 'HALF_DAY') days = days.filter(d => d.dayType === 'HALF_DAY');
       else if (applyTo === 'WORKING') days = days.filter(d => d.isAttendanceExpected);
-      
       setPreview(days);
-    } catch {
-      toast.error('Failed to load days');
-    } finally {
-      setLoading(false);
-    }
+    } catch { toast.error('Failed to load days'); } finally { setLoading(false); }
   };
 
   const handleBulkUpdate = async () => {
     if (!currentInstituteId || preview.length === 0) return;
     setUpdating(true);
     const updateResults: typeof results = [];
-
     for (const day of preview) {
       try {
         await calendarApi.updateDay(currentInstituteId, day.id, {
@@ -69,7 +57,6 @@ const BulkDayUpdate: React.FC = () => {
         updateResults.push({ date: day.calendarDate, success: false, error: error.message });
       }
     }
-
     setResults(updateResults);
     const successCount = updateResults.filter(r => r.success).length;
     toast.success(`Updated ${successCount}/${updateResults.length} days`);
@@ -87,14 +74,18 @@ const BulkDayUpdate: React.FC = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Date Range */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">From</Label>
-              <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="mt-1" />
+              <div className="mt-1">
+                <ResponsiveDatePicker value={startDate} onChange={setStartDate} placeholder="Select start date" />
+              </div>
             </div>
             <div>
               <Label className="text-xs">To</Label>
-              <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="mt-1" />
+              <div className="mt-1">
+                <ResponsiveDatePicker value={endDate} onChange={setEndDate} placeholder="Select end date" />
+              </div>
             </div>
           </div>
 
@@ -166,7 +157,7 @@ const BulkDayUpdate: React.FC = () => {
             <div className="border rounded-lg p-2 max-h-32 overflow-y-auto">
               {results.map((r, i) => (
                 <div key={i} className={`text-xs ${r.success ? 'text-green-600' : 'text-red-500'}`}>
-                  {r.date}: {r.success ? '✅ Updated' : `❌ ${r.error}`}
+                  {r.date}: {r.success ? 'Updated' : `Failed: ${r.error}`}
                 </div>
               ))}
             </div>

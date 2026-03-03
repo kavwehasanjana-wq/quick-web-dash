@@ -139,7 +139,7 @@ const CalendarDashboard: React.FC<CalendarDashboardProps> = ({ onNavigate }) => 
       {todayData && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">📅 Today</CardTitle>
+            <CardTitle className="text-base">Today</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3">

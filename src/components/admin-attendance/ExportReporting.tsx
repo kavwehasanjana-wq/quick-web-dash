@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import adminAttendanceApi from '@/api/adminAttendance.api';
+import adminAttendanceApi, { AdminAttendanceRecord } from '@/api/adminAttendance.api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,15 +41,54 @@ function exportToCSV(records: any[], filename: string) {
   URL.revokeObjectURL(link.href);
 }
 
+function buildPrintTable(records: AdminAttendanceRecord[]): string {
+  const rows = records.map((r, index) => `
+    <tr>
+      <td>${index + 1}</td>
+      <td>${r.date || r.markedAt?.split('T')[0] || '—'}</td>
+      <td>${r.studentName || r.userName || '—'}</td>
+      <td>${r.studentId || r.userId || '—'}</td>
+      <td>${r.className || '—'}</td>
+      <td>${r.subjectName || '—'}</td>
+      <td>${r.status || '—'}</td>
+      <td>${r.markedAt ? toSriLankaTime(r.markedAt) : '—'}</td>
+      <td>${r.markingMethod || '—'}</td>
+    </tr>
+  `).join('');
+
+  return `
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Student</th>
+          <th>Student ID</th>
+          <th>Class</th>
+          <th>Subject</th>
+          <th>Status</th>
+          <th>Marked At</th>
+          <th>Method</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
 const ExportReporting: React.FC = () => {
   const { currentInstituteId, selectedInstitute } = useAuth();
   const [exportType, setExportType] = useState('institute');
   const [startDate, setStartDate] = useState(() => {
-    const d = new Date(); d.setDate(d.getDate() - 7);
+    const d = new Date(); d.setDate(d.getDate() - 1);
     return d.toISOString().split('T')[0];
   });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(() => {
+    const d = new Date(); d.setDate(d.getDate() + 1);
+    return d.toISOString().split('T')[0];
+  });
   const [loading, setLoading] = useState(false);
+  const [reportRecords, setReportRecords] = useState<AdminAttendanceRecord[]>([]);
 
   const handleExport = useCallback(async () => {
     if (!currentInstituteId) return;
@@ -63,10 +102,11 @@ const ExportReporting: React.FC = () => {
 
       if (!records || records.length === 0) {
         toast.error('No records found for the selected date range');
-        setLoading(false);
+        setReportRecords([]);
         return;
       }
 
+      setReportRecords(records);
       const instituteName = selectedInstitute?.name?.replace(/\s+/g, '_') || 'institute';
       exportToCSV(records, `attendance_${instituteName}`);
       toast.success(`Exported ${records.length} records`);
@@ -78,13 +118,15 @@ const ExportReporting: React.FC = () => {
   }, [currentInstituteId, startDate, endDate, selectedInstitute]);
 
   const handlePrint = useCallback(() => {
-    const printArea = document.getElementById('attendance-print-area');
-    if (!printArea) {
-      toast.error('No data to print. Please export first.');
+    if (reportRecords.length === 0) {
+      toast.error('No report data to print. Please export first.');
       return;
     }
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
+
+    const reportHtml = buildPrintTable(reportRecords);
     printWindow.document.write(`
       <html>
         <head>
@@ -102,20 +144,20 @@ const ExportReporting: React.FC = () => {
         <body>
           <h1>Attendance Report — ${selectedInstitute?.name || 'Institute'}</h1>
           <h2>Date Range: ${startDate} — ${endDate}</h2>
-          ${printArea.innerHTML}
+          ${reportHtml}
         </body>
       </html>
     `);
     printWindow.document.close();
     printWindow.print();
-  }, [selectedInstitute, startDate, endDate]);
+  }, [reportRecords, selectedInstitute, startDate, endDate]);
 
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
           <FileText className="h-4 w-4 text-primary" />
-          📤 Export & Reporting
+          Export & Reporting
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import adminAttendanceApi, { AdminAttendanceRecord } from '@/api/adminAttendance.api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,19 +25,18 @@ const StudentAttendanceLookup: React.FC = () => {
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [hasSearched, setHasSearched] = useState(false);
 
-  const searchStudent = useCallback(async () => {
-    if (!currentInstituteId || !studentId.trim()) {
-      toast.error('Please enter a student ID');
-      return;
-    }
+  const fetchStudentAttendance = useCallback(async (targetPage: number) => {
+    if (!currentInstituteId || !studentId.trim()) return;
+
     setLoading(true);
     try {
       const res = await adminAttendanceApi.getStudentAttendance(studentId.trim(), {
         instituteId: currentInstituteId,
         startDate,
         endDate,
-        page,
+        page: targetPage,
         limit: 50,
       });
       setRecords(res?.data || []);
@@ -47,7 +46,23 @@ const StudentAttendanceLookup: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentInstituteId, studentId, startDate, endDate, page]);
+  }, [currentInstituteId, studentId, startDate, endDate]);
+
+  const searchStudent = useCallback(async () => {
+    if (!currentInstituteId || !studentId.trim()) {
+      toast.error('Please enter a student ID');
+      return;
+    }
+
+    setHasSearched(true);
+    setPage(1);
+    await fetchStudentAttendance(1);
+  }, [currentInstituteId, studentId, fetchStudentAttendance]);
+
+  useEffect(() => {
+    if (!hasSearched || page === 1) return;
+    fetchStudentAttendance(page);
+  }, [hasSearched, page, fetchStudentAttendance]);
 
   const stats = React.useMemo(() => {
     const present = records.filter(r => r.status === 'present').length;
@@ -98,7 +113,7 @@ const StudentAttendanceLookup: React.FC = () => {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Search className="h-4 w-4 text-primary" />
-            🔍 Student Attendance Lookup
+            Student Attendance Lookup
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -139,7 +154,7 @@ const StudentAttendanceLookup: React.FC = () => {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
                 <User className="h-4 w-4" />
-                📊 {studentName}
+                {studentName}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -239,8 +254,8 @@ const StudentAttendanceLookup: React.FC = () => {
               <div className="flex items-center justify-between mt-2">
                 <span className="text-xs text-muted-foreground">Page {page} of {totalPages}</span>
                 <div className="flex gap-1">
-                  <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => { setPage(p => p - 1); searchStudent(); }}>Prev</Button>
-                  <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => { setPage(p => p + 1); searchStudent(); }}>Next</Button>
+                  <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Prev</Button>
+                  <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
                 </div>
               </div>
             </CardContent>

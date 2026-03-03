@@ -115,7 +115,7 @@ const AttendanceAlerts: React.FC = () => {
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
               <Bell className="h-4 w-4 text-primary" />
-              🔔 Attendance Alerts
+              Attendance Alerts
             </CardTitle>
             <Button variant="outline" size="sm" onClick={checkAlerts} disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -156,7 +156,7 @@ const AttendanceAlerts: React.FC = () => {
           <CardContent className="py-3">
             <div className="flex items-center gap-2">
               <TrendingDown className="h-4 w-4 text-amber-500" />
-              <span className="text-sm">📊 Today's attendance: <strong>{todayRate}%</strong> (below 85% target)</span>
+              <span className="text-sm">Today's attendance: <strong>{todayRate}%</strong> (below 85% target)</span>
             </div>
           </CardContent>
         </Card>
@@ -168,7 +168,7 @@ const AttendanceAlerts: React.FC = () => {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-500" />
-              ⚠️ {lowAttendanceStudents.length} students below {config.lowAttendanceThreshold}% attendance
+              {lowAttendanceStudents.length} students below {config.lowAttendanceThreshold}% attendance
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -193,7 +193,7 @@ const AttendanceAlerts: React.FC = () => {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-red-500" />
-              🔴 {consecutiveAbsent.length} students absent {config.consecutiveAbsentDays}+ consecutive days
+              {consecutiveAbsent.length} students absent {config.consecutiveAbsentDays}+ consecutive days
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -216,7 +216,7 @@ const AttendanceAlerts: React.FC = () => {
       {!loading && lowAttendanceStudents.length === 0 && consecutiveAbsent.length === 0 && (
         <Card className="border-emerald-500/50">
           <CardContent className="py-4 text-center">
-            <span className="text-sm text-emerald-600">✅ No attendance alerts at this time</span>
+            <span className="text-sm text-emerald-600">No attendance alerts at this time</span>
           </CardContent>
         </Card>
       )}

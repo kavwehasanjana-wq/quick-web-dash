@@ -1,4 +1,5 @@
-// Calendar Day Types
+// ============= CALENDAR DAY TYPES =============
+
 export type CalendarDayType =
   | 'REGULAR'
   | 'HALF_DAY'
@@ -10,18 +11,27 @@ export type CalendarDayType =
   | 'INSTITUTE_HOLIDAY'
   | 'WEEKEND';
 
-// Calendar Event Types
+// ============= CALENDAR EVENT TYPES =============
+// Full list from API docs including all backend-supported types
+
 export type CalendarEventType =
   | 'REGULAR_CLASS'
   | 'EXAM'
   | 'PARENTS_MEETING'
+  | 'PRIZE_GIVING'
   | 'SPORTS_DAY'
   | 'CULTURAL_EVENT'
   | 'FIELD_TRIP'
   | 'WORKSHOP'
   | 'ORIENTATION'
+  | 'OPEN_DAY'
+  | 'RELIGIOUS_EVENT'
+  | 'EXTRACURRICULAR'
   | 'STAFF_MEETING'
   | 'TRAINING'
+  | 'GRADUATION'
+  | 'ADMISSION'
+  | 'MAINTENANCE'
   | 'CUSTOM';
 
 export type EventStatus = 'SCHEDULED' | 'ONGOING' | 'COMPLETED' | 'CANCELLED' | 'POSTPONED';
@@ -32,7 +42,36 @@ export type TargetScope = 'INSTITUTE' | 'CLASS' | 'SUBJECT';
 
 export type AttendanceUserType = 'STUDENT' | 'TEACHER' | 'PARENT' | 'STAFF';
 
-// Operating Config
+// ============= ALL VALUES ARRAYS =============
+
+export const ALL_CALENDAR_EVENT_TYPES: CalendarEventType[] = [
+  'REGULAR_CLASS', 'EXAM', 'PARENTS_MEETING', 'PRIZE_GIVING',
+  'SPORTS_DAY', 'CULTURAL_EVENT', 'FIELD_TRIP', 'WORKSHOP',
+  'ORIENTATION', 'OPEN_DAY', 'RELIGIOUS_EVENT', 'EXTRACURRICULAR',
+  'STAFF_MEETING', 'TRAINING', 'GRADUATION', 'ADMISSION',
+  'MAINTENANCE', 'CUSTOM'
+];
+
+export const ALL_EVENT_STATUSES: EventStatus[] = [
+  'SCHEDULED', 'ONGOING', 'COMPLETED', 'CANCELLED', 'POSTPONED'
+];
+
+export const ALL_ATTENDANCE_OPEN_TO: AttendanceOpenTo[] = [
+  'TARGET_ONLY', 'ALL_ENROLLED', 'ANYONE'
+];
+
+export const ALL_TARGET_SCOPES: TargetScope[] = [
+  'INSTITUTE', 'CLASS', 'SUBJECT'
+];
+
+export const ALL_CALENDAR_DAY_TYPES: CalendarDayType[] = [
+  'REGULAR', 'HALF_DAY', 'EXAM_DAY', 'STAFF_ONLY',
+  'SPECIAL_EVENT', 'CANCELLED', 'PUBLIC_HOLIDAY',
+  'INSTITUTE_HOLIDAY', 'WEEKEND'
+];
+
+// ============= OPERATING CONFIG =============
+
 export interface OperatingConfig {
   dayOfWeek: number; // 1-7 (1=Monday)
   dayName?: string;
@@ -59,9 +98,11 @@ export interface BulkOperatingConfigPayload {
   }>;
 }
 
-// Calendar Day
+// ============= CALENDAR DAY =============
+
 export interface CalendarDay {
   id: string;
+  instituteId?: string;
   calendarDate: string; // YYYY-MM-DD
   dayType: CalendarDayType;
   title?: string;
@@ -71,6 +112,15 @@ export interface CalendarDay {
   isAttendanceExpected: boolean;
   academicYear?: string;
   dayOfWeek?: number;
+  events?: CalendarEvent[];
+  defaultEventId?: string;
+  // Class calendar override fields
+  classOverride?: {
+    classDayType?: CalendarDayType;
+    isAttendanceExpected?: boolean;
+  };
+  effectiveDayType?: CalendarDayType;
+  effectiveIsAttendanceExpected?: boolean;
 }
 
 export interface UpdateCalendarDayPayload {
@@ -82,7 +132,8 @@ export interface UpdateCalendarDayPayload {
   isAttendanceExpected?: boolean;
 }
 
-// Calendar Event
+// ============= CALENDAR EVENT =============
+
 export interface CalendarEvent {
   id: string;
   calendarDayId?: string;
@@ -155,7 +206,8 @@ export interface UpdateEventPayload {
   notes?: string;
 }
 
-// Generate Calendar
+// ============= GENERATE CALENDAR =============
+
 export interface PublicHoliday {
   date: string;  // YYYY-MM-DD
   title: string;
@@ -179,19 +231,25 @@ export interface GenerateCalendarResponse {
   success: boolean;
   message: string;
   data: {
-    academicYear: string;
+    academicYear?: string;
     totalDays: number;
-    breakdown: {
+    regularDays?: number;
+    breakdown?: {
       regular: number;
       weekend: number;
       publicHoliday: number;
       instituteHoliday: number;
     };
-    eventsCreated: number;
+    weekends?: number;
+    publicHolidays?: number;
+    termBreaks?: number;
+    totalEvents?: number;
+    eventsCreated?: number;
   };
 }
 
-// Cache Stats
+// ============= CACHE =============
+
 export interface CacheStats {
   cacheEnabled: boolean;
   todayCacheKey: string;
@@ -200,10 +258,23 @@ export interface CacheStats {
   ttlRemaining?: number;
 }
 
-// API Response wrapper
+// ============= API RESPONSE WRAPPER =============
+
 export interface CalendarApiResponse<T> {
   success: boolean;
   message?: string;
   data: T;
   total?: number;
+  count?: number;
+}
+
+// ============= DELETE CALENDAR RESPONSE =============
+
+export interface DeleteCalendarResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    deletedDays: number;
+    deletedEvents: number;
+  };
 }

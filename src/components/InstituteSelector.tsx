@@ -196,10 +196,7 @@ const InstituteSelector = ({
       // Filter out any invalid institute data
       const validInstitutes = normalized.filter(inst => inst && inst.id && inst.name);
       setInstitutes(validInstitutes);
-      toast({
-        title: "Data Loaded",
-        description: `Successfully loaded ${validInstitutes.length} institutes.`
-      });
+      
     } catch (error) {
       console.error('Error loading institutes:', error);
       toast({

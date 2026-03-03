@@ -151,8 +151,8 @@ const OperatingSchedule: React.FC = () => {
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Table */}
-          <div className="border rounded-lg overflow-hidden">
+          {/* Desktop Table */}
+          <div className="hidden sm:block border rounded-lg overflow-hidden">
             <div className="grid grid-cols-[1fr,80px,100px,100px] gap-0 bg-muted/50 text-xs font-medium text-muted-foreground p-2 border-b">
               <div>Day</div>
               <div className="text-center">Operating</div>
@@ -204,6 +204,50 @@ const OperatingSchedule: React.FC = () => {
                     <span className="text-xs text-muted-foreground">—</span>
                   )}
                 </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="sm:hidden space-y-2">
+            {configs.map((config, i) => (
+              <div key={config.dayOfWeek} className={`border rounded-lg p-3 space-y-2 ${!config.isOperating ? 'bg-muted/30' : ''}`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{config.dayName}</span>
+                  <Switch
+                    checked={config.isOperating}
+                    onCheckedChange={(checked) => updateConfig(i, {
+                      isOperating: checked,
+                      startTime: checked ? '08:00' : null,
+                      endTime: checked ? '15:00' : null,
+                    })}
+                  />
+                </div>
+                {config.isOperating && (
+                  <div className="flex items-center gap-2">
+                    <Select value={config.startTime || '08:00'} onValueChange={(v) => updateConfig(i, { startTime: v })}>
+                      <SelectTrigger className="flex-1 h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-48">
+                        {TIME_OPTIONS.map(t => (
+                          <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <span className="text-xs text-muted-foreground">to</span>
+                    <Select value={config.endTime || '15:00'} onValueChange={(v) => updateConfig(i, { endTime: v })}>
+                      <SelectTrigger className="flex-1 h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-48">
+                        {TIME_OPTIONS.map(t => (
+                          <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             ))}
           </div>

@@ -562,20 +562,6 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             icon: Video,
             permission: 'view-lectures',
             alwaysShow: false
-          },
-          {
-            id: 'calendar-management',
-            label: 'Calendar',
-            icon: ClipboardList,
-            permission: 'view-dashboard',
-            alwaysShow: false
-          },
-          {
-            id: 'admin-attendance',
-            label: 'Attendance Monitor',
-            icon: BarChart3,
-            permission: 'view-attendance',
-            alwaysShow: false
           }
         ];
         return baseItems;
@@ -760,6 +746,13 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       // 2. Parent with child selected - show main sections without institute navigation
       if (selectedChild) {
         return [
+          {
+            id: 'parent-attendance',
+            label: 'Attendance Dashboard',
+            icon: BarChart3,
+            permission: 'view-dashboard',
+            alwaysShow: true
+          },
           {
             id: 'child-attendance',
             label: 'Transport Attendance',
@@ -987,35 +980,45 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   };
 
   const getAttendanceItems = () => {
-    // For Student - no additional attendance items needed as they are in main menu
+    // For Student - show today dashboard and calendar view
     if (userRole === 'Student') {
-      return [];
+      if (!selectedInstitute) return [];
+      return [
+        {
+          id: 'today-dashboard',
+          label: 'Today',
+          icon: CalendarDays,
+          permission: 'view-dashboard',
+          alwaysShow: false
+        },
+        {
+          id: 'calendar-view',
+          label: 'Calendar View',
+          icon: Calendar,
+          permission: 'view-dashboard',
+          alwaysShow: false
+        }
+      ];
+    }
+
+    // For Parent - show parent attendance dashboard
+    if (userRole === 'Parent') {
+      if (!selectedChild) return [];
+      return [
+        {
+          id: 'parent-attendance',
+          label: 'Attendance Dashboard',
+          icon: CalendarDays,
+          permission: 'view-dashboard',
+          alwaysShow: true
+        }
+      ];
     }
 
     // For Teacher - show specific attendance items based on selection state
     if (userRole === 'Teacher') {
-      // 3. Teacher with institute and class selected (but no subject)
-      if (selectedInstitute && selectedClass && !selectedSubject) {
-        return [
-          {
-            id: 'daily-attendance',
-            label: 'Daily Attendance',
-            icon: UserCheck,
-            permission: 'view-attendance',
-            alwaysShow: false
-          },
-          {
-            id: 'qr-attendance',
-            label: 'Mark Attendance',
-            icon: QrCode,
-            permission: 'mark-attendance',
-            alwaysShow: false
-          }
-        ];
-      }
-
-      // 4. Teacher with institute, class, and subject all selected
-      if (selectedInstitute && selectedClass && selectedSubject) {
+      // 3. Teacher with institute and class selected (with or without subject)
+      if (selectedInstitute && selectedClass) {
         return [
           {
             id: 'daily-attendance',
@@ -1060,7 +1063,28 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             icon: QrCode,
             permission: 'mark-attendance',
             alwaysShow: false
-          }
+          },
+          {
+            id: 'calendar-view',
+            label: 'Calendar View',
+            icon: Calendar,
+            permission: 'view-attendance',
+            alwaysShow: false
+          },
+          {
+            id: 'calendar-management',
+            label: 'Calendar',
+            icon: ClipboardList,
+            permission: 'view-dashboard',
+            alwaysShow: false
+          },
+          {
+            id: 'admin-attendance',
+            label: 'Attendance Monitor',
+            icon: BarChart3,
+            permission: 'view-attendance',
+            alwaysShow: false
+          },
         ];
       }
 
@@ -1085,19 +1109,32 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       }
     }
 
+    // For AttendanceMarker with class selected - only Daily Attendance and Mark Attendance
+    if (userRole === 'AttendanceMarker' && selectedInstitute && selectedClass) {
+      return [
+        {
+          id: 'daily-attendance',
+          label: 'Daily Attendance',
+          icon: UserCheck,
+          permission: 'view-attendance',
+          alwaysShow: false
+        },
+        {
+          id: 'qr-attendance',
+          label: 'Mark Attendance',
+          icon: QrCode,
+          permission: 'mark-attendance',
+          alwaysShow: true
+        }
+      ];
+    }
+
     // Default attendance items for other roles
     const attendanceItems = [
       {
         id: 'today-dashboard',
         label: 'Today',
         icon: CalendarDays,
-        permission: 'view-attendance',
-        alwaysShow: false
-      },
-      {
-        id: 'daily-attendance',
-        label: 'Daily Attendance',
-        icon: UserCheck,
         permission: 'view-attendance',
         alwaysShow: false
       },
@@ -1113,7 +1150,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         label: 'Mark Attendance',
         icon: QrCode,
         permission: 'mark-attendance',
-        alwaysShow: userRole === 'AttendanceMarker' // Always show for AttendanceMarker
+        alwaysShow: userRole === 'AttendanceMarker'
       },
       {
         id: 'calendar-view',
@@ -1716,7 +1753,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       let allowPush = true;
 
       // Institute-specific pages that require institute selection
-      const instituteSpecificPages = /^(classes|subjects|students|teachers|users|parents|institutes|daily-attendance|qr-attendance|live-lectures|grading|exams|homework|results|lectures|free-lectures|institute-details|institute-users|verify-image|select-class|select-subject|unverified-students)$/i;
+      const instituteSpecificPages = /^(classes|subjects|students|teachers|users|parents|institutes|qr-attendance|live-lectures|grading|exams|homework|results|lectures|free-lectures|institute-details|institute-users|verify-image|select-class|select-subject|unverified-students)$/i;
       
       // Don't show institute-specific pages in sidebar when no institute is selected
       if (!selectedInstitute && instituteSpecificPages.test(currentPage)) {

@@ -17,6 +17,8 @@ import { buildAttendanceAddress } from '@/utils/attendanceAddress';
 import { attendanceScanLog } from '@/utils/attendanceScanLog';
 import { AttendanceStatus, ALL_ATTENDANCE_STATUSES, ATTENDANCE_STATUS_CONFIG } from '@/types/attendance.types';
 import { Capacitor } from '@capacitor/core';
+import { useTodayCalendarEvents, DEFAULT_EVENT_ID } from '@/hooks/useTodayCalendarEvents';
+import EventSelector from '@/components/attendance/EventSelector';
 import MobileScannerOverlay from '@/components/MobileScannerOverlay';
 
 // Dynamic import to avoid crash on web where the plugin isn't available
@@ -61,11 +63,18 @@ const QRAttendance = () => {
   const [location, setLocation] = useState<{ latitude: number; longitude: number; address: string } | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [status, setStatus] = useState<AttendanceStatus>('present');
+  const [selectedEventId, setSelectedEventId] = useState(DEFAULT_EVENT_ID);
   const [attendanceAlerts, setAttendanceAlerts] = useState<AttendanceAlert[]>([]);
   const [showMethodDialog, setShowMethodDialog] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<'qr' | 'barcode' | 'rfid/nfc'>('qr');
   const [studentImagesMap, setStudentImagesMap] = useState<Map<string, string>>(new Map());
   const [isManualProcessing, setIsManualProcessing] = useState(false);
+
+  // Fetch today's calendar events
+  const calendarInfo = useTodayCalendarEvents(
+    currentInstituteId,
+    selectedClass?.id?.toString()
+  );
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [lastMarkedStudent, setLastMarkedStudent] = useState<{ name: string; status: AttendanceStatus } | null>(null);
   const [isNativeScanning, setIsNativeScanning] = useState(false); // Track native scanner state
@@ -531,6 +540,11 @@ const QRAttendance = () => {
         status: status
       };
 
+      // Only send eventId for special (non-default) events
+      if (selectedEventId !== DEFAULT_EVENT_ID) {
+        (request as any).eventId = selectedEventId;
+      }
+
       // Include class data if selected
       if (selectedClass) {
         request.classId = selectedClass.id;
@@ -662,6 +676,11 @@ const QRAttendance = () => {
         markingMethod: 'manual',
         status: status
       };
+
+      // Only send eventId for special (non-default) events
+      if (selectedEventId !== DEFAULT_EVENT_ID) {
+        (request as any).eventId = selectedEventId;
+      }
 
       // Only include class data if a class is selected
       if (selectedClass) {
@@ -963,9 +982,18 @@ const QRAttendance = () => {
                           ))}
                        </SelectContent>
                      </Select>
-                   </div>
-                 </div>
-                 
+                    </div>
+                    <EventSelector
+                      events={calendarInfo.events}
+                      selectedEventId={selectedEventId}
+                      onEventChange={setSelectedEventId}
+                      loading={calendarInfo.loading}
+                      dayType={calendarInfo.dayType}
+                      isAttendanceExpected={calendarInfo.isAttendanceExpected}
+                      compact
+                    />
+                  </div>
+                  
                  <div className="text-center py-16">
                    <Camera className="h-20 w-20 mx-auto mb-6 text-muted-foreground" />
                    <p className="text-xl font-medium mb-3">Ready to Scan</p>
@@ -1162,6 +1190,16 @@ const QRAttendance = () => {
                    </SelectContent>
                  </Select>
                </div>
+
+               <EventSelector
+                 events={calendarInfo.events}
+                 selectedEventId={selectedEventId}
+                 onEventChange={setSelectedEventId}
+                 loading={calendarInfo.loading}
+                 dayType={calendarInfo.dayType}
+                 isAttendanceExpected={calendarInfo.isAttendanceExpected}
+                 compact
+               />
                
                <div className="space-y-2">
                  <Input

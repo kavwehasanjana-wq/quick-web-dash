@@ -14,9 +14,16 @@ interface CardUser {
   userId: string;
   userName: string;
   instituteCardId: string;
+  userIdByInstitute?: string;
   imageUrl?: string;
-  isActive: boolean;
-  roles: string[];
+  isInstituteImage?: boolean;
+  imageVerificationStatus?: string;
+  userType?: string;
+  className?: string;
+  classId?: string;
+  subjectId?: string;
+  isActive?: boolean;
+  roles?: string[];
 }
 
 const CardManagement: React.FC = () => {
@@ -52,7 +59,7 @@ const CardManagement: React.FC = () => {
   }, [currentInstituteId, cardId]);
 
   const statusIcon = (s: string) => {
-    switch (s) { case 'present': return '✅'; case 'absent': return '❌'; case 'late': return '⏰'; default: return '→'; }
+    switch (s) { case 'present': return 'P'; case 'absent': return 'A'; case 'late': return 'L'; default: return '→'; }
   };
 
   return (
@@ -61,7 +68,7 @@ const CardManagement: React.FC = () => {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <CreditCard className="h-4 w-4 text-primary" />
-            💳 Card Management
+            Card Management
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -105,7 +112,7 @@ const CardManagement: React.FC = () => {
                     <Badge key={r} variant="outline" className="text-xs">{r}</Badge>
                   ))}
                   <Badge variant={cardUser.isActive ? 'default' : 'destructive'} className="text-xs">
-                    {cardUser.isActive ? '✅ Active' : '❌ Inactive'}
+                    {cardUser.isActive ? 'Active' : 'Inactive'}
                   </Badge>
                 </div>
               </div>

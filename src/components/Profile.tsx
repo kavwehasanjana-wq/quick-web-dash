@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
+import ImagePreviewModal from '@/components/ImagePreviewModal';
 import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -90,6 +91,7 @@ const Profile = () => {
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [revoking, setRevoking] = useState<string | null>(null);
   const [revokingAll, setRevokingAll] = useState(false);
+  const [showImagePreview, setShowImagePreview] = useState(false);
 
   const loadSessions = async () => {
     setSessionsLoading(true);
@@ -127,6 +129,13 @@ const Profile = () => {
       setRevokingAll(false);
     }
   };
+
+  // Auto-load sessions when tab=sessions on mount or tab change
+  useEffect(() => {
+    if (activeProfileTab === 'sessions' && sessions.length === 0 && !sessionsLoading) {
+      loadSessions();
+    }
+  }, [activeProfileTab]);
 
   const parseUserAgent = (ua: string | null): { os: string; browser: string } => {
     if (!ua) return { os: 'Unknown', browser: '' };
@@ -331,8 +340,11 @@ const Profile = () => {
         <CardContent className="p-4 sm:p-6">
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-5">
             <div className="relative group">
-              <Avatar className="h-20 w-20 sm:h-24 sm:w-24 ring-2 ring-primary/20">
-                <AvatarImage src={currentImageUrl} alt="Profile" />
+              <Avatar
+                className="h-20 w-20 sm:h-24 sm:w-24 ring-2 ring-primary/20 cursor-pointer transition-opacity hover:opacity-80"
+                onClick={() => currentImageUrl && setShowImagePreview(true)}
+              >
+                <AvatarImage src={currentImageUrl} alt="Profile" className="object-cover" />
                 <AvatarFallback className="text-lg sm:text-xl font-semibold bg-primary/10 text-primary">
                   {getUserInitials()}
                 </AvatarFallback>
@@ -352,6 +364,9 @@ const Profile = () => {
             <div className="text-center sm:text-left flex-1 min-w-0">
               <h1 className="text-lg sm:text-2xl font-bold text-foreground truncate">{formData.nameWithInitials || formData.name || 'Welcome'}</h1>
               <p className="text-muted-foreground text-xs sm:text-sm mt-0.5 truncate">{formData.email}</p>
+              {user?.id && (
+                <p className="text-muted-foreground text-[10px] sm:text-xs mt-0.5 font-mono">ID: {user.id}</p>
+              )}
               <div className="flex items-center gap-2 mt-2 justify-center sm:justify-start flex-wrap">
                 <Badge variant="secondary" className="text-[10px] sm:text-xs">
                   <Shield className="h-3 w-3 mr-1" />
@@ -598,6 +613,13 @@ const Profile = () => {
           Logout
         </Button>
       </div>
+      {/* Image Preview Modal */}
+      <ImagePreviewModal
+        isOpen={showImagePreview}
+        onClose={() => setShowImagePreview(false)}
+        imageUrl={currentImageUrl}
+        title="Profile Photo"
+      />
     </div>
   );
 };

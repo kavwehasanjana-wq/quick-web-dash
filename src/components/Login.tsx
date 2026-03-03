@@ -631,8 +631,8 @@ const Login = ({
       </div>
 
       {/* Left Side - Form */}
-      <div className="w-full md:w-1/2 lg:w-2/5 flex flex-col items-center justify-center px-4 py-6 sm:p-6 md:p-8 bg-background -mt-6 md:mt-0 rounded-t-[2rem] md:rounded-none relative z-10 flex-1 md:min-h-screen overflow-y-auto">
-        <div className="w-full max-w-sm md:max-w-md space-y-5 md:space-y-6">
+      <div className="w-full md:w-3/5 lg:w-1/2 flex flex-col items-center justify-center px-5 py-7 sm:p-7 md:p-10 bg-background -mt-8 md:mt-0 rounded-t-[3rem] md:rounded-none relative z-10 flex-1 md:min-h-screen overflow-y-auto">
+        <div className="w-full max-w-md md:max-w-lg space-y-6 md:space-y-7">
           {/* Logo and Header */}
           <div className="text-center space-y-1">
             <div className="flex justify-center mb-2 md:mb-4">
@@ -646,8 +646,8 @@ const Login = ({
           </div>
 
           {/* Main Login/First Login/Forgot Password Card */}
-          <Card className="border-border/50 shadow-sm md:shadow-md">
-            <CardContent className="p-4 md:p-6 lg:p-8">
+          <Card className="border-border/50 shadow-md lg:shadow-lg">
+            <CardContent className="p-5 md:p-8 lg:p-10">
             {/* Regular Login Form */}
             {loginStep === 'login' && <form onSubmit={handleLogin} className="space-y-4 md:space-y-6">
                 {/* Role Selection - Only show for mock login */}

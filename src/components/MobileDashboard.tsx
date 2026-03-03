@@ -342,29 +342,29 @@ const MobileDashboard = () => {
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 px-1">
             {section.title}
           </h2>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {section.items.map((item) => (
               <button
                 key={item.id}
                 onClick={() => !item.locked && handleNavigate(item.id)}
                 disabled={item.locked}
                 className={`
-                  flex flex-col items-center gap-2 p-4 rounded-2xl
+                  flex flex-col items-center gap-1.5 sm:gap-2 p-2.5 sm:p-4 rounded-2xl
                   transition-all duration-200 active:scale-95
                   ${item.locked 
                     ? 'opacity-40 cursor-not-allowed' 
                     : 'hover:shadow-md active:shadow-sm'
                   }
-                  bg-card border border-border/50 shadow-sm
+                  bg-card border border-border/50 shadow-sm min-w-0 overflow-hidden
                 `}
               >
                 <div className={`
-                  w-12 h-12 rounded-xl flex items-center justify-center
+                  w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0
                   ${item.color} text-white shadow-sm
                 `}>
-                  <item.icon className="h-6 w-6" />
+                  <item.icon className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
-                <span className="text-xs font-medium text-foreground text-center leading-tight line-clamp-2">
+                <span className="text-[10px] sm:text-xs font-medium text-foreground text-center leading-tight line-clamp-2 w-full">
                   {item.label}
                 </span>
               </button>

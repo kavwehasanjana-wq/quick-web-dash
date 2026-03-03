@@ -10,19 +10,10 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import calendarApi from '@/api/calendar.api';
 import type { CalendarDay, CalendarEvent, CalendarDayType } from '@/types/calendar.types';
+import { DAY_TYPE_META } from '@/components/calendar/calendarTheme';
 
 // Day type color configuration
-const DAY_TYPE_COLORS: Record<CalendarDayType, { dot: string; bg: string; text: string; label: string }> = {
-  REGULAR: { dot: 'bg-emerald-500', bg: 'bg-emerald-500/10', text: 'text-emerald-700 dark:text-emerald-400', label: 'Regular' },
-  WEEKEND: { dot: 'bg-blue-500', bg: 'bg-blue-500/10', text: 'text-blue-700 dark:text-blue-400', label: 'Weekend' },
-  PUBLIC_HOLIDAY: { dot: 'bg-red-500', bg: 'bg-red-500/10', text: 'text-red-700 dark:text-red-400', label: 'Holiday' },
-  INSTITUTE_HOLIDAY: { dot: 'bg-orange-500', bg: 'bg-orange-500/10', text: 'text-orange-700 dark:text-orange-400', label: 'Inst. Holiday' },
-  HALF_DAY: { dot: 'bg-amber-500', bg: 'bg-amber-500/10', text: 'text-amber-700 dark:text-amber-400', label: 'Half Day' },
-  EXAM_DAY: { dot: 'bg-purple-500', bg: 'bg-purple-500/10', text: 'text-purple-700 dark:text-purple-400', label: 'Exam' },
-  STAFF_ONLY: { dot: 'bg-slate-400', bg: 'bg-slate-500/10', text: 'text-slate-700 dark:text-slate-400', label: 'Staff Only' },
-  SPECIAL_EVENT: { dot: 'bg-cyan-500', bg: 'bg-cyan-500/10', text: 'text-cyan-700 dark:text-cyan-400', label: 'Special' },
-  CANCELLED: { dot: 'bg-slate-500', bg: 'bg-slate-500/10', text: 'text-slate-500', label: 'Cancelled' },
-};
+const DAY_TYPE_COLORS: Record<CalendarDayType, { dot: string; bg: string; text: string; label: string }> = DAY_TYPE_META as Record<CalendarDayType, { dot: string; bg: string; text: string; label: string }>;
 
 const formatTime = (time: string | undefined | null): string => {
   if (!time) return '';

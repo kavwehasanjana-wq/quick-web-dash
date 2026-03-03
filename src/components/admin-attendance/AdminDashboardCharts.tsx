@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import adminAttendanceApi from '@/api/adminAttendance.api';
-import calendarApi from '@/api/calendar.api';
+import { normalizeAttendanceSummary } from '@/types/attendance.types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
+  PieChart, Pie, Cell,
+  Tooltip, ResponsiveContainer,
 } from 'recharts';
-import { RefreshCw, TrendingUp, BarChart3, Clock, Activity } from 'lucide-react';
+import { RefreshCw, Activity } from 'lucide-react';
 import { toast } from 'sonner';
 
 const CHART_COLORS = {
@@ -29,43 +29,76 @@ const AdminDashboardCharts: React.FC = () => {
     if (!currentInstituteId) return;
     setLoading(true);
     try {
-      // Load today's data
+      // Load today's data - use summary from response
       const today = new Date().toISOString().split('T')[0];
       const todayRes = await adminAttendanceApi.getInstituteAttendance(
         currentInstituteId,
-        { startDate: today, endDate: today, limit: 500 },
+        { startDate: today, endDate: today, limit: 100 },
         { ttl: 60 }
       );
+      
       const todayRecords = todayRes?.data || [];
-      setTodayStats({
-        present: todayRecords.filter(r => r.status === 'present').length,
-        absent: todayRecords.filter(r => r.status === 'absent').length,
-        late: todayRecords.filter(r => r.status === 'late').length,
-        left: todayRecords.filter(r => ['left', 'left_early', 'left_lately'].includes(r.status)).length,
-        total: todayRecords.length,
-      });
+      const todaySummary = normalizeAttendanceSummary(todayRes?.summary);
+      
+      if (todayRecords.length > 0) {
+        // Use individual records if available
+        setTodayStats({
+          present: todayRecords.filter(r => r.status === 'present').length,
+          absent: todayRecords.filter(r => r.status === 'absent').length,
+          late: todayRecords.filter(r => r.status === 'late').length,
+          left: todayRecords.filter(r => ['left', 'left_early', 'left_lately'].includes(r.status)).length,
+          total: todayRecords.length,
+        });
+      } else if (todaySummary.totalPresent > 0 || todaySummary.totalAbsent > 0 || todaySummary.totalLate > 0) {
+        // Fall back to summary data
+        const left = todaySummary.totalLeft + todaySummary.totalLeftEarly + todaySummary.totalLeftLately;
+        const total = todaySummary.totalPresent + todaySummary.totalAbsent + todaySummary.totalLate + left;
+        setTodayStats({
+          present: todaySummary.totalPresent,
+          absent: todaySummary.totalAbsent,
+          late: todaySummary.totalLate,
+          left,
+          total,
+        });
+      } else {
+        setTodayStats({ present: 0, absent: 0, late: 0, left: 0, total: 0 });
+      }
 
-      // Load last 4 weeks for day-of-week analysis
+      // Load last 4 weeks for day-of-week analysis using daily summaries
       const end = new Date();
       const start = new Date();
       start.setDate(start.getDate() - 28);
-      const records = await adminAttendanceApi.getInstituteAttendanceRange(
+      
+      const dailySummaries = await adminAttendanceApi.getInstituteDailySummaries(
         currentInstituteId,
         start.toISOString().split('T')[0],
         end.toISOString().split('T')[0],
         { ttl: 300 }
       );
 
-      // Day of week analysis
-      const dayMap = new Map<number, { present: number; total: number }>();
-      for (const r of records) {
-        const d = new Date(r.date || r.markedAt?.split('T')[0] || '');
+      // Day of week analysis using summaries
+      const dayMap = new Map<number, { present: number; total: number; rateSum: number; dayCount: number }>();
+      for (const ds of dailySummaries) {
+        const d = new Date(ds.date);
         const day = d.getDay();
-        if (!dayMap.has(day)) dayMap.set(day, { present: 0, total: 0 });
+        if (!dayMap.has(day)) dayMap.set(day, { present: 0, total: 0, rateSum: 0, dayCount: 0 });
         const s = dayMap.get(day)!;
-        s.total++;
-        if (r.status === 'present') s.present++;
+        
+        if (ds.records.length > 0) {
+          // Use individual records
+          for (const r of ds.records) {
+            s.total++;
+            if (r.status === 'present') s.present++;
+          }
+        } else if (ds.summary.totalPresent > 0 || ds.summary.totalAbsent > 0) {
+          // Use summary
+          s.present += ds.summary.totalPresent;
+          const dayTotal = ds.summary.totalPresent + ds.summary.totalAbsent + ds.summary.totalLate + 
+            ds.summary.totalLeft + ds.summary.totalLeftEarly + ds.summary.totalLeftLately;
+          s.total += dayTotal;
+        }
       }
+      
       const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const dowData = [1, 2, 3, 4, 5].map(d => ({
         day: dayNames[d],
@@ -104,13 +137,12 @@ const AdminDashboardCharts: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Today's Live Status */}
-      <Card>
-        <CardHeader className="pb-3">
+    <div className="w-full">
+      <Card className="w-full">
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Activity className="h-4 w-4 text-primary" />
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Activity className="h-5 w-5 text-primary" />
               Today's Live Attendance
             </CardTitle>
             <Button variant="outline" size="sm" onClick={loadCharts} disabled={loading}>
@@ -120,21 +152,21 @@ const AdminDashboardCharts: React.FC = () => {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            <div className="flex justify-center py-16">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
             </div>
-          ) : todayStats ? (
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-              {/* Pie Chart */}
-              <div className="w-48 h-48">
+          ) : todayStats && todayStats.total > 0 ? (
+            <div className="flex flex-col items-center gap-8 w-full">
+              {/* Pie Chart - Bigger */}
+              <div className="w-64 h-64 sm:w-72 sm:h-72">
                 <ResponsiveContainer>
                   <PieChart>
                     <Pie
                       data={pieData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={50}
-                      outerRadius={75}
+                      innerRadius={70}
+                      outerRadius={100}
                       dataKey="value"
                       labelLine={false}
                     >
@@ -145,77 +177,38 @@ const AdminDashboardCharts: React.FC = () => {
                     <Tooltip />
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="text-center -mt-[115px]">
-                  <div className="text-2xl font-bold text-foreground">{todayRate}%</div>
-                  <div className="text-xs text-muted-foreground">Attendance</div>
+                <div className="text-center -mt-[155px] sm:-mt-[165px]">
+                  <div className="text-4xl font-bold text-foreground">{todayRate}%</div>
+                  <div className="text-sm text-muted-foreground">Attendance</div>
                 </div>
-                <div className="h-[75px]" /> {/* spacer */}
+                <div className="h-[90px] sm:h-[100px]" />
               </div>
 
-              {/* Stats */}
-              <div className="grid grid-cols-2 gap-3 flex-1">
-                <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-center">
-                  <div className="text-xl font-bold text-emerald-600">{todayStats.present}</div>
-                  <div className="text-xs text-muted-foreground">🟢 Present</div>
+              {/* Stats - Full Width */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full">
+                <div className="p-5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-center">
+                  <div className="text-3xl font-bold text-emerald-600">{todayStats.present}</div>
+                  <div className="text-sm text-muted-foreground mt-1">Present</div>
                 </div>
-                <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-center">
-                  <div className="text-xl font-bold text-red-500">{todayStats.absent}</div>
-                  <div className="text-xs text-muted-foreground">🔴 Absent</div>
+                <div className="p-5 rounded-xl bg-red-50 dark:bg-red-900/20 text-center">
+                  <div className="text-3xl font-bold text-red-500">{todayStats.absent}</div>
+                  <div className="text-sm text-muted-foreground mt-1">Absent</div>
                 </div>
-                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-center">
-                  <div className="text-xl font-bold text-amber-600">{todayStats.late}</div>
-                  <div className="text-xs text-muted-foreground">🟡 Late</div>
+                <div className="p-5 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-center">
+                  <div className="text-3xl font-bold text-amber-600">{todayStats.late}</div>
+                  <div className="text-sm text-muted-foreground mt-1">Late</div>
                 </div>
-                <div className="p-3 rounded-lg bg-muted text-center">
-                  <div className="text-xl font-bold text-foreground">{todayStats.total}</div>
-                  <div className="text-xs text-muted-foreground">Total Records</div>
+                <div className="p-5 rounded-xl bg-muted text-center">
+                  <div className="text-3xl font-bold text-foreground">{todayStats.total}</div>
+                  <div className="text-sm text-muted-foreground mt-1">Total Records</div>
                 </div>
               </div>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-4">No attendance data for today</p>
+            <p className="text-sm text-muted-foreground text-center py-12">No attendance data for today</p>
           )}
         </CardContent>
       </Card>
-
-      {/* Day of Week Analysis */}
-      {dayOfWeekData.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Clock className="h-4 w-4 text-primary" />
-              Day-of-Week Analysis (Last 4 Weeks)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {/* Heatmap Bars */}
-            <div className="grid grid-cols-5 gap-2 mb-4">
-              {dayOfWeekData.map(d => (
-                <div key={d.day} className={`p-3 rounded-lg text-center ${getHeatColor(d.avgRate)}`}>
-                  <div className="text-xs font-semibold">{d.day}</div>
-                  <div className="text-lg font-bold">{d.avgRate}%</div>
-                  <div className="text-xs opacity-75">{d.totalRecords} records</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Bar Chart */}
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={dayOfWeekData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="day" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} tickFormatter={v => `${v}%`} />
-                <Tooltip formatter={(v: number) => `${v}%`} />
-                <Bar dataKey="avgRate" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]}>
-                  {dayOfWeekData.map((entry, i) => (
-                    <Cell key={i} fill={entry.avgRate >= 85 ? 'hsl(var(--chart-1))' : entry.avgRate >= 75 ? 'hsl(var(--chart-3))' : 'hsl(var(--chart-2))'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };

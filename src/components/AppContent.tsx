@@ -96,6 +96,9 @@ import CalendarManagementPage from '@/components/calendar/CalendarManagementPage
 import AdminAttendancePage from '@/components/admin-attendance/AdminAttendancePage';
 import CalendarMonthView from '@/components/CalendarMonthView';
 import TodayDashboard from '@/components/TodayDashboard';
+import ParentAttendanceDashboard from '@/components/parent-attendance/ParentAttendanceDashboard';
+import ClassCalendarPage from '@/pages/ClassCalendarPage';
+import DeviceManagement from '@/pages/DeviceManagement';
 
 interface AppContentProps {
   initialPage?: string;
@@ -769,6 +772,18 @@ const AppContent = ({ initialPage }: AppContentProps) => {
         case 'notifications':
         case 'institute-notifications':
           return <NotificationsPage />;
+        case 'parent-attendance':
+          return <ParentAttendanceDashboard />;
+        case 'calendar-view':
+          return <CalendarMonthView />;
+        case 'today-dashboard':
+          return <TodayDashboard />;
+        case 'select-institute':
+          return <InstituteSelector useChildId={true} />;
+        case 'select-class':
+          return <ClassSelector />;
+        case 'select-subject':
+          return <SubjectSelector />;
         default:
           return <ParentChildrenSelector />;
       }
@@ -829,9 +844,8 @@ const AppContent = ({ initialPage }: AppContentProps) => {
         case 'view-grade-classes':
           return <Grading />;
         case 'attendance':
-          return <Attendance />;
         case 'daily-attendance':
-          return <NewAttendance />;
+          return <Attendance />;
         case 'qr-attendance':
           return <QRAttendance />;
         case 'institute-mark-attendance':
@@ -903,34 +917,37 @@ const AppContent = ({ initialPage }: AppContentProps) => {
         case 'dashboard':
           return <Dashboard />;
         case 'attendance':
-          return <Attendance />;
         case 'daily-attendance':
-          return <NewAttendance />;
+          return <Attendance />;
         case 'my-attendance':
           return <MyAttendance />;
+        case 'today-dashboard':
+          return <TodayDashboard />;
+        case 'calendar-view':
+          return <CalendarMonthView />;
         case 'attendance-markers':
           return <AttendanceMarkers />;
-      case 'qr-attendance':
-        return <QRAttendance />;
-      case 'rfid-attendance':
-        return <RfidAttendance />;
-      case 'institute-mark-attendance':
-        return <InstituteMarkAttendance />;
+        case 'qr-attendance':
+          return <QRAttendance />;
+        case 'rfid-attendance':
+          return <RfidAttendance />;
+        case 'institute-mark-attendance':
+          return <InstituteMarkAttendance />;
         case 'profile':
           return <Profile />;
         case 'select-institute':
           return <InstituteSelector />;
         case 'select-class':
           return <ClassSelector />;
-      case 'appearance':
-        return <Appearance />;
-      case 'institute-profile':
-        return <InstituteProfile />;
-      case 'settings':
+        case 'appearance':
+          return <Appearance />;
+        case 'institute-profile':
+          return <InstituteProfile />;
+        case 'settings':
           return <Settings />;
-      case 'notifications':
-      case 'institute-notifications':
-        return <NotificationsPage />;
+        case 'notifications':
+        case 'institute-notifications':
+          return <NotificationsPage />;
         default:
           return <Dashboard />;
       }
@@ -959,7 +976,10 @@ const AppContent = ({ initialPage }: AppContentProps) => {
       'calendar-management',
       'calendar-view',
       'today-dashboard',
-      'admin-attendance'
+      'admin-attendance',
+      'parent-attendance',
+      'class-calendar',
+      'device-management'
     ];
     
     console.log('🔍 Student Role - Debug:', { 
@@ -1052,9 +1072,8 @@ const AppContent = ({ initialPage }: AppContentProps) => {
       case 'view-grade-classes':
         return <Grading />;
       case 'attendance':
-        return <Attendance />;
       case 'daily-attendance':
-        return <NewAttendance />;
+        return <Attendance />;
       case 'attendance-markers':
         return <AttendanceMarkers />;
       case 'qr-attendance':
@@ -1124,6 +1143,12 @@ const AppContent = ({ initialPage }: AppContentProps) => {
         return <TodayDashboard />;
       case 'admin-attendance':
         return <AdminAttendancePage />;
+      case 'parent-attendance':
+        return <ParentAttendanceDashboard />;
+      case 'class-calendar':
+        return <ClassCalendarPage />;
+      case 'device-management':
+        return <DeviceManagement />;
       case 'my-children':
         return <MyChildren />;
       case 'child/:childId/dashboard':

@@ -233,7 +233,7 @@ class ChildAttendanceApi {
     subjectName?: string;
     address: string;
     markingMethod: string;
-    status: 'present' | 'absent' | 'late';
+    status: AttendanceStatus;
     date: string;
     location?: string;
   }): Promise<any> {
@@ -346,7 +346,7 @@ class ChildAttendanceApi {
       address: request.address,
       markingMethod: request.markingMethod,
       status: request.status,
-      date: new Date().toISOString()
+      date: new Date().toISOString().split('T')[0] // YYYY-MM-DD format per API docs
     };
 
     // Only include class data if provided

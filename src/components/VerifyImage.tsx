@@ -116,11 +116,7 @@ const VerifyImage = () => {
       setStudents(result.data || []);
       setTotalCount(result.meta?.total || 0);
       
-      toast({
-        title: "Data Loaded",
-        description: `Found ${result.meta?.total || 0} unverified images`,
-        duration: 1500
-      });
+      
     } catch (error) {
       console.error('Error fetching unverified images:', error);
       toast({
