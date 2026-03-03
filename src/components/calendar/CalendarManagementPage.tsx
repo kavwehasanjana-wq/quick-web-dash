@@ -78,8 +78,8 @@ const CalendarManagementPage: React.FC = () => {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-              <CalendarDays className="h-5 w-5 text-primary" />
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+              <CalendarDays className="h-5 w-5 text-emerald-600" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-foreground tracking-tight">Calendar Management</h1>
