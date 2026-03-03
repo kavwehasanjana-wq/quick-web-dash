@@ -20,6 +20,7 @@ import { User, Mail, Phone, MapPin, Calendar, Shield, Lock, Eye, EyeOff, Camera,
 import { getActiveSessions, revokeSession, revokeAllSessions } from '@/contexts/utils/auth.api';
 import { useInstituteRole } from '@/hooks/useInstituteRole';
 import ConnectedApps from '@/components/ConnectedApps';
+import CurrentSelection from '@/components/ui/current-selection';
 
 interface UserData {
   id: string;
@@ -335,6 +336,7 @@ const Profile = () => {
 
   return (
     <div className="max-w-3xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-20 lg:pb-6">
+      <CurrentSelection showNavigation={false} />
       {/* Profile Header */}
       <Card className="overflow-hidden">
         <CardContent className="p-4 sm:p-6">

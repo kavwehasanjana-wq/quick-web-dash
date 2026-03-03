@@ -75,10 +75,10 @@ const AdminAttendancePage: React.FC = () => {
 
   if (!currentInstituteId) {
     return (
-       <Card className="border-dashed border-emerald-200 dark:border-emerald-800">
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4">
-            <AlertTriangle className="h-6 w-6 text-emerald-600" />
+       <Card className="border-dashed border-success/40 dark:border-success/50">
+         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+             <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center mb-4">
+             <AlertTriangle className="h-6 w-6 text-success" />
           </div>
           <h3 className="text-base font-semibold mb-1">No Institute Selected</h3>
           <p className="text-sm text-muted-foreground max-w-sm">
@@ -95,12 +95,12 @@ const AdminAttendancePage: React.FC = () => {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-              <Activity className="h-5 w-5 text-emerald-600" />
+            <div className="w-9 h-9 rounded-xl bg-success/10 flex items-center justify-center">
+              <Activity className="h-5 w-5 text-success" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground tracking-tight">Attendance Monitoring</h1>
-              <p className="text-xs text-muted-foreground">{selectedInstitute?.name || 'Institute'}</p>
+              <h1 className="text-xl font-bold text-success tracking-tight">Attendance Monitoring</h1>
+              <p className="text-xs text-success/80">{selectedInstitute?.name || 'Institute'}</p>
             </div>
           </div>
         </div>
