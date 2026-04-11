@@ -97,7 +97,7 @@ const HeroSection = () => {
           initial={{ opacity: 0, scale: 0.85, x: 60 }}
           animate={{ opacity: 1, scale: 1, x: 0 }}
           transition={{ type: "spring", stiffness: 80, damping: 18, delay: 0.4 }}
-          className="order-1 lg:order-2 flex justify-center lg:items-end relative lg:self-end"
+          className="order-1 lg:order-2 flex justify-center lg:items-end relative lg:self-end lg:translate-y-12"
         >
           <div className="relative mt-8 md:mt-12 lg:mt-0 mb-0 pb-0">
             <img
