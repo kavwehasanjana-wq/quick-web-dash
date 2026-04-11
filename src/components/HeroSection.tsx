@@ -27,7 +27,7 @@ const HandDrawnUnderline = () => (
 const HeroSection = () => {
   return (
     <section
-      className="relative min-h-screen flex items-end md:items-center overflow-visible pt-32 md:pt-0 pb-0"
+      className="relative min-h-screen flex items-center overflow-visible pt-20 md:pt-0 pb-0"
       style={{ background: "var(--hero-gradient)" }}
     >
       <motion.div
@@ -46,8 +46,8 @@ const HeroSection = () => {
         className="absolute top-1/2 left-1/4 w-4 h-4 rounded-full bg-primary/20"
       />
 
-      <div className="container mx-auto px-4 grid lg:grid-cols-2 gap-0 lg:gap-8 items-center relative z-10 pb-0 mb-0">
-        <div className="order-2 lg:order-1 text-center lg:text-left -mt-4 md:-mt-2 lg:mt-0">
+      <div className="container mx-auto px-4 flex flex-col items-center lg:grid lg:grid-cols-2 gap-0 lg:gap-8 lg:items-center relative z-10 pb-0 mb-0">
+        <div className="order-2 lg:order-1 text-center lg:text-left mt-0 lg:mt-0">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -99,7 +99,7 @@ const HeroSection = () => {
           transition={{ type: "spring", stiffness: 80, damping: 18, delay: 0.4 }}
           className="order-1 lg:order-2 flex justify-center relative"
         >
-          <div className="relative mt-16 md:mt-12 lg:mt-16 mb-0 pb-0">
+          <div className="relative mt-8 md:mt-12 lg:mt-24 mb-0 pb-0">
             <img
               src={teacherImg}
               alt="Thilina Dhananjaya - English Teacher"
@@ -110,7 +110,7 @@ const HeroSection = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}
-              className="md:hidden absolute bottom-4 left-1/2 -translate-x-1/2 z-20 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 backdrop-blur-sm text-primary text-sm font-medium whitespace-nowrap"
+              className="md:hidden absolute bottom-4 left-4 z-20 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 backdrop-blur-sm text-primary text-sm font-medium whitespace-nowrap"
             >
               <BookOpen className="w-4 h-4" />
               A/L & O/L English Excellence
