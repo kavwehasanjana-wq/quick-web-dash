@@ -52,7 +52,7 @@ const HeroSection = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-3 md:mb-6"
+            className="hidden md:inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-3 md:mb-6"
           >
             <BookOpen className="w-4 h-4" />
             A/L & O/L English Excellence
@@ -105,6 +105,16 @@ const HeroSection = () => {
               alt="Thilina Dhananjaya - English Teacher"
               className="relative z-10 w-[260px] md:w-[420px] lg:w-[480px] drop-shadow-2xl block"
             />
+            {/* Badge overlaid on image - mobile only */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+              className="md:hidden absolute bottom-4 left-1/2 -translate-x-1/2 z-20 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 backdrop-blur-sm text-primary text-sm font-medium whitespace-nowrap"
+            >
+              <BookOpen className="w-4 h-4" />
+              A/L & O/L English Excellence
+            </motion.div>
           </div>
         </motion.div>
       </div>
