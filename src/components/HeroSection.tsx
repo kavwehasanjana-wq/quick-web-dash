@@ -46,8 +46,8 @@ const HeroSection = () => {
         className="absolute top-1/2 left-1/4 w-4 h-4 rounded-full bg-primary/20"
       />
 
-      <div className="container mx-auto px-4 flex flex-col items-center lg:grid lg:grid-cols-2 gap-0 lg:gap-8 lg:items-end relative z-10 pb-0 mb-0">
-        <div className="order-2 lg:order-1 text-center lg:text-left mt-0 lg:mt-0">
+      <div className="container mx-auto px-4 flex flex-col items-center lg:grid lg:grid-cols-2 gap-0 lg:gap-8 relative z-10 pb-0 mb-0">
+        <div className="order-2 lg:order-1 text-center lg:text-left mt-0 lg:mt-0 lg:self-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
