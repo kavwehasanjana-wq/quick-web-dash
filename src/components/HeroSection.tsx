@@ -46,7 +46,7 @@ const HeroSection = () => {
         className="absolute top-1/2 left-1/4 w-4 h-4 rounded-full bg-primary/20"
       />
 
-      <div className="container mx-auto px-4 flex flex-col items-center lg:grid lg:grid-cols-2 gap-0 lg:gap-8 relative z-10 pb-0 mb-0">
+      <div className="container mx-auto px-4 flex flex-col items-center lg:grid lg:grid-cols-2 gap-0 lg:gap-8 relative z-10 pb-0 mb-0 lg:min-h-screen">
         <div className="order-2 lg:order-1 text-center lg:text-left mt-0 lg:mt-0 lg:self-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -97,7 +97,7 @@ const HeroSection = () => {
           initial={{ opacity: 0, scale: 0.85, x: 60 }}
           animate={{ opacity: 1, scale: 1, x: 0 }}
           transition={{ type: "spring", stiffness: 80, damping: 18, delay: 0.4 }}
-          className="order-1 lg:order-2 flex justify-center lg:items-end relative lg:self-end lg:translate-y-12"
+          className="order-1 lg:order-2 flex justify-center lg:items-end relative lg:self-end lg:translate-y-24"
         >
           <div className="relative mt-8 md:mt-12 lg:mt-0 mb-0 pb-0">
             <img
