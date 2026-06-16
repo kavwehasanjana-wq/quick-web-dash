@@ -74,10 +74,10 @@ function FormPreamble() {
 
       <div className="space-y-3 border border-foreground/15 bg-secondary/40 rounded-sm px-5 py-4">
         <p className="text-base sm:text-lg font-bold text-foreground leading-relaxed">
-          This form is to be completed in respect of every student covered under the Suraksha Scheme. All particulars furnished must be true and correct. Submission of false information will result in legal action.
+          This form must be completed for every student registering under the Suraksha system. All particulars furnished must be true and correct. Submission of false information may lead to problematic situations.
         </p>
         <p className="text-sm sm:text-base font-bold text-foreground/90 leading-relaxed">
-          සුරක්ෂා ක්‍රමය යටතේ ආවරණය වන සෑම ශිෂ්‍යයෙකු සඳහාම මෙම පත්‍රිකාව සම්පූර්ණ කළ යුතුය. ඉදිරිපත් කරන සියලු තොරතුරු සත්‍ය හා නිවැරදි විය යුතුය. අසත්‍ය තොරතුරු ඇතුළත් කිරීම නීතිමය ක්‍රියාමාර්ග වලට හේතු වේ.
+          සුරක්ෂා පද්ධතිය සදහා ලියාපදින්චි වන සෑම ශිෂ්‍යයෙකු සඳහාම මෙම පත්‍රිකාව සම්පූර්ණ කළ යුතුය. ඉදිරිපත් කරන සියලු තොරතුරු සත්‍ය හා නිවැරදි විය යුතුය. අසත්‍ය තොරතුරු ඇතුලත් කිරීමෙන් ගැටලුකාරී තත්වයන්ට මුහුණදීමට සිදුවේ.
         </p>
       </div>
 
