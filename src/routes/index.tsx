@@ -16,10 +16,14 @@ export const Route = createFileRoute("/")({
 function RegistrationPage() {
   return (
     <div className="min-h-screen">
-      <Header />
-      <main className="mx-auto max-w-5xl px-4 sm:px-6 py-8 sm:py-12">
-        <FormPreamble />
-        <div className="mt-8">
+      <div className="print:hidden">
+        <Header />
+      </div>
+      <main className="mx-auto max-w-5xl px-4 sm:px-6 py-8 sm:py-12 print:px-0 print:py-0 print:max-w-none">
+        <div className="print:hidden">
+          <FormPreamble />
+        </div>
+        <div className="mt-8 print:mt-0">
           <StudentRegistrationForm />
         </div>
       </main>

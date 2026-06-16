@@ -269,6 +269,10 @@ const gradeOpts = GRADES.map((v) => {
   const n = v.replace("GRADE_", "");
   return { value: v, label: `Grade ${n} / ${n} ශ්‍රේණිය` };
 });
+const classroomOpts = Array.from({ length: 26 }, (_, i) => {
+  const letter = String.fromCharCode(65 + i);
+  return { value: letter, label: letter };
+});
 
 // =========================================================================
 // Section
@@ -349,7 +353,7 @@ function StudentStepForm({ defaultValues, onNext }: {
 
       <Section num="A.3" title="Student Particulars" titleSi="ශිෂ්‍ය තොරතුරු">
         <SelectField form={form} name={"grade" as any} en="Grade" si="ශ්‍රේණිය" required options={gradeOpts} className="md:col-span-3" />
-        <TextField form={form} name={"classroom" as any} en="Classroom" si="පන්ති කාමරය" required placeholder="e.g. A" className="md:col-span-3" />
+        <ComboField form={form} name={"classroom" as any} en="Classroom" si="පන්ති කාමරය" required options={classroomOpts} className="md:col-span-3" />
         <TextField form={form} name={"studentId" as any} en="School / Index No." si="පාසල් / දර්ශක අංකය" className="md:col-span-3" />
         <TextField form={form} name={"birthCertificateNo" as any} en="Birth certificate no." si="උප්පැන්න සහතික අංකය" className="md:col-span-3" />
         <SelectField form={form} name={"bloodGroup" as any} en="Blood group" si="රුධිර කාණ්ඩය" options={bloodOpts} className="md:col-span-2" />
