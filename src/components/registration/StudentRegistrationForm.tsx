@@ -269,6 +269,10 @@ const gradeOpts = GRADES.map((v) => {
   const n = v.replace("GRADE_", "");
   return { value: v, label: `Grade ${n} / ${n} ශ්‍රේණිය` };
 });
+const classroomOpts = Array.from({ length: 26 }, (_, i) => {
+  const letter = String.fromCharCode(65 + i);
+  return { value: letter, label: letter };
+});
 
 // =========================================================================
 // Section
