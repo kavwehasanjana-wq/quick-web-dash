@@ -120,6 +120,7 @@ const userBase = z.object({
 // ---------- Step 1: Student ----------
 export const studentStepSchema = userBase.extend({
   studentId: asciiString(15).optional().or(z.literal("")),
+  schoolRegistrationNumber: asciiString(20).optional().or(z.literal("")),
   birthCertificateNo: asciiString(50).optional().or(z.literal("")),
   grade: z.enum(GRADES, { errorMap: () => ({ message: "Select grade" }) }),
   classroom: z.string().trim().regex(classroomRegex, "e.g. A, B, 6-C (English & numbers)").min(1, "Required"),
@@ -225,6 +226,7 @@ export function buildPayloads(input: BuildPayloadInput) {
     userType: "USER_WITHOUT_PARENT" as const,
     studentData: stripEmpty({
       studentId: student.studentId,
+      schoolRegistrationNumber: student.schoolRegistrationNumber,
       birthCertificateNo: student.birthCertificateNo,
       grade: student.grade,
       classroom: student.classroom,
@@ -243,6 +245,52 @@ export function buildPayloads(input: BuildPayloadInput) {
 
   return { studentBody, fatherBody, motherBody, guardianBody };
 }
+
+const userHeaders = (prefix: string) => [
+  `${prefix} First Name`,
+  `${prefix} Last Name`,
+  `${prefix} Name with Initials`,
+  `${prefix} Gender`,
+  `${prefix} Date of Birth`,
+  `${prefix} Email`,
+  `${prefix} Phone Number`,
+  `${prefix} NIC`,
+  `${prefix} Address Line 1`,
+  `${prefix} Address Line 2`,
+  `${prefix} City`,
+  `${prefix} District`,
+  `${prefix} Province`,
+  `${prefix} Postal Code`,
+  `${prefix} Language`,
+];
+
+const parentHeaders = (prefix: string) => [
+  ...userHeaders(prefix),
+  `${prefix} Occupation`,
+  `${prefix} Workplace`,
+  `${prefix} Work Phone`,
+  `${prefix} Education Level`,
+];
+
+export const SHEET_HEADERS = [
+  "Reference",
+  "Submitted At",
+  ...userHeaders("Student"),
+  "Student School/Index No.",
+  "Student School Registration No.",
+  "Student Birth Certificate No.",
+  "Student Grade",
+  "Student Classroom",
+  "Student Blood Group",
+  "Student Emergency Contact",
+  "Student Medical Conditions",
+  "Student Allergies",
+  ...parentHeaders("Mother"),
+  ...parentHeaders("Father"),
+  ...parentHeaders("Guardian"),
+  "Mother Skip Reason",
+  "Father Skip Reason",
+];
 
 export function flattenPayloadToRow(input: BuildPayloadInput): string[] {
   const { student, father, mother, guardian } = input;
@@ -282,6 +330,7 @@ export function flattenPayloadToRow(input: BuildPayloadInput): string[] {
   return [
     ...userCols(student),
     s(student.studentId),
+    s(student.schoolRegistrationNumber),
     s(student.birthCertificateNo),
     s(student.grade),
     s(student.classroom),
@@ -289,11 +338,11 @@ export function flattenPayloadToRow(input: BuildPayloadInput): string[] {
     s(student.emergencyContact),
     s(student.medicalConditions),
     s(student.allergies),
-    ...(f ? parentCols(f) : Array(19).fill("")),
     ...(m ? parentCols(m) : Array(19).fill("")),
+    ...(f ? parentCols(f) : Array(19).fill("")),
     ...(g ? parentCols(g) : Array(19).fill("")),
-    s(father.mode === "skip" ? father.skipReason : ""),
     s(mother.mode === "skip" ? mother.skipReason : ""),
+    s(father.mode === "skip" ? father.skipReason : ""),
   ];
 }
 
@@ -328,6 +377,7 @@ export function flattenPayloadToRows(input: BuildPayloadInput, ref: string): str
     ref, ts, "STUDENT",
     ...userCols(student),
     s(student.studentId),
+    s(student.schoolRegistrationNumber),
     s(student.birthCertificateNo),
     s(student.grade),
     s(student.classroom),
@@ -383,7 +433,7 @@ export function buildStudentRow(student: StudentStep, ref: string): string[] {
   return [
     ref, new Date().toISOString(), "STUDENT",
     ..._userCols(student),
-    _s(student.studentId), _s(student.birthCertificateNo), _s(student.grade),
+    _s(student.studentId), _s(student.schoolRegistrationNumber), _s(student.birthCertificateNo), _s(student.grade),
     _s(student.classroom), _s(student.bloodGroup), _s(student.emergencyContact),
     _s(student.medicalConditions), _s(student.allergies),
     "", "", "", "",

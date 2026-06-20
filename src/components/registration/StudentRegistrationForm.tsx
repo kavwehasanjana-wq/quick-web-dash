@@ -1,14 +1,11 @@
-import { useEffect, useRef, useState } from "react";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useState } from "react";
 import { useForm, type UseFormReturn, type FieldValues, type Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   studentStepSchema,
   parentStepSchema,
   guardianStepSchema,
-  buildStudentRow,
-  buildParentRow,
-  buildGuardianRow,
+  flattenPayloadToRow,
   DISTRICTS,
   PROVINCES,
   BLOOD_GROUPS,
@@ -56,7 +53,7 @@ async function postRowToSheet(row: string[], ref: string) {
       method: "POST",
       mode: "no-cors",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ ref, submittedAt: new Date().toISOString(), row }),
+      body: JSON.stringify({ ref, row }),
     });
   } catch (err) {
     console.error("Sheet submit failed", err);
@@ -101,8 +98,8 @@ interface BaseFieldProps<T extends FieldValues> {
 }
 
 function TextField<T extends FieldValues>({
-  form, name, en, si, required, placeholder, hint, className, type = "text", asciiOnly = true,
-}: BaseFieldProps<T> & { type?: string; asciiOnly?: boolean }) {
+  form, name, en, si, required, placeholder, hint, className, type = "text", asciiOnly = true, readOnly = false,
+}: BaseFieldProps<T> & { type?: string; asciiOnly?: boolean; readOnly?: boolean }) {
   const id = String(name);
   const err = (form.formState.errors as any)[name]?.message as string | undefined;
   const reg = form.register(name, asciiOnly ? {
@@ -117,6 +114,7 @@ function TextField<T extends FieldValues>({
         placeholder={placeholder}
         lang="en"
         inputMode={type === "email" ? "email" : type === "tel" ? "tel" : undefined}
+        readOnly={readOnly}
         {...reg}
         onChange={(e) => {
           if (asciiOnly && type === "text") {
@@ -125,7 +123,10 @@ function TextField<T extends FieldValues>({
           }
           reg.onChange(e);
         }}
-        className="bg-paper border-foreground/25 focus-visible:ring-primary/40"
+        className={cn(
+          "bg-paper border-foreground/25 focus-visible:ring-primary/40",
+          readOnly && "bg-muted/60 text-foreground/70 cursor-not-allowed",
+        )}
       />
       {hint && !err && <p className="text-[11px] text-muted-foreground">{hint}</p>}
       <ErrText msg={err} />
@@ -299,33 +300,34 @@ function Section({ title, titleSi, num, children }: { title: string; titleSi: st
 // Shared user-info sections (for student & parents)
 // =========================================================================
 
-function UserInfoSections<T extends FieldValues>({ form, includeNic = true }: { form: UseFormReturn<T>; includeNic?: boolean }) {
+function UserInfoSections<T extends FieldValues>({ form, includeNic = true, prefix }: { form: UseFormReturn<T>; includeNic?: boolean; prefix?: string }) {
   const f = form as unknown as UseFormReturn<any>;
+  const p = (en: string) => prefix ? `${prefix}'s ${en}` : en;
   return (
     <>
       <Section num="A.1" title="Personal Particulars" titleSi="පුද්ගලික තොරතුරු">
-        <TextField form={f} name="firstName" en="First name" si="මුල් නම" required className="md:col-span-3" />
-        <TextField form={f} name="lastName" en="Last name" si="වාසගම" required className="md:col-span-3" />
-        <TextField form={f} name="nameWithInitials" en="Name with initials" si="මුලකුරු සමග නම" placeholder="e.g. K. Perera" className="md:col-span-3" />
-        <SelectField form={f} name="gender" en="Gender" si="ස්ත්‍රී / පුරුෂ භාවය" required options={genderOpts} className="md:col-span-2" />
-        <TextField form={f} name="dateOfBirth" en="Date of birth" si="උපන් දිනය" type="date" asciiOnly={false} className="md:col-span-1" />
+        <TextField form={f} name="firstName" en={p("First name")} si="මුල් නම" required className="md:col-span-3" />
+        <TextField form={f} name="lastName" en={p("Last name")} si="වාසගම" required className="md:col-span-3" />
+        <TextField form={f} name="nameWithInitials" en={p("Name with initials")} si="මුලකුරු සමග නම" placeholder="e.g. K. Perera" className="md:col-span-3" />
+        <SelectField form={f} name="gender" en={p("Gender")} si="ස්ත්‍රී / පුරුෂ භාවය" required options={genderOpts} className="md:col-span-2" />
+        <TextField form={f} name="dateOfBirth" en={p("Date of birth")} si="උපන් දිනය" type="date" asciiOnly={false} className="md:col-span-1" />
         {includeNic && (
-          <TextField form={f} name="nic" en="N.I.C. number" si="ජාතික හැඳුනුම්පත් අංකය" hint="9 digits + V/X, or 12 digits" className="md:col-span-3" />
+          <TextField form={f} name="nic" en={p("N.I.C. number")} si="ජාතික හැඳුනුම්පත් අංකය" hint="9 digits + V/X, or 12 digits" className="md:col-span-3" />
         )}
-        <SelectField form={f} name="language" en="Preferred language" si="කැමති භාෂාව" options={languageOpts} className="md:col-span-3" />
+        <SelectField form={f} name="language" en={p("Preferred language")} si="කැමති භාෂාව" options={languageOpts} className="md:col-span-3" />
       </Section>
 
       <Section num="A.2" title="Contact Details" titleSi="සම්බන්ධතා විස්තර">
-        <TextField form={f} name="phoneNumber" en="Mobile number" si="ජංගම දුරකථන අංකය" placeholder="07XXXXXXXX" className="md:col-span-3" />
-        <TextField form={f} name="email" en="E-mail" si="විද්‍යුත් තැපෑල" type="email" className="md:col-span-3" />
-        <TextField form={f} name="addressLine1" en="Address line 1" si="ලිපිනය - පෙළ 1" className="md:col-span-6" />
-        <TextField form={f} name="addressLine2" en="Address line 2" si="ලිපිනය - පෙළ 2" className="md:col-span-6" />
-        <TextField form={f} name="city" en="City / Town" si="නගරය / ගම" className="md:col-span-2" />
-        <ComboField form={f} name="district" en="District" si="දිස්ත්‍රික්කය" required options={districtOpts} className="md:col-span-2" />
-        <ComboField form={f} name="province" en="Province" si="පළාත" required options={provinceOpts} className="md:col-span-2" />
-        <TextField form={f} name="postalCode" en="Postal code" si="තැපැල් කේතය" placeholder="00300" className="md:col-span-2" />
+        <TextField form={f} name="phoneNumber" en={p("Mobile number")} si="ජංගම දුරකථන අංකය" placeholder="07XXXXXXXX" className="md:col-span-3" />
+        <TextField form={f} name="email" en={p("E-mail")} si="විද්‍යුත් තැපෑල" type="email" className="md:col-span-3" />
+        <TextField form={f} name="addressLine1" en={p("Address line 1")} si="ලිපිනය - පෙළ 1" className="md:col-span-6" />
+        <TextField form={f} name="addressLine2" en={p("Address line 2")} si="ලිපිනය - පෙළ 2" className="md:col-span-6" />
+        <TextField form={f} name="city" en={p("City / Town")} si="නගරය / ගම" className="md:col-span-2" />
+        <ComboField form={f} name="district" en={p("District")} si="දිස්ත්‍රික්කය" required options={districtOpts} className="md:col-span-2" />
+        <ComboField form={f} name="province" en={p("Province")} si="පළාත" required options={provinceOpts} className="md:col-span-2" />
+        <TextField form={f} name="postalCode" en={p("Postal code")} si="තැපැල් කේතය" placeholder="00300" className="md:col-span-2" />
         <div className="md:col-span-4 flex flex-col gap-1.5">
-          <BiLabel en="Country" si="රට" htmlFor="country" />
+          <BiLabel en={p("Country")} si="රට" htmlFor="country" />
           <Input id="country" value="Sri Lanka" readOnly className="bg-muted/60 border-foreground/15 text-foreground/70" />
         </div>
       </Section>
@@ -337,13 +339,18 @@ function UserInfoSections<T extends FieldValues>({ form, includeNic = true }: { 
 // Step 1 — Student
 // =========================================================================
 
-function StudentStepForm({ defaultValues, onNext }: {
+function StudentStepForm({ defaultValues, onNext, lockedStudentId }: {
   defaultValues?: Partial<StudentStep>;
   onNext: (v: StudentStep) => void;
+  lockedStudentId?: string;
 }) {
   const form = useForm<StudentStep>({
     resolver: zodResolver(studentStepSchema) as any,
-    defaultValues: { language: "E", ...defaultValues } as any,
+    defaultValues: {
+      language: "E",
+      ...defaultValues,
+      ...(lockedStudentId ? { studentId: lockedStudentId } : {}),
+    } as any,
     mode: "onBlur",
   });
 
@@ -354,7 +361,8 @@ function StudentStepForm({ defaultValues, onNext }: {
       <Section num="A.3" title="Student Particulars" titleSi="ශිෂ්‍ය තොරතුරු">
         <SelectField form={form} name={"grade" as any} en="Grade" si="ශ්‍රේණිය" required options={gradeOpts} className="md:col-span-3" />
         <ComboField form={form} name={"classroom" as any} en="Classroom" si="පන්ති කාමරය" required options={classroomOpts} className="md:col-span-3" />
-        <TextField form={form} name={"studentId" as any} en="School / Index No." si="පාසල් / දර්ශක අංකය" className="md:col-span-3" />
+        <TextField form={form} name={"studentId" as any} en="School / Index No." si="පාසල් / දර්ශක අංකය" readOnly={!!lockedStudentId} className="md:col-span-3" />
+        <TextField form={form} name={"schoolRegistrationNumber" as any} en="School admission number" si="පාසල් ඇතුළත් වීමේ අංකය" className="md:col-span-3" />
         <TextField form={form} name={"birthCertificateNo" as any} en="Birth certificate no." si="උප්පැන්න සහතික අංකය" className="md:col-span-3" />
         <SelectField form={form} name={"bloodGroup" as any} en="Blood group" si="රුධිර කාණ්ඩය" options={bloodOpts} className="md:col-span-2" />
         <TextField form={form} name={"emergencyContact" as any} en="Emergency contact" si="හදිසි අවස්ථා දුරකථන" placeholder="07XXXXXXXX" className="md:col-span-4" />
@@ -372,13 +380,14 @@ function StudentStepForm({ defaultValues, onNext }: {
 // =========================================================================
 
 function ParentStepForm({
-  role, roleSi, defaultValues, onNext, onBack,
+  role, roleSi, defaultValues, onNext, onBack, submitting,
 }: {
   role: "Father" | "Mother";
   roleSi: string;
   defaultValues?: Partial<ParentStep>;
   onNext: (v: ParentStep) => void;
   onBack: () => void;
+  submitting?: boolean;
 }) {
   const initialMode = (defaultValues as any)?.mode ?? "provide";
   const form = useForm<ParentStep>({
@@ -412,7 +421,7 @@ function ParentStepForm({
 
       {mode === "provide" ? (
         <>
-          <UserInfoSections form={form} />
+          <UserInfoSections form={form} prefix={role} />
           <Section num="B" title={`${role} — Employment`} titleSi={`${roleSi} — රැකියාව`}>
             <ComboField form={form} name={"occupation" as any} en="Occupation" si="රැකියාව" required options={occupationOpts} className="md:col-span-3" />
             <TextField form={form} name={"workplace" as any} en="Workplace" si="සේවා ස්ථානය" className="md:col-span-3" />
@@ -425,7 +434,7 @@ function ParentStepForm({
         </Section>
       )}
 
-      <StepNav onBack={onBack} />
+      <StepNav onBack={onBack} submitting={submitting} />
     </form>
   );
 }
@@ -435,11 +444,12 @@ function ParentStepForm({
 // =========================================================================
 
 function GuardianStepForm({
-  defaultValues, onNext, onBack,
+  defaultValues, onNext, onBack, submitting,
 }: {
   defaultValues?: Partial<GuardianStep>;
   onNext: (v: GuardianStep) => void;
   onBack: () => void;
+  submitting?: boolean;
 }) {
   const form = useForm<GuardianStep>({
     resolver: zodResolver(guardianStepSchema) as any,
@@ -456,13 +466,13 @@ function GuardianStepForm({
           මව්පියන්ගෙන් එක් අයෙකුගේ තොරතුරු නොමැති නිසා, <strong>භාරකරු</strong> පිළිබඳ විස්තර අවශ්‍ය වේ.
         </p>
       </div>
-      <UserInfoSections form={form} />
+      <UserInfoSections form={form} prefix="Guardian" />
       <Section num="C" title="Guardian — Employment" titleSi="භාරකරු — රැකියාව">
         <ComboField form={form} name={"occupation" as any} en="Occupation" si="රැකියාව" required options={occupationOpts} className="md:col-span-3" />
         <TextField form={form} name={"workplace" as any} en="Workplace" si="සේවා ස්ථානය" className="md:col-span-3" />
         <TextField form={form} name={"workPhone" as any} en="Work phone" si="කාර්යාල දුරකථන" placeholder="07XXXXXXXX" className="md:col-span-3" />
       </Section>
-      <StepNav onBack={onBack} />
+      <StepNav onBack={onBack} submitting={submitting} />
     </form>
   );
 }
@@ -471,16 +481,16 @@ function GuardianStepForm({
 // Step nav
 // =========================================================================
 
-function StepNav({ onBack, onlyNext }: { onBack?: () => void; onlyNext?: boolean }) {
+function StepNav({ onBack, onlyNext, submitting }: { onBack?: () => void; onlyNext?: boolean; submitting?: boolean }) {
   return (
     <div className="flex items-center justify-between pt-2">
       {!onlyNext && onBack ? (
-        <Button type="button" variant="outline" onClick={onBack} className="gap-1">
+        <Button type="button" variant="outline" onClick={onBack} disabled={submitting} className="gap-1">
           <ChevronLeft className="size-4" /> Back / ආපසු
         </Button>
       ) : <span />}
-      <Button type="submit" className="gap-1">
-        Submit / යොමු කරන්න <ChevronRight className="size-4" />
+      <Button type="submit" disabled={submitting} className="gap-1">
+        {submitting ? "Submitting… / යොමු කරමින්…" : <>Submit / යොමු කරන්න <ChevronRight className="size-4" /></>}
       </Button>
     </div>
   );
@@ -531,7 +541,7 @@ function Stepper({ steps, current }: { steps: { en: string; si: string }[]; curr
 
 type Stage = "student" | "father" | "mother" | "guardian" | "done";
 
-export function StudentRegistrationForm() {
+export function StudentRegistrationForm({ prefillStudentId }: { prefillStudentId?: string } = {}) {
   const [stage, setStage] = useState<Stage>("student");
   const [student, setStudent] = useState<StudentStep | null>(null);
   const [father, setFather] = useState<ParentStep | null>(null);
@@ -539,17 +549,13 @@ export function StudentRegistrationForm() {
   const [guardian, setGuardian] = useState<GuardianStep | null>(null);
   const [ref, setRef] = useState(() => "SRK-" + Math.random().toString(36).slice(2, 9).toUpperCase());
   const [finalRef, setFinalRef] = useState<string | null>(null);
-
-  // Success popup between steps
-  const [successOpen, setSuccessOpen] = useState(false);
-  const [successFor, setSuccessFor] = useState<{ en: string; si: string; nextEn: string; nextSi: string } | null>(null);
-  const afterSuccess = useRef<(() => void) | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const guardianRequired = (father?.mode === "skip") || (mother?.mode === "skip");
   const baseSteps = [
     { en: "Student", si: "ශිෂ්‍යයා" },
-    { en: "Father", si: "පියා" },
     { en: "Mother", si: "මව" },
+    { en: "Father", si: "පියා" },
   ];
   const steps = guardianRequired || stage === "guardian" || guardian
     ? [...baseSteps, { en: "Guardian", si: "භාරකරු" }]
@@ -557,41 +563,27 @@ export function StudentRegistrationForm() {
 
   const currentIndex =
     stage === "student" ? 0 :
-    stage === "father" ? 1 :
-    stage === "mother" ? 2 :
+    stage === "mother" ? 1 :
+    stage === "father" ? 2 :
     stage === "guardian" ? 3 : steps.length;
 
   const resetAll = () => {
     setStudent(null); setFather(null); setMother(null); setGuardian(null);
     setStage("student");
     setFinalRef(null);
+    setSubmitting(false);
     setRef("SRK-" + Math.random().toString(36).slice(2, 9).toUpperCase());
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
-
-  const showSuccess = (
-    saved: { en: string; si: string },
-    next: { en: string; si: string },
-    advance: () => void,
-  ) => {
-    setSuccessFor({ en: saved.en, si: saved.si, nextEn: next.en, nextSi: next.si });
-    afterSuccess.current = () => { advance(); scrollTop(); };
-    setSuccessOpen(true);
+  const submit = async (payload: Parameters<typeof flattenPayloadToRow>[0]) => {
+    setSubmitting(true);
+    await postRowToSheet([ref, new Date().toISOString(), ...flattenPayloadToRow(payload)], ref);
+    setFinalRef(ref);
+    setStage("done");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setSubmitting(false);
   };
-
-  // Auto-close success dialog and advance to next step
-  useEffect(() => {
-    if (!successOpen) return;
-    const t = window.setTimeout(() => {
-      setSuccessOpen(false);
-      const fn = afterSuccess.current;
-      afterSuccess.current = null;
-      if (fn) window.setTimeout(fn, 150);
-    }, 1600);
-    return () => window.clearTimeout(t);
-  }, [successOpen]);
 
   if (stage === "done" && finalRef) {
     return <ApplicationReceived referenceCode={finalRef} onNew={resetAll} />;
@@ -606,30 +598,11 @@ export function StudentRegistrationForm() {
       {stage === "student" && (
         <StudentStepForm
           defaultValues={student ?? undefined}
+          lockedStudentId={prefillStudentId}
           onNext={(v) => {
             setStudent(v);
-            void postRowToSheet(buildStudentRow(v, ref), ref);
-            showSuccess(
-              { en: "Student", si: "ශිෂ්‍යයා" },
-              { en: "Father", si: "පියා" },
-              () => setStage("father"),
-            );
-          }}
-        />
-      )}
-      {stage === "father" && (
-        <ParentStepForm
-          role="Father" roleSi="පියා"
-          defaultValues={father ?? undefined}
-          onBack={() => setStage("student")}
-          onNext={(v) => {
-            setFather(v);
-            void postRowToSheet(buildParentRow("FATHER", v, ref), ref);
-            showSuccess(
-              { en: "Father", si: "පියා" },
-              { en: "Mother", si: "මව" },
-              () => setStage("mother"),
-            );
+            setStage("mother");
+            window.scrollTo({ top: 0, behavior: "smooth" });
           }}
         />
       )}
@@ -637,21 +610,28 @@ export function StudentRegistrationForm() {
         <ParentStepForm
           role="Mother" roleSi="මව"
           defaultValues={mother ?? undefined}
-          onBack={() => setStage("father")}
+          onBack={() => setStage("student")}
           onNext={(v) => {
             setMother(v);
-            void postRowToSheet(buildParentRow("MOTHER", v, ref), ref);
-            const needGuardian = father?.mode === "skip" || v.mode === "skip";
+            setStage("father");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        />
+      )}
+      {stage === "father" && (
+        <ParentStepForm
+          role="Father" roleSi="පියා"
+          defaultValues={father ?? undefined}
+          onBack={() => setStage("mother")}
+          submitting={submitting}
+          onNext={(v) => {
+            setFather(v);
+            const needGuardian = mother?.mode === "skip" || v.mode === "skip";
             if (needGuardian) {
-              showSuccess(
-                { en: "Mother", si: "මව" },
-                { en: "Guardian", si: "භාරකරු" },
-                () => setStage("guardian"),
-              );
+              setStage("guardian");
+              window.scrollTo({ top: 0, behavior: "smooth" });
             } else {
-              setFinalRef(ref);
-              setStage("done");
-              scrollTop();
+              void submit({ student: student!, father: v, mother: mother! });
             }
           }}
         />
@@ -659,58 +639,15 @@ export function StudentRegistrationForm() {
       {stage === "guardian" && (
         <GuardianStepForm
           defaultValues={guardian ?? undefined}
-          onBack={() => setStage("mother")}
+          onBack={() => setStage("father")}
+          submitting={submitting}
           onNext={(v) => {
             setGuardian(v);
-            void postRowToSheet(buildGuardianRow(v, ref), ref);
-            setFinalRef(ref);
-            setStage("done");
-            scrollTop();
+            void submit({ student: student!, father: father!, mother: mother!, guardian: v });
           }}
         />
       )}
-
-      <SuccessDialog
-        open={successOpen}
-        saved={successFor}
-        onClose={() => setSuccessOpen(false)}
-      />
     </div>
-  );
-}
-
-// =========================================================================
-// Professional inter-step success dialog
-// =========================================================================
-
-function SuccessDialog({
-  open, saved, onClose,
-}: {
-  open: boolean;
-  saved: { en: string; si: string; nextEn: string; nextSi: string } | null;
-  onClose: () => void;
-}) {
-  return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md text-center border-foreground/15 bg-card shadow-2xl">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/15 text-success ring-4 ring-success/10 animate-in zoom-in-50 duration-300">
-          <CheckCircle2 className="size-9" strokeWidth={2.25} />
-        </div>
-        <DialogTitle className="font-serif text-2xl text-foreground mt-2">
-          Saved Successfully
-        </DialogTitle>
-        <DialogDescription className="text-sm text-muted-foreground">
-          {saved ? `${saved.en} details have been recorded.` : "Details have been recorded."}
-          <br />
-          <span className="text-xs">තොරතුරු සාර්ථකව සුරක්ෂිත කර ඇත.</span>
-        </DialogDescription>
-        {saved && (
-          <p className="text-[11px] uppercase tracking-wider text-muted-foreground mt-2">
-            Opening {saved.nextEn} form · {saved.nextSi} පත්‍රිකාව විවෘත වෙමින්…
-          </p>
-        )}
-      </DialogContent>
-    </Dialog>
   );
 }
 

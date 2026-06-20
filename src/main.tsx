@@ -1,35 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StudentRegistrationForm } from "@/components/registration/StudentRegistrationForm";
+import "./styles.css";
 
-export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "Suraksha · 2026/2027 — Data Entry Form" },
-      { name: "description", content: "Suraksha system data entry form for the academic year 2026/2027." },
-      { property: "og:title", content: "Suraksha · 2026/2027 — Data Entry Form" },
-      { property: "og:description", content: "Suraksha system data entry form for the academic year 2026/2027." },
-    ],
-  }),
-  component: RegistrationPage,
-});
-
-function RegistrationPage() {
-  return (
-    <div className="min-h-screen">
-      <div className="print:hidden">
-        <Header />
-      </div>
-      <main className="mx-auto max-w-5xl px-4 sm:px-6 py-8 sm:py-12 print:px-0 print:py-0 print:max-w-none">
-        <div className="print:hidden">
-          <FormPreamble />
-        </div>
-        <div className="mt-8 print:mt-0">
-          <StudentRegistrationForm />
-        </div>
-      </main>
-    </div>
-  );
-}
+const queryClient = new QueryClient();
 
 function Header() {
   return (
@@ -98,3 +73,31 @@ function FormPreamble() {
     </div>
   );
 }
+
+function App() {
+  const schoolIndexNo = new URLSearchParams(window.location.search).get("index") ?? undefined;
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <div className="min-h-screen">
+        <div className="print:hidden">
+          <Header />
+        </div>
+        <main className="mx-auto max-w-5xl px-4 sm:px-6 py-8 sm:py-12 print:px-0 print:py-0 print:max-w-none">
+          <div className="print:hidden">
+            <FormPreamble />
+          </div>
+          <div className="mt-8 print:mt-0">
+            <StudentRegistrationForm prefillStudentId={schoolIndexNo} />
+          </div>
+        </main>
+      </div>
+    </QueryClientProvider>
+  );
+}
+
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);
